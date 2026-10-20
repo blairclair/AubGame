@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base href="/">
+  <title>Art Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>body { margin: 0; background: #333; } canvas { width: 960px; height: 540px; }</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <script src="js/core.js"></script>
+  <script src="js/art.js"></script>
+  <script>
+    // Preview sheet for the unicorn and grown-ups: open /tools/art_preview.html
+    var S = { t: 1.3 };
+    loadImages().then(() => {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.fillStyle = '#f4ecf8'; ctx.fillRect(0, 0, W, H);
+      const looks = [
+        [{ mane: 'natural', style: 'flowing', shine: 15 }, { mood: 'sad', mud: [{ x: -20, y: -90, r: 12, dirt: 1, kind: 'mud' }, { x: 60, y: -150, r: 10, dirt: 1, kind: 'tangle' }] }],
+        [{ mane: 'rainbow', style: 'flowing', shine: 100, head: 'crown', neck: 'lei', back: 'wings', tail: 'tailflowers', hooves: 'pink' }, {}],
+        [{ mane: 'lavender', style: 'topknot', shine: 100, head: 'tiara', neck: 'necklace', back: 'cape', tail: 'goldcuff', hooves: 'gold' }, { mood: 'joy' }],
+        [{ mane: 'ocean', style: 'braid', shine: 90, head: 'shellcomb', neck: 'shells', back: 'shawl', tail: 'pearls', hooves: 'pearl' }, {}],
+        [{ mane: 'midnight', style: 'curly', shine: 100, head: 'starclip', neck: 'starpendant', back: 'starcape', tail: 'tailstars', hooves: 'star' }, { mood: 'wow' }],
+      ];
+      looks.forEach(([look, o], i) => drawUnicorn(95 + i * 190, 270, 0.62, look, o));
+      drawUnicorn(200, 530, 1.0, { mane: 'rainbow', style: 'flowing', shine: 100, head: 'tiara', neck: 'necklace', back: 'blanket', tail: 'tailbow' }, {});
+      drawPerson('mom', 520, 530, 1, 0.6, false, 0.95);
+      drawPerson('ranger', 660, 530, -1, 0, true, 0.95);
+      drawPersonPortrait('mom', 760, 300, 112, 124, false);
+      drawUnicorn(900, 530, 1.1, { mane: 'pink', style: 'curly', shine: 100 }, {});
+    });
+  </script>
+</body>
+</html>

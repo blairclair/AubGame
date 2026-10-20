@@ -1,0 +1,8 @@
+
+# errata-managed agent skills (daemon-synced; namespaced)
+.agents/skills/errata-*/
+.claude/skills/errata-*/
+.cursor/skills/errata-*/
+
+# errata daemon runtime state (databases, locks) — machine-local
+.errata/
