@@ -804,18 +804,26 @@
   // Aubrey rowing: her photo sits in the boat facing the stern (rowers face backwards, so she faces us as the boat
   // heads up the river), her arms out to the oar handles, pulling each one back as that side strokes
   const aubTop = (grips, oarL, oarR, steer = 0) => {
-    const s = 0.3, im = IMG.idle_front, h = im.height * s, waist = 10, lean = 2.5 * Math.max(oarL, oarR);
+    const s = 0.3, im = aubNoArmsImage(), w = im.width * s, h = im.height * s, waist = 10, lean = 2.5 * Math.max(oarL, oarR);
+    const top = waist - h * 0.5, sy = top + h * 0.255, SEG = 12; // her shoulders in the photo; arm parts her real size
     ctx.save(); ctx.translate(0, lean);
-    ctx.save(); ctx.beginPath(); ctx.rect(-30, waist - h * 0.5 - 4, 60, h * 0.5 + 4); ctx.clip();
+    // her photo with its own arms cut away, top half only (the rest is inside the boat)
+    ctx.save(); ctx.beginPath(); ctx.rect(-30, top - 4, 60, h * 0.5 + 4); ctx.clip();
     ctx.translate(0, waist + h * 0.5); ctx.rotate(clamp(steer, -0.4, 0.4) * 0.3);
-    drawAubrey(0, 0, 'idle_front', 1, 0, s);
+    ctx.drawImage(im, -w / 2, -h, w, h);
     ctx.restore();
-    const sy = waist - h * 0.36;
+    // arms from her shoulders to the oar handles, bending out at the elbows
     for (const side of [-1, 1]) {
-      const [hx, hy] = grips[side];
-      ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(side * 8, sy); ctx.lineTo(hx, hy - lean); ctx.stroke();
-      ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 2.8; ctx.stroke();
-      inkCircle(hx, hy - lean, 2.8, '#f6cfb0', 1);
+      const x0 = side * 5.5, y0 = sy;
+      let [x1, y1] = grips[side]; y1 -= lean;
+      let dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
+      if (d > SEG * 2 - 0.5) { const k = (SEG * 2 - 0.5) / d; dx *= k; dy *= k; x1 = x0 + dx; y1 = y0 + dy; d = SEG * 2 - 0.5; }
+      const m = Math.sqrt(Math.max(0, SEG * SEG - d * d / 4)), nx = -dy / d, ny = dx / d, sg = nx * side >= 0 ? 1 : -1;
+      const ex = x0 + dx / 2 + nx * m * sg, ey = y0 + dy / 2 + ny * m * sg;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 4.6;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(ex, ey); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 2.4; ctx.stroke();
+      inkCircle(x1, y1, 2.6, '#f6cfb0', 0.9);
     }
     ctx.restore();
   };
