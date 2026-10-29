@@ -1,322 +1,203 @@
 'use strict';
-// Inside the shed: the hub, bath & brush, cuddles, the style studio, and Mom's surprise visits.
+// Inside the shed: the nightly Workshop (crafting & dressing up) and Mom's surprise visits.
 
 const HUB_UNI = { x: 400, y: 494, s: 1.12 };
 
-function drawShedInterior(dim = 0) {
-  ctx.fillStyle = '#8a5c3b'; ctx.fillRect(0, 0, W, H);
-  for (let x = 0; x < W; x += 48) {
-    ctx.fillStyle = (x / 48) % 2 ? '#93633f' : '#875a39'; ctx.fillRect(x, 0, 46, H);
-    ctx.fillStyle = 'rgba(60,30,20,.35)'; ctx.fillRect(x + 46, 0, 2, H);
-    ctx.fillStyle = 'rgba(60,30,20,.25)'; circle(x + 12, 100 + (x * 7) % 300, 3);
+// the inside of the shed, painted once and cached (see scenery.js sprite())
+function paintShedInterior() {
+  const R = rng(4242);
+  // honey-wood plank walls with grain and knots
+  for (let x = 0; x < W; x += 44) {
+    ctx.fillStyle = vgrad(0, 340, mix('#d8a066', '#c88e56', R()), '#b87a48'); ctx.fillRect(x, 0, 44, 340);
+    ctx.strokeStyle = 'rgba(110,60,25,.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 340); ctx.stroke();
+    ctx.strokeStyle = 'rgba(140,80,35,.3)'; ctx.lineWidth = 1.2;
+    for (let k = 0; k < 4; k++) { const gx = x + 6 + R() * 30; ctx.beginPath(); ctx.moveTo(gx, 0); ctx.bezierCurveTo(gx + 6, 100, gx - 6, 220, gx + 3, 340); ctx.stroke(); }
+    if (R() < 0.5) { const ky = 60 + R() * 240; ctx.fillStyle = 'rgba(110,60,25,.5)'; ellipse(x + 22, ky, 4, 6); ctx.strokeStyle = 'rgba(110,60,25,.3)'; ctx.beginPath(); ctx.ellipse(x + 22, ky, 7, 10, 0, 0, TAU); ctx.stroke(); }
+    ctx.fillStyle = '#6a4a3a'; circle(x + 6, 20, 1.6); circle(x + 38, 20, 1.6); circle(x + 6, 320, 1.6); circle(x + 38, 320, 1.6);
   }
-  // window shows the time of day
-  const sky = [['#9fdcff', '#e6f6ff'], ['#ffcf8a', '#ffe9c4'], ['#2a2a6a', '#5a4a8a']][S.slot ?? 0];
-  const g = ctx.createLinearGradient(0, 70, 0, 190);
-  g.addColorStop(0, sky[0]); g.addColorStop(1, sky[1]);
-  inkRect(76, 64, 164, 128, '#5b3d26', 3, 6);
-  ctx.fillStyle = g; ctx.fillRect(86, 74, 144, 108);
-  if (S.slot === 2) { ctx.fillStyle = '#fff8d8'; circle(200, 102, 14); for (let i = 0; i < 6; i++) star(100 + i * 22, 90 + (i * 31) % 70, 2, '#fff'); }
-  else { ctx.fillStyle = S.slot === 1 ? '#ff9a5a' : '#ffe36b'; circle(200, 104, 16); }
-  ctx.fillStyle = '#5b3d26'; ctx.fillRect(155, 74, 6, 108); ctx.fillRect(86, 125, 144, 6);
+  // rafters
+  box(-10, -6, W + 20, 26, 0, vgrad(-6, 20, '#8a5a34', '#6a4226'), '#4a2a18', 2.5);
+  for (const x of [120, 480, 840]) { ctx.save(); ctx.translate(x, 20); ctx.rotate(0.5); box(-8, -10, 16, 90, 2, '#7a4e2e', '#4a2a18', 2); ctx.restore(); }
+  // mint wainscoting
+  for (let x = 0; x < W; x += 30) { ctx.fillStyle = vgrad(330, 470, x % 60 ? '#7fe0c8' : '#74d6be', '#52b8a0'); ctx.fillRect(x, 330, 30, 140); ctx.strokeStyle = 'rgba(20,90,80,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, 330); ctx.lineTo(x, 470); ctx.stroke(); }
+  box(-4, 322, W + 8, 14, 2, '#ffffff', '#9ab8b0', 2);
+  // floorboards
+  ctx.fillStyle = vgrad(468, H, '#c08a58', '#9a6a40'); ctx.fillRect(0, 468, W, H - 468);
+  ctx.strokeStyle = 'rgba(90,50,25,.45)'; ctx.lineWidth = 1.5;
+  for (let y = 482; y < H; y += 16) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  for (let y = 468, row = 0; y < H; y += 16, row++) for (let x = (row % 2) * 90; x < W; x += 180) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 16); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(60,30,15,.3)'; ctx.fillRect(0, 466, W, 5);
+  // window with gingham curtains and a flower box
+  box(70, 58, 176, 140, 8, '#ffffff', '#9a8aa0', 3);
+  ctx.fillStyle = vgrad(68, 190, '#24226a', '#5a4a9a'); ctx.fillRect(82, 70, 152, 116);
+  ctx.fillStyle = '#fff8d8'; circle(200, 100, 15); ctx.fillStyle = '#3a3488'; circle(193, 96, 13);
+  for (let i = 0; i < 9; i++) star(92 + (i * 37) % 130, 80 + (i * 29) % 90, 1.6 + (i % 2), '#ffffff');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(155, 70, 6, 116); ctx.fillRect(82, 125, 152, 6);
+  for (const side of [-1, 1]) {
+    const cx = side < 0 ? 64 : 252;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(cx, 50); ctx.lineTo(cx - side * 46, 50); ctx.quadraticCurveTo(cx - side * 16, 130, cx - side * 30, 206); ctx.lineTo(cx, 206); ctx.closePath();
+    ctx.fillStyle = '#ffd6e6'; ctx.fill(); ctx.clip();
+    ctx.fillStyle = 'rgba(255,100,160,.35)';
+    for (let gx = cx - 60; gx < cx + 60; gx += 12) ctx.fillRect(gx, 40, 6, 180);
+    for (let gy = 46; gy < 210; gy += 12) ctx.fillRect(cx - 60, gy, 120, 6);
+    ctx.restore();
+    ctx.strokeStyle = '#e0709a'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  box(56, 46, 204, 10, 4, '#a07850', '#6a4a30', 2);
+  box(66, 198, 184, 18, 4, '#b5713f', '#6a4228', 2);
+  for (let i = 0; i < 9; i++) { ctx.fillStyle = '#4fae4a'; ellipse(76 + i * 21, 196, 7, 4, i); tinyFlower(76 + i * 21, 190, 6, ['#ff5fa2', '#ffe24a', '#ffffff', '#c6a2ff'][i % 4]); }
+  // Aubrey's crayon drawings pinned to the wall
+  [[280, 76, -0.08, '#fff8f0'], [292, 196, 0.06, '#f0f8ff']].forEach(([x, y, rot, paper], i) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    box(0, 0, 70, 84, 2, paper, '#c8b8c8', 1.5);
+    ctx.lineWidth = 2.5;
+    if (i === 0) {
+      ctx.strokeStyle = '#c86ae8'; ctx.beginPath(); ctx.ellipse(34, 54, 18, 10, 0, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(48, 48); ctx.lineTo(56, 30); ctx.stroke(); ctx.beginPath(); ctx.arc(58, 28, 7, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = '#ffb81a'; ctx.beginPath(); ctx.moveTo(60, 21); ctx.lineTo(64, 10); ctx.stroke();
+      ctx.strokeStyle = '#ff5fa2'; for (const lx of [22, 30, 40, 46]) { ctx.beginPath(); ctx.moveTo(lx, 62); ctx.lineTo(lx, 74); ctx.stroke(); }
+      ctx.strokeStyle = '#40b0ff'; ctx.beginPath(); ctx.moveTo(52, 30); ctx.quadraticCurveTo(42, 34, 44, 46); ctx.stroke();
+    } else {
+      ctx.strokeStyle = '#ff5fa2'; heart(35, 26, 40, '#ffb0d0');
+      ctx.fillStyle = '#c86ae8'; ctx.font = `700 13px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('MY BFF', 35, 72);
+    }
+    ctx.fillStyle = '#ff4a4a'; circle(35, 4, 4);
+    ctx.restore();
+  });
+  // shelf of glass jars
+  box(596, 178, 308, 14, 3, '#9a6a40', '#5a3a20', 2.5);
+  for (const bx of [610, 880]) { ctx.beginPath(); ctx.moveTo(bx, 192); ctx.lineTo(bx + 6, 210); ctx.lineTo(bx + 12, 192); ctx.closePath(); fillLine('#7a5030', '#5a3a20', 1.5); }
+  [['#ffb3d6', '🌸'], ['#b8e6ff', '🐚'], ['#fff1a8', '⭐'], ['#d6c2ff', '💎'], ['#c8f0c0', '🧶']].forEach(([c, e], i) => {
+    const jx = 612 + i * 58;
+    box(jx, 126, 44, 52, 12, mix(c, '#ffffff', 0.35), mix(c, '#5a3a60', 0.4), 2);
+    ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(jx + 4, 146, 36, 28, 8); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillRect(jx + 7, 132, 5, 36);
+    box(jx + 4, 118, 36, 12, 4, '#c8a070', '#7a5030', 1.5);
+    emoji(e, jx + 22, 160, 22);
+  });
+  // hanging garden tools
+  box(820, 226, 110, 90, 4, '#c89a68', '#7a5030', 2);
+  ctx.fillStyle = '#7a5030'; for (let y = 236; y < 312; y += 12) for (let x = 830; x < 926; x += 12) circle(x, y, 1.5);
+  ctx.strokeStyle = '#8a5a34'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(846, 236); ctx.lineTo(846, 300); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(834, 300); ctx.lineTo(858, 300); ctx.moveTo(838, 300); ctx.lineTo(838, 310); ctx.moveTo(846, 300); ctx.lineTo(846, 312); ctx.moveTo(854, 300); ctx.lineTo(854, 310); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(876, 240); ctx.lineTo(876, 282); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(876, 282); ctx.quadraticCurveTo(866, 296, 876, 306); ctx.quadraticCurveTo(886, 296, 876, 282); fillLine('#b8b8c8', '#6a6a7a', 1.5);
+  ctx.beginPath(); ctx.moveTo(898, 262); ctx.lineTo(924, 262); ctx.lineTo(920, 290); ctx.lineTo(902, 290); ctx.closePath(); fillLine('#ff8fc8', '#a03a6a', 2);
+  ctx.strokeStyle = '#a03a6a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(911, 262, 10, Math.PI, 0); ctx.stroke();
+  // workbench with ribbon spools and a sewing kit
+  box(650, 396, 290, 16, 3, vgrad(396, 412, '#b8804a', '#8a5a30'), '#5a3a20', 2.5);
+  for (const lx of [664, 916]) box(lx, 410, 14, 62, 2, '#8a5a30', '#5a3a20', 2);
+  [['#ff5fa2', 690], ['#9b6ae8', 722], ['#40b0ff', 754]].forEach(([c, sx]) => {
+    box(sx - 12, 366, 24, 30, 4, c, mix(c, '#2a1050', 0.45), 2);
+    box(sx - 15, 362, 30, 6, 2, '#e8c890', '#8a6a3a', 1.2); box(sx - 15, 392, 30, 6, 2, '#e8c890', '#8a6a3a', 1.2);
+    ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1; for (let y = 370; y < 392; y += 4) { ctx.beginPath(); ctx.moveTo(sx - 11, y); ctx.lineTo(sx + 11, y); ctx.stroke(); }
+  });
+  box(790, 376, 70, 22, 6, '#ff9ec7', '#a03a6a', 2); box(794, 370, 62, 10, 4, '#ffd0e4', '#a03a6a', 1.5);
+  inkCircle(890, 386, 9, '#ffe24a', 0.8, '#a08020'); ctx.fillStyle = '#c0a020'; for (let i = 0; i < 6; i++) circle(886 + (i % 3) * 4, 382 + Math.floor(i / 3) * 6, 1);
+  ctx.strokeStyle = '#8a8aa0'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(910, 394); ctx.lineTo(930, 380); ctx.moveTo(910, 380); ctx.lineTo(930, 394); ctx.stroke();
+  // hay bale
+  box(560, 420, 120, 58, 8, vgrad(420, 478, '#f2d070', '#d4a840'), '#9a7020', 2.5);
+  ctx.strokeStyle = 'rgba(150,100,20,.55)'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 26; i++) { const sx = 566 + R() * 108, sy = 426 + R() * 46; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 10 - R() * 20, sy + 4); ctx.stroke(); }
+  ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 3; for (const tx of [590, 650]) { ctx.beginPath(); ctx.moveTo(tx, 420); ctx.lineTo(tx, 478); ctx.stroke(); }
+  // braided rug and a soft hay bed
+  for (let i = 0; i < 7; i++) {
+    ctx.strokeStyle = ['#ff6fa8', '#b88af0', '#fff0e0', '#ff9ec7', '#8ad4ff', '#ffd23f', '#ff6fa8'][i]; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.ellipse(HUB_UNI.x, 508, 290 - i * 34, 36 - i * 4.2, 0, 0, TAU); ctx.stroke();
+  }
+  ctx.fillStyle = vgrad(470, 520, '#f6d878', '#d8ac48'); ellipse(HUB_UNI.x - 170, 500, 110, 26);
+  ctx.strokeStyle = 'rgba(160,110,30,.6)'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 40; i++) { const sx = HUB_UNI.x - 270 + R() * 200, sy = 482 + R() * 30; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 14 - R() * 28, sy - 6 + R() * 4); ctx.stroke(); }
+}
+function drawShedInterior(dim = 0) {
+  blit(sprite('shedInterior', W, H, 0, 0, paintShedInterior), 0, 0);
+  // a warm lantern glow, flickering a little
+  const f = 0.85 + Math.sin(S.t * 7) * 0.05 + Math.sin(S.t * 13) * 0.04;
+  const lg = ctx.createRadialGradient(540, 70, 4, 540, 70, 260);
+  lg.addColorStop(0, `rgba(255,210,130,${0.35 * f})`); lg.addColorStop(1, 'rgba(255,210,130,0)');
+  ctx.fillStyle = lg; ctx.fillRect(280, 0, 520, 340);
+  ctx.strokeStyle = '#4a2a18'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(540, 18); ctx.lineTo(540, 48); ctx.stroke();
+  box(526, 48, 28, 34, 6, `rgba(255,220,140,${f})`, '#4a2a18', 2.5);
+  box(522, 44, 36, 8, 3, '#5a3a20', '#3a2010', 1.5);
   // fairy lights
   ctx.strokeStyle = '#3d2c22'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(0, 30); for (let x = 0; x <= W; x += 40) ctx.lineTo(x, 30 + Math.sin(x / 80) * 14 + 10); ctx.stroke();
   for (let x = 20; x < W; x += 40) {
-    const y = 30 + Math.sin(x / 80) * 14 + 16;
-    const c = ['#ff8fc8', '#ffe36b', '#8ad4ff', '#a6f0b8'][(x / 40) % 4 | 0];
-    ctx.fillStyle = c; ctx.globalAlpha = 0.25; circle(x, y, 12); ctx.globalAlpha = 1; circle(x, y, 5);
+    const y = 30 + Math.sin(x / 80) * 14 + 16, i = (x / 40) | 0;
+    const c = ['#ff6fb5', '#ffe36b', '#6fd0ff', '#8ff0a8'][i % 4];
+    ctx.fillStyle = c; ctx.globalAlpha = 0.22 + 0.12 * Math.sin(S.t * 3 + i); circle(x, y, 13); ctx.globalAlpha = 1; circle(x, y, 5);
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; circle(x - 1.5, y - 1.5, 1.6);
   }
-  // shelf with jars
-  inkRect(600, 176, 300, 12, '#6e4a30', 2.5, 3);
-  [['#ffb3d6', '🌸'], ['#b8e6ff', '🐚'], ['#fff1a8', '⭐'], ['#d6c2ff', '💎'], ['#c8f0c0', '🌼']].forEach(([c, e], i) => {
-    rrect(612 + i * 58, 128, 42, 48, 10, c, OL, 2.5);
-    rrect(616 + i * 58, 122, 34, 10, 4, '#a07850', OL, 2);
-    emoji(e, 633 + i * 58, 154, 22);
-  });
-  // rug and hay bed
-  ctx.fillStyle = '#c2557f'; ellipse(HUB_UNI.x, 506, 300, 34);
-  ctx.fillStyle = '#e07aa0'; ellipse(HUB_UNI.x, 504, 270, 26);
-  ctx.fillStyle = '#e8c766'; ellipse(HUB_UNI.x - 160, 500, 120, 30);
-  ctx.fillStyle = '#d4b04f'; for (let i = 0; i < 14; i++) ctx.fillRect(HUB_UNI.x - 260 + i * 15, 486 + (i * 7) % 14, 20, 3);
-  ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, 516, W, 24);
   if (dim) { ctx.fillStyle = `rgba(20,10,30,${dim})`; ctx.fillRect(0, 0, W, H); }
 }
 
-function drawTopBar() {
-  darkPanel(12, 12, 360, 46, 23);
-  emoji(['☀️', '🌤️', '🌙'][S.slot], 36, 35, 24);
-  text(`Day ${S.day} of ${SHOW_DAY} · ${SLOT_NAMES[S.slot]}`, 58, 35, 19, '#fff', 'left', 700);
-  const left = daysLeft();
-  text(left === 0 ? 'Show TONIGHT!' : `Show in ${left} day${left > 1 ? 's' : ''}`, 360, 35, 14, '#ffd1ec', 'right', 600);
-  darkPanel(W - 210, 12, 198, 46, 23);
-  text('Mom suspicion', W - 196, 35, 14, '#fff');
-  for (let i = 0; i < 3; i++) {
-    const on = i < S.strikes;
-    ctx.globalAlpha = on ? 1 : 0.3;
-    emoji('👀', W - 90 + i * 28, 35, 20);
-  }
-  ctx.globalAlpha = 1;
-}
-function drawStats(x, y) {
-  darkPanel(x, y, 240, 178, 16);
-  text(S.name, x + 16, y + 22, 21, '#ffd1ec', 'left', 700);
-  [['✨', 'Shine', S.shine, '#8ad4ff'], ['💗', 'Happy', S.happy, '#ff7fd0'], ['💃', 'Poise', S.poise, '#ffd36b']].forEach(([ic, lbl, v, col], i) => {
-    const yy = y + 54 + i * 32;
-    emoji(ic, x + 26, yy, 18);
-    text(lbl, x + 42, yy, 15, '#fff', 'left', 500);
-    bar(x + 98, yy - 7, 124, 14, v, col, 'rgba(255,255,255,.18)');
-  });
-  const m = themeMatchCount();
-  emoji(theme().icon, x + 26, y + 152, 18);
-  text(`${theme().name}: ${m}/7 match`, x + 42, y + 152, 15, m >= 6 ? '#9ff0b8' : '#fff', 'left', 600);
-}
 function drawMats(x, y, w, rows = 1) {
   const perRow = Math.ceil(MAT_ORDER.length / rows);
   darkPanel(x, y - (rows - 1) * 32, w, 40 + (rows - 1) * 32, 14);
   const step = (w - 20) / perRow;
   MAT_ORDER.forEach((k, i) => {
     const cx = x + 22 + (i % perRow) * step, cy = y + 20 - (rows - 1 - Math.floor(i / perRow)) * 32;
-    ctx.globalAlpha = S.mats[k] ? 1 : 0.4;
+    ctx.globalAlpha = S.mats[k] ? 1 : 0.35;
     emoji(MATS[k].icon, cx, cy, 20);
     text(String(S.mats[k]), cx + 13, cy + 2, 14, '#fff', 'left', 700);
   });
   ctx.globalAlpha = 1;
 }
-function hubTip() {
-  if (S.day === SHOW_DAY && S.slot === 1) return 'Last chance to get ready — the show is tonight!';
-  if (S.happy < 30) return `${S.name} is grumpy. Unhappy unicorns get NOISY — and Mom might come check.`;
-  if (S.shine < 40) return `${S.name} is pretty muddy. A bath & brush will make her shine.`;
-  if (themeMatchCount() < 3) {
-    const want = WARDROBE.find(i => i.tags.includes(S.theme) && !S.owned[i.id] && i.cost && !canAfford(i.cost));
-    return want ? `Tip: the ${want.name} fits the ${theme().name} theme. It needs ${costText(want.cost)}.` : 'Visit the Style Studio to dress her up for the theme!';
-  }
-  if (S.poise < 50) return 'Practice the runway walk so she struts her stuff on show night.';
-  return `${S.name} is looking wonderful! Keep it up.`;
-}
+const TIER_COLORS = { 0: '#b9aac4', 1: '#5fb87a', 2: '#4fa8e0', 3: '#9a6ae0' };
 
-// --- hub ---------------------------------------------------------------------------
-SCENES.salon = {
-  enter() { this.joy = 0; },
-  update(dt) {
-    this.joy = Math.max(0, this.joy - dt);
-    if (pressed.m) muted = !muted;
-    const id = clickedButton();
-    if (id === 'gather') { SFX.step(); return startWorld('gather'); }
-    if (id === 'groom') return setScene('groom');
-    if (id === 'runway') return startRunway('practice');
-    if (id === 'cuddle') return setScene('cuddle');
-    if (id === 'style') return setScene('style');
-    if (pointer.clicked && Math.abs(pointer.x - (HUB_UNI.x + 30)) < 110 && pointer.y > 230 && pointer.y < 500) {
-      this.joy = 0.8; SFX.pop();
-      burst(pointer.x, pointer.y, 4, { kind: 'heart', colors: ['#ff6fb5', '#ff9ec7'], spread: 50, up: 40 });
-    }
-  },
-  draw() {
-    buttons = [];
-    drawShedInterior();
-    const mood = this.joy > 0 ? 'joy' : S.happy < 30 ? 'sad' : undefined;
-    drawUnicorn(HUB_UNI.x, HUB_UNI.y, HUB_UNI.s, uniLook(), { facing: 1, mood, glow: S.shine / 140 });
-    drawTopBar();
-    drawStats(12, 70);
-    const bx = W - 262, w = 248;
-    darkPanel(bx - 8, 70, w + 16, 344, 18);
-    text('What should we do?', bx + w / 2, 92, 16, '#ffd1ec', 'center', 700);
-    button('gather', bx, 110, w, 54, 'Go gathering', { icon: '🧺', sub: 'find materials outside', key: '1', color: '#5fb87a' });
-    button('groom', bx, 170, w, 54, 'Bath & brush', { icon: '🛁', sub: '+ Shine', key: '2', color: '#4fa8e0' });
-    button('runway', bx, 230, w, 54, 'Runway practice', { icon: '💃', sub: '+ Poise', key: '3', color: '#e0a03f' });
-    button('cuddle', bx, 290, w, 54, 'Cuddles & treats', { icon: '💗', sub: '+ Happy', key: '4', color: '#ff6fb5' });
-    button('style', bx, 350, w, 54, 'Style Studio', { icon: '👗', sub: 'free — no time used!', key: '5', color: '#9a6ae0' });
-    text('Each activity uses up the ' + SLOT_NAMES[S.slot].toLowerCase(), bx + w / 2, 428, 12, 'rgba(255,255,255,.8)', 'center', 500);
-    drawMats(12, H - 52, 560);
-    const tip = hubTip();
-    ctx.font = `600 15px ${FONT}`;
-    const tw = Math.min(560, ctx.measureText(tip).width + 50);
-    rrect(12, H - 100, tw, 38, 19, 'rgba(255,248,252,.92)', '#e2c6f5', 2);
-    emoji('🧚', 32, H - 81, 18);
-    text(wrap(tip, 510, 15, 600)[0], 50, H - 81, 15, '#5a2a6e');
-    drawFx(false);
-  },
-};
-
-// --- bath & brush ------------------------------------------------------------------
-const GROOM_UNI = { x: 400, y: 494, s: 1.3 };
-const MUD_SPOTS = [[-40, -95], [-15, -78], [10, -100], [35, -85], [-50, -70], [0, -62], [25, -62], [-42, -28], [30, -26], [50, -112], [-25, -108], [62, -132]];
-const TANGLE_SPOTS = [[64, -178], [48, -146], [32, -116], [-74, -70], [-86, -42]];
-SCENES.groom = {
-  enter() {
-    const n = clamp(Math.round((100 - S.shine) / 8), 3, MUD_SPOTS.length);
-    const spots = [...MUD_SPOTS].sort(() => Math.random() - 0.5).slice(0, n).map(([x, y]) => ({ x, y, r: rand(9, 13), dirt: 1, kind: 'mud' }));
-    for (const [x, y] of TANGLE_SPOTS) spots.push({ x, y, r: 11, dirt: 1, kind: 'tangle' });
-    Object.assign(this, { spots, stage: 'scrub', px: pointer.x, py: pointer.y, wasDown: false, bubbles: [], popped: 0, rinseT: 0, spawnT: 0, start: S.shine, sfxT: 0 });
-  },
-  finish() {
-    const cleanFrac = this.spots.filter(s => s.dirt <= 0).length / this.spots.length;
-    const old = S.shine;
-    S.shine = Math.min(100, Math.max(S.shine, Math.round(38 + 42 * cleanFrac + this.popped * 2)));
-    S.happy = Math.min(100, S.happy + 6);
-    SFX.fanfare();
-    burst(GROOM_UNI.x, GROOM_UNI.y - 160, 40);
-    this.stage = 'done';
-    say([['unicorn', 'joy', '*happy, sparkly whinny*'], ['narrator', null, `${S.name} is squeaky clean! Shine ${old} → ${S.shine} ✨`]], () => afterActivity());
-  },
-  update(dt) {
-    if (this.stage === 'done') return;
-    const id = clickedButton();
-    if (id === 'skip') return this.finish();
-    const moved = Math.hypot(pointer.x - this.px, pointer.y - this.py);
-    this.px = pointer.x; this.py = pointer.y;
-    const dragging = pointer.down && this.wasDown;
-    this.wasDown = pointer.down;
-    const { x: ux, y: uy, s } = GROOM_UNI;
-    if (this.stage === 'scrub') {
-      if (!dragging || moved <= 0) return;
-      this.sfxT -= dt;
-      for (const m of this.spots) {
-        if (m.dirt <= 0) continue;
-        const sx = ux + m.x * s, sy = uy + m.y * s;
-        if (Math.hypot(pointer.x - sx, pointer.y - sy) < m.r * s + 18) {
-          m.dirt -= moved * (m.kind === 'mud' ? 0.0065 : 0.0045);
-          if (this.sfxT <= 0) { SFX.scrub(); this.sfxT = 0.08; }
-          if (Math.random() < 0.35) burst(pointer.x, pointer.y, 1, { kind: 'bubble', colors: ['#fff'], spread: 40, up: 20 });
-          if (m.dirt <= 0) { SFX.pick(); burst(sx, sy, 10, { spread: 90, up: 40 }); }
-        }
-      }
-      if (this.spots.every(m => m.dirt <= 0)) { this.stage = 'rinse'; SFX.sparkle(); }
-    } else if (this.stage === 'rinse') {
-      this.rinseT += dt; this.spawnT -= dt;
-      if (this.spawnT <= 0 && this.rinseT < 6) {
-        this.spawnT = 0.42;
-        this.bubbles.push({ x: rand(200, 620), y: 520, r: rand(18, 30), vx: rand(-20, 20), ph: rand(0, 6) });
-      }
-      for (const b of this.bubbles) { b.y -= 70 * dt; b.x += Math.sin(S.t * 2 + b.ph) * 30 * dt + b.vx * dt; }
-      if (pointer.clicked) {
-        const hit = this.bubbles.find(b => Math.hypot(pointer.x - b.x, pointer.y - b.y) < b.r + 6);
-        if (hit) { SFX.pop(); this.popped++; burst(hit.x, hit.y, 8, { colors: ['#fff', '#b8e6ff', '#ffb3e0'], spread: 80, up: 20 }); this.bubbles.splice(this.bubbles.indexOf(hit), 1); }
-      }
-      this.bubbles = this.bubbles.filter(b => b.y > -40);
-      if (this.rinseT > 6 && !this.bubbles.length) this.finish();
-    }
-  },
-  draw() {
-    buttons = [];
-    drawShedInterior();
-    const { x, y, s } = GROOM_UNI;
-    drawUnicorn(x, y, s, uniLook({ shine: this.stage === 'scrub' ? Math.max(S.shine, 20) : 90 }), { facing: 1, mud: this.stage === 'scrub' ? this.spots : undefined, mood: this.stage === 'scrub' ? 'sad' : 'joy' });
-    const left = this.spots.filter(m => m.dirt > 0).length;
-    const msg = this.stage === 'scrub' ? `Click & drag to scrub the mud and brush out tangles!  (${left} left)` : this.stage === 'rinse' ? `Rinse time! Pop the bubbles for extra sparkle!  (${this.popped} popped)` : '';
-    if (msg) { darkPanel(W / 2 - 300, 14, 600, 44, 22); text(msg, W / 2, 36, 17, '#fff', 'center'); }
-    for (const b of this.bubbles) {
-      ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.stroke();
-      const g = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.3, 2, b.x, b.y, b.r);
-      g.addColorStop(0, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(180,220,255,.15)');
-      ctx.fillStyle = g; ctx.fill();
-      ctx.fillStyle = 'rgba(255,200,240,.6)'; ellipse(b.x + b.r * 0.4, b.y + b.r * 0.3, b.r * 0.25, b.r * 0.12, -0.6);
-    }
-    if (this.stage !== 'done') button('skip', W - 190, H - 70, 170, 52, this.stage === 'rinse' ? 'Finish' : 'All done', { color: '#9a6ae0' });
-    drawFx(false);
-    if (this.stage === 'scrub') {
-      ctx.save(); ctx.translate(pointer.x, pointer.y); ctx.rotate(-0.5 + (pointer.down ? Math.sin(S.t * 30) * 0.25 : 0));
-      rrect(-8, 0, 16, 50, 6, '#c86ad8', OL, 2.5);
-      rrect(-20, -28, 40, 30, 9, '#ff9ec7', OL, 2.5);
-      ctx.fillStyle = '#fff'; for (let i = -15; i <= 15; i += 7.5) ctx.fillRect(i - 1.5, -38, 3, 11);
-      ctx.restore();
-    }
-  },
-};
-
-// --- cuddles & treats ----------------------------------------------------------------
-const CUDDLE_SPOTS = [[72, -222, 'ear'], [102, -162, 'cheek'], [48, -132, 'neck'], [-10, -114, 'back'], [118, -152, 'nose'], [-35, -95, 'side']];
-SCENES.cuddle = {
-  enter() { Object.assign(this, { time: 12, target: null, nextT: 0.6, joy: 0, got: 0, ate: 0, done: false }); },
-  update(dt) {
-    if (this.done) return;
-    this.time -= dt; this.nextT -= dt; this.joy = Math.max(0, this.joy - dt);
-    const id = clickedButton();
-    if (id === 'apple' && S.mats.apple > 0) {
-      S.mats.apple--; this.ate++; S.happy = Math.min(100, S.happy + 10); this.joy = 1;
-      SFX.pick(); burst(HUB_UNI.x + 130, HUB_UNI.y - 160, 6, { kind: 'heart', colors: ['#ff6fb5'], spread: 60, up: 40 });
-      floatText(HUB_UNI.x + 120, HUB_UNI.y - 230, 'Crunch crunch! +10 💗', '#fff');
-    }
-    if (id === 'stop') this.time = 0;
-    if (this.target) {
-      this.target.life -= dt;
-      const { x, y, s } = HUB_UNI, tx = x + this.target.x * s, ty = y + this.target.y * s;
-      if (pointer.clicked && Math.hypot(pointer.x - tx, pointer.y - ty) < 40) {
-        this.got++; S.happy = Math.min(100, S.happy + 4); this.joy = 0.7;
-        tone(660 + this.got * 30, 0.15, 'sine', 0.08);
-        burst(tx, ty, 7, { kind: 'heart', colors: ['#ff6fb5', '#ff9ec7'], spread: 70, up: 50 });
-        floatText(tx, ty - 30, `Scratches! (${this.target.name})`, '#fff', false, 17);
-        this.target = null; this.nextT = 0.35;
-      } else if (this.target.life <= 0) { this.target = null; this.nextT = 0.3; }
-    }
-    if (!this.target && this.nextT <= 0 && this.time > 0) {
-      const [x, y, name] = pick(CUDDLE_SPOTS);
-      this.target = { x, y, name, life: 1.6 };
-    }
-    if (this.time <= 0) {
-      this.done = true;
-      say([['unicorn', 'joy', '*purrs like a very large, very sparkly kitten*'], ['narrator', null, `${S.name} feels so loved. Happy: ${Math.round(S.happy)} 💗`]], () => afterActivity());
-    }
-  },
-  draw() {
-    buttons = [];
-    drawShedInterior();
-    drawUnicorn(HUB_UNI.x, HUB_UNI.y, HUB_UNI.s, uniLook(), { facing: 1, mood: this.joy > 0 ? 'joy' : undefined, glow: 0.4 });
-    darkPanel(W / 2 - 290, 14, 580, 44, 22);
-    text(`Click the hearts to give ${S.name} scratches!  ⏱ ${Math.max(0, Math.ceil(this.time))}`, W / 2, 36, 17, '#fff', 'center');
-    if (this.target) {
-      const { x, y, s } = HUB_UNI, tx = x + this.target.x * s, ty = y + this.target.y * s;
-      const p = 1 + Math.sin(S.t * 10) * 0.12;
-      ctx.globalAlpha = clamp(this.target.life * 2, 0, 1);
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(tx, ty + 8, 30 * p, 0, Math.PI * 2); ctx.stroke();
-      heart(tx, ty - 6, 34 * p, '#ff4f8b');
-      ctx.globalAlpha = 1;
-    }
-    button('apple', W - 262, 300, 248, 56, `Give an apple (${S.mats.apple})`, { icon: '🍎', on: S.mats.apple > 0, color: '#e8413f', sub: '+10 Happy' });
-    button('stop', W - 262, 366, 248, 48, 'Finish cuddles', { color: '#9a6ae0' });
-    drawStats(12, 70);
-    drawFx(false);
-  },
-};
-
-// --- style studio (free) ---------------------------------------------------------------
+// --- the Workshop: craft at night, or just peek at the plans during the day ---------------------
 SCENES.style = {
-  enter() { this.tab = this.tab || 'mane'; this.shake = 0; this.joy = 0; },
+  enter({ mode = 'peek', onDone } = {}) {
+    Object.assign(this, { mode, onDone, tab: this.tab || 'mane', shake: 0, joy: 0 });
+    if (mode === 'craft') speak(`Workshop time! Use your treasures to make things for ${S.name}.`);
+  },
   update(dt) {
     this.shake = Math.max(0, this.shake - dt); this.joy = Math.max(0, this.joy - dt);
-    if (pressed.escape) return setScene('salon');
+    if (pressed.escape) return this.onDone();
     const id = clickedButton();
     if (!id) return;
-    if (id === 'done') return setScene('salon');
+    if (id === 'done') return this.onDone();
     if (id.startsWith('tab:')) { this.tab = id.slice(4); return; }
-    if (id.startsWith('item:')) {
-      const it = ITEM[id.slice(5)];
-      if (S.owned[it.id]) {
-        const optional = it.slot !== 'mane' && it.slot !== 'style';
-        S.equip[it.slot] = S.equip[it.slot] === it.id && optional ? null : it.id;
-        this.joy = 0.6;
-      } else if (canAfford(it.cost)) {
-        pay(it.cost); S.owned[it.id] = true; S.equip[it.slot] = it.id;
-        SFX.sparkle(); this.joy = 1.2;
-        burst(300, 300, 30);
-        floatText(300, 160, `Made: ${it.name}!`, '#fff6a8', false, 24);
-      } else {
-        SFX.miss(); this.shake = 0.4;
-        floatText(730, 480, `Need ${costText(it.cost)} — go gathering!`, '#ffd1ec', false, 17);
-      }
+    if (!id.startsWith('item:')) return;
+    const it = ITEM[id.slice(5)];
+    if (S.owned[it.id]) {
+      const optional = it.slot !== 'mane' && it.slot !== 'style';
+      S.equip[it.slot] = S.equip[it.slot] === it.id && optional ? null : it.id;
+      this.joy = 0.6;
+    } else if (canAfford(it.cost) && this.mode === 'craft') {
+      pay(it.cost); S.owned[it.id] = true; S.equip[it.slot] = it.id;
+      SFX.sparkle(); this.joy = 1.2;
+      burst(300, 300, 30);
+      floatText(300, 160, `Made: ${it.name}! +${it.pts} points`, '#fff6a8', false, 24);
+      speak(`You made the ${it.name}!`);
+    } else if (canAfford(it.cost)) {
+      SFX.click();
+      floatText(730, 470, 'You can make this tonight in the shed!', '#ffd1ec', false, 17);
+    } else {
+      SFX.miss(); this.shake = 0.4;
+      const need = Object.entries(it.cost).filter(([k, n]) => S.mats[k] < n).map(([k, n]) => `${MATS[k].icon}${n - S.mats[k]}`).join(' ');
+      floatText(730, 470, `Still need ${need}`, '#ffd1ec', false, 17);
     }
   },
   draw() {
     buttons = [];
     drawShedInterior(0.15);
     drawUnicorn(300, 492, 1.15, uniLook(), { facing: 1, mood: this.joy > 0 ? 'joy' : undefined, glow: 0.5 });
-    darkPanel(12, 12, 300, 46, 23);
-    emoji('👗', 36, 35, 22);
-    text('Style Studio', 56, 35, 20, '#fff', 'left', 700);
-    darkPanel(12, 66, 300, 40, 20);
-    text(`${theme().icon} Theme: ${theme().name} — ${themeMatchCount()}/7 match`, 28, 86, 15, '#ffd1ec', 'left', 600);
+    const craft = this.mode === 'craft';
+    darkPanel(12, 12, 316, 46, 23);
+    emoji(craft ? '🔨' : '📖', 36, 35, 22);
+    text(craft ? `Workshop · Night ${S.day}` : 'Outfit Plans', 56, 35, 19, '#fff', 'left', 700);
+    // outfit score against the rivals
+    const score = outfitScore();
+    darkPanel(12, 66, 316, 68, 18);
+    text(`Show score: ${score}`, 28, 88, 18, '#fff6a8', 'left', 700);
+    RIVALS.forEach((r, i) => {
+      const x = 28 + i * 100, beat = score > r.score;
+      emoji(r.icon, x + 12, 116, 20);
+      text(String(r.score), x + 28, 117, 15, beat ? '#9ff0b8' : 'rgba(255,255,255,.7)', 'left', 700);
+      if (beat) text('✓', x + 56, 117, 14, '#9ff0b8', 'left', 700);
+    });
 
     const px = 340, pw = W - px - 12;
     panel(px, 12, pw, H - 84, 18);
@@ -326,12 +207,13 @@ SCENES.style = {
       buttons.push(b);
       rrect(tx, 22, tw, 52, 12, on ? '#ff6fb5' : inRect(b) ? '#ffd1ec' : '#f3e6fb', on ? null : '#e2c6f5', 2);
       emoji(sl.icon, tx + tw / 2, 42, 22);
-      if (slotMatches(sl.id)) { ctx.fillStyle = '#3fbf6a'; circle(tx + tw - 8, 28, 8); text('✓', tx + tw - 8, 28, 11, '#fff', 'center', 700); }
+      const eq = S.equip[sl.id] && ITEM[S.equip[sl.id]].pts;
+      if (eq) { rrect(tx + tw - 22, 18, 26, 18, 9, '#ffc83d'); text(String(eq), tx + tw - 9, 27, 11, '#5a2a00', 'center', 700); }
       text(sl.name.split(' ')[0], tx + tw / 2, 66, 11, on ? '#fff' : '#7a5a8a', 'center', 600);
     });
     const slot = SLOTS.find(s => s.id === this.tab);
     text(slot.name, px + 18, 96, 19, '#5a2a6e', 'left', 700);
-    text(`${theme().icon} = matches the theme`, px + pw - 16, 96, 13, '#9a7aaa', 'right', 500);
+    text(craft ? 'Tap to craft or wear' : 'Craft these at night in the shed', px + pw - 16, 96, 13, '#9a7aaa', 'right', 500);
 
     const items = WARDROBE.filter(i => i.slot === this.tab);
     const cw = (pw - 40) / 2, ch = 72;
@@ -343,7 +225,8 @@ SCENES.style = {
       const hover = inRect(b);
       const shakeX = !owned && !afford && hover && this.shake > 0 ? Math.sin(S.t * 60) * 3 : 0;
       rrect(cx + shakeX, cy, cw, ch, 14, worn ? '#ffe3f1' : hover ? '#fbf3ff' : '#fff', worn ? '#ff6fb5' : '#e2c6f5', worn ? 3.5 : 2);
-      const ix = cx + 34 + shakeX, iy = cy + ch / 2;
+      rrect(cx + shakeX, cy + 10, 5, ch - 20, 3, TIER_COLORS[it.tier]);
+      const ix = cx + 36 + shakeX, iy = cy + ch / 2;
       if (it.slot === 'mane') {
         const pal = MANES[it.id];
         pal.forEach((c, j) => { const a = j / pal.length * Math.PI * 2; ctx.fillStyle = c; circle(ix + Math.cos(a) * 10, iy + Math.sin(a) * 10, 9); });
@@ -352,21 +235,20 @@ SCENES.style = {
         rrect(ix - 16, iy - 14, 32, 28, 8, HOOF_COLORS[it.value], OL, 2.5);
         ctx.fillStyle = 'rgba(255,255,255,.7)'; circle(ix - 6, iy - 5, 4);
       } else emoji(it.icon, ix, iy, 30);
-      if (!owned && !afford) { ctx.globalAlpha = 0.55; }
-      text(it.name, cx + 64 + shakeX, cy + 22, 15, '#4a2060', 'left', 700);
+      ctx.globalAlpha = owned || afford ? 1 : 0.6;
+      text(it.name, cx + 66 + shakeX, cy + 22, 15, '#4a2060', 'left', 700);
       ctx.globalAlpha = 1;
-      const tagStr = it.tags.map(t => THEMES[t].icon).join(' ');
-      if (it.tags.includes(S.theme)) rrect(cx + cw - 34, cy + 8, 26, 22, 8, '#fff2a8');
-      if (tagStr) { ctx.font = `14px ${EMOJI_FONT}`; ctx.textAlign = 'right'; ctx.fillText(tagStr, cx + cw - 10, cy + 20); }
+      if (it.pts) { rrect(cx + cw - 52, cy + 8, 44, 22, 11, TIER_COLORS[it.tier]); text(`+${it.pts}`, cx + cw - 30, cy + 19, 13, '#fff', 'center', 700); }
       let status, col;
       if (worn) { status = 'Wearing ✓'; col = '#d0407e'; }
-      else if (owned) { status = 'Click to wear'; col = '#7a5a8a'; }
-      else if (afford) { status = `Craft: ${costText(it.cost)}`; col = '#2f9a55'; }
+      else if (owned) { status = 'Tap to wear'; col = '#7a5a8a'; }
+      else if (afford) { status = craft ? `Craft: ${costText(it.cost)}` : `Ready: ${costText(it.cost)}`; col = '#2f9a55'; }
       else { status = `Need: ${costText(it.cost)}`; col = '#b07a90'; }
-      text(status, cx + 64 + shakeX, cy + 50, 14, col, 'left', 600);
+      text(status, cx + 66 + shakeX, cy + 50, 14, col, 'left', 600);
     });
     drawMats(12, H - 52, 316, 2);
-    button('done', W - 212, H - 64, 200, 52, 'Done', { color: '#9a6ae0', key: 'Escape' });
+    const doneLabel = !craft ? 'Back to the map' : S.day === SHOW_DAY ? 'To the show! ✨' : 'Bedtime 😴';
+    button('done', W - 222, H - 64, 210, 52, doneLabel, { color: craft ? '#ff6fb5' : '#9a6ae0', size: 17 });
     drawFx(false);
   },
 };
@@ -376,13 +258,14 @@ const EVIDENCE_SPOTS = [[110, 236], [200, 250], [560, 230], [650, 260], [90, 420
 SCENES.hide = {
   enter(onDone) {
     const n = 3 + Math.floor(S.day / 2);
-    const icons = ['✨', '🎀', '🌸', '💎', '🪶', '⭐', '🐚', '🌼', '🫐'];
+    const icons = MAT_ORDER.map(k => MATS[k].icon);
     const spots = [...EVIDENCE_SPOTS].sort(() => Math.random() - 0.5).slice(0, n);
     Object.assign(this, {
-      onDone, time: 7.6 - S.day * 0.4, max: 7.6 - S.day * 0.4, tarp: false, result: null, stepT: 0, intro: 1.2,
+      onDone, time: 8 - S.day * 0.4, max: 8 - S.day * 0.4, tarp: false, result: null, stepT: 0, intro: 1.4,
       items: spots.map(([x, y]) => ({ x, y, icon: pick(icons), gone: false, fly: 0 })),
     });
     SFX.alert();
+    speak(`Oh no! Mom is coming! Click everything sparkly, and click ${S.name} to hide her under the tarp!`);
   },
   update(dt) {
     if (this.result) return;
@@ -391,7 +274,7 @@ SCENES.hide = {
     if (this.stepT <= 0) { SFX.step(); this.stepT = Math.max(0.25, this.time / this.max * 0.6); }
     for (const it of this.items) if (it.gone) it.fly = Math.min(1, it.fly + dt * 3);
     if (pointer.clicked) {
-      const it = this.items.find(i => !i.gone && Math.hypot(pointer.x - i.x, pointer.y - i.y) < 36);
+      const it = this.items.find(i => !i.gone && Math.hypot(pointer.x - i.x, pointer.y - i.y) < 40);
       if (it) { it.gone = true; SFX.pick(); }
       else if (!this.tarp && Math.abs(pointer.x - (HUB_UNI.x + 20)) < 130 && pointer.y > 200 && pointer.y < 500) {
         this.tarp = true; SFX.hush(); burst(HUB_UNI.x, HUB_UNI.y - 120, 12, { colors: ['#9aa870', '#7a8a5a'] });
@@ -408,71 +291,49 @@ SCENES.hide = {
     drawShedInterior();
     if (this.tarp) drawTarp(HUB_UNI.x + 20, HUB_UNI.y, 1.15);
     else drawUnicorn(HUB_UNI.x, HUB_UNI.y, HUB_UNI.s, uniLook(), { facing: 1, mood: 'wow' });
-    // stash basket
     inkRect(850, 448, 90, 56, '#c99a5a', 3, 10);
     ctx.strokeStyle = 'rgba(91,63,115,.4)'; ctx.lineWidth = 2;
     for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(850 + i * 18, 450); ctx.lineTo(850 + i * 18, 502); ctx.stroke(); }
     for (const it of this.items) {
       if (it.fly >= 1) continue;
       const k = easeOut(it.fly), x = lerp(it.x, 895, k), y = lerp(it.y, 470, k) - Math.sin(k * Math.PI) * 80;
-      if (!it.gone) {
-        ctx.fillStyle = `rgba(255,255,200,${0.4 + 0.3 * Math.sin(S.t * 8)})`; circle(x, y, 30);
-      }
-      emoji(it.icon, x, y, 36 * (1 - k * 0.5));
+      if (!it.gone) { ctx.fillStyle = `rgba(255,255,200,${0.4 + 0.3 * Math.sin(S.t * 8)})`; circle(x, y, 32); }
+      emoji(it.icon, x, y, 38 * (1 - k * 0.5));
     }
     const left = this.items.filter(i => !i.gone).length;
-    panel(W / 2 - 260, 14, 520, 92, 18);
+    panel(W / 2 - 270, 14, 540, 92, 18);
     outlined("Mom's coming! Hide everything!", W / 2, 40, 24, '#ff6fb5', 'center', '#fff');
-    text(`Click the sparkly evidence (${left} left)${this.tarp ? '' : ` and throw a tarp over ${S.name}!`}`, W / 2, 68, 14, '#5a2a6e', 'center', 600);
-    bar(W / 2 - 230, 84, 460, 12, (this.time / this.max) * 100, this.time / this.max < 0.35 ? '#ff5a5a' : '#ffb15c');
-    // Mom's silhouette approaching the window
+    text(`Click the sparkly things (${left} left)${this.tarp ? '' : ` and click ${S.name} to throw a tarp over her!`}`, W / 2, 68, 14, '#5a2a6e', 'center', 600);
+    bar(W / 2 - 240, 84, 480, 12, (this.time / this.max) * 100, this.time / this.max < 0.35 ? '#ff5a5a' : '#ffb15c');
     const k = 1 - clamp(this.time / this.max, 0, 1);
     ctx.save(); ctx.beginPath(); ctx.rect(86, 74, 144, 108); ctx.clip();
     ctx.fillStyle = 'rgba(40,20,60,.7)'; circle(110 + k * 60, 160 - k * 30, 20 + k * 14); ellipse(110 + k * 60, 210 - k * 30, 30 + k * 14, 40);
     ctx.restore();
-    if (this.intro > 0) { ctx.fillStyle = `rgba(255,255,255,${this.intro * 0.4})`; ctx.fillRect(0, 0, W, H); outlined('Footsteps outside...!', W / 2, H / 2, 40, '#ffd23f'); }
+    if (this.intro > 0) { ctx.fillStyle = `rgba(255,255,255,${this.intro * 0.3})`; ctx.fillRect(0, 0, W, H); outlined('Footsteps outside...!', W / 2, H / 2, 40, '#ffd23f'); }
     drawFx(false);
   },
 };
 function momVisitOk(onDone) {
   const visits = [
     [['mom', null, 'Aubrey? Oh, there you are! What are you doing out in the shed?'], ['aubrey', 'silly', 'Just... organising flowerpots!'], ['mom', null, "Well, aren't you a helper. ...Is that tarp breathing?"], ['aubrey', 'winky', "It's a very old lawnmower."], ['mom', null, "Hm! Okay, sweetie. Don't stay out too long."]],
-    [['mom', null, 'Knock knock! I brought you a snack, honey.'], ['aubrey', 'happy', 'Thanks, Mom! Everything is totally normal in here!'], ['mom', null, 'I never said it wasn\'t... Okay! Love you!']],
-    [['mom', null, 'Aubrey, have you seen my good ribbon? The pink one?'], ['aubrey', 'thinking', 'Nope! Never seen a ribbon in my life.'], ['mom', null, 'Hm. Must have been the wind.']],
+    [['mom', null, 'Knock knock! I brought you a snack, honey.'], ['aubrey', 'happy', 'Thanks, Mom! Everything is totally normal in here!'], ['mom', null, "I never said it wasn't... Okay! Love you!"]],
   ];
   say([...pick(visits), ['narrator', null, 'Phew! The secret is safe.']], onDone);
 }
+// failing doesn't end the game — Mom just tidies away some of the evidence
 function momVisitFail(onDone) {
-  S.strikes++;
-  if (S.strikes >= 3) {
-    return say([
-      ['mom', 'shock', "Aubrey... is that a UNICORN under that tarp?!"],
-      ['fairy', '🧚', "Oh dear, oh dear. A grown-up has seen her. Magic Law says she must come home with me..."],
-    ], () => setScene('gameover'));
+  const have = MAT_ORDER.filter(k => S.mats[k] > 0);
+  let lost = '';
+  if (have.length) {
+    const k = have.sort((a, b) => MATS[a].tier - MATS[b].tier)[0];
+    const n = Math.min(S.mats[k], 2);
+    S.mats[k] -= n;
+    lost = ` Mom took away ${n} ${MATS[k].name} ${MATS[k].icon}.`;
   }
-  const fails = [
-    [['mom', 'shock', 'Aubrey, why is there GLITTER all over the floor? And is that a... hoofprint?'], ['aubrey', 'serious', "It's for a school project! About... horses. Sparkly horses."]],
-    [['mom', 'shock', 'What was that whinnying sound?!'], ['aubrey', 'silly', 'That was me! Neigh! I\'m practising for drama class.']],
-    [['mom', 'shock', 'Why does it smell like rainbows in here?'], ['aubrey', 'thinking', 'Air freshener?']],
-  ];
-  say([...pick(fails), ['mom', null, "Hmm. I'm keeping my eye on you, missy."], ['narrator', null, `Mom is getting suspicious! (${S.strikes} of 3)`]], onDone);
+  say([
+    ['mom', 'shock', 'Aubrey, why is there GLITTER all over the floor? And is that a... hoofprint?'],
+    ['aubrey', 'serious', "It's for a school project! About... horses. Sparkly horses."],
+    ['mom', null, "Hmm. I'm tidying up this mess, missy."],
+    ['narrator', null, `Phew — she didn't spot ${S.name}!${lost}`],
+  ], onDone);
 }
-
-SCENES.gameover = {
-  update() {
-    if (clickedButton() !== 'retry') return;
-    restoreCheckpoint();
-    // a do-over shouldn't start one slip away from losing again
-    S.strikes = Math.min(S.strikes, 1);
-    setScene('salon');
-  },
-  draw() {
-    buttons = [];
-    drawShedInterior(0.55);
-    panel(W / 2 - 280, 80, 560, 380, 24);
-    ctx.drawImage(IMG.face_sad, W / 2 - 60, 104, 120, 134);
-    outlined('Oh no — the secret is out!', W / 2, 270, 30, '#ff6fb5', 'center', '#fff');
-    wrap(`Mom found ${S.name}! But Fairy Fizzlewick has one more trick: she can turn back time to the start of today.`, 460, 18).forEach((l, i) => text(l, W / 2, 314 + i * 26, 18, '#5a2a6e', 'center', 500));
-    button('retry', W / 2 - 130, 380, 260, 56, `Try Day ${checkpoint.day} again`, { icon: '🧚', color: '#9a6ae0' });
-  },
-};

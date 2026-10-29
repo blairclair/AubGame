@@ -11,25 +11,32 @@
   <canvas id="game"></canvas>
   <script src="js/core.js"></script>
   <script src="js/art.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/scenery.js"></script>
   <script>
     // Preview sheet for the unicorn and grown-ups: open /tools/art_preview.html
-    var S = { t: 1.3 };
+    S.t = 1.3;
+    const A = new URLSearchParams(location.search).has('alarm');
     loadImages().then(() => {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       ctx.fillStyle = '#f4ecf8'; ctx.fillRect(0, 0, W, H);
       const looks = [
-        [{ mane: 'natural', style: 'flowing', shine: 15 }, { mood: 'sad', mud: [{ x: -20, y: -90, r: 12, dirt: 1, kind: 'mud' }, { x: 60, y: -150, r: 10, dirt: 1, kind: 'tangle' }] }],
+        [{ mane: 'natural', style: 'flowing', shine: 15 }, { mood: 'sad' }],
         [{ mane: 'rainbow', style: 'flowing', shine: 100, head: 'crown', neck: 'lei', back: 'wings', tail: 'tailflowers', hooves: 'pink' }, {}],
         [{ mane: 'lavender', style: 'topknot', shine: 100, head: 'tiara', neck: 'necklace', back: 'cape', tail: 'goldcuff', hooves: 'gold' }, { mood: 'joy' }],
         [{ mane: 'ocean', style: 'braid', shine: 90, head: 'shellcomb', neck: 'shells', back: 'shawl', tail: 'pearls', hooves: 'pearl' }, {}],
         [{ mane: 'midnight', style: 'curly', shine: 100, head: 'starclip', neck: 'starpendant', back: 'starcape', tail: 'tailstars', hooves: 'star' }, { mood: 'wow' }],
       ];
-      looks.forEach(([look, o], i) => drawUnicorn(95 + i * 190, 270, 0.62, look, o));
-      drawUnicorn(200, 530, 1.0, { mane: 'rainbow', style: 'flowing', shine: 100, head: 'tiara', neck: 'necklace', back: 'blanket', tail: 'tailbow' }, {});
-      drawPerson('mom', 520, 530, 1, 0.6, false, 0.95);
-      drawPerson('ranger', 660, 530, -1, 0, true, 0.95);
-      drawPersonPortrait('mom', 760, 300, 112, 124, false);
-      drawUnicorn(900, 530, 1.1, { mane: 'pink', style: 'curly', shine: 100 }, {});
+      looks.forEach(([look, o], i) => drawUnicorn(80 + i * 150, 250, 0.55, look, o));
+      drawUnicorn(190, 530, 1.0, { mane: 'natural', style: 'flowing', shine: 100 }, {});
+      drawPerson('mom', 440, 530, 1, 0.6, A, 0.72);
+      drawPerson('ranger', 570, 530, -1, 0, !A, 0.72);
+      drawPerson('neighbor', 690, 530, 1, 0, A, 0.72);
+      drawPersonPortrait('mom', 800, 290, 108, 120, A);
+      drawPersonPortrait('ranger', 800, 164, 108, 120, A);
+      drawPersonPortrait('neighbor', 800, 416, 108, 120, !A);
     });
   </script>
 </body>

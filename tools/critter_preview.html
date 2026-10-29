@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base href="/">
+  <title>Cast Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>body { margin: 0; background: #333; } canvas { width: 960px; height: 540px; }</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <script src="js/core.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/critters.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/scenery.js"></script>
+  <script>
+    // Every location side character: open /tools/critter_preview.html (add ?portraits for dialog portraits, ?page=2 for the rest)
+    S.t = 1.3;
+    const q = new URLSearchParams(location.search);
+    loadImages().then(() => {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.fillStyle = '#f4ecf8'; ctx.fillRect(0, 0, W, H);
+      const names = Object.keys(CHARACTERS);
+      if (q.has('portraits')) {
+        names.forEach((n, i) => { const x = 6 + (i % 9) * 106, y = 6 + Math.floor(i / 9) * 106; drawCritterPortrait(n, x, y, 100, 100); });
+        return;
+      }
+      const page = +(q.get('page') || 1), per = 24, list = names.slice((page - 1) * per, page * per);
+      list.forEach((n, i) => {
+        const x = 60 + (i % 8) * 118, y = 255 + Math.floor(i / 8) * 175 - 80;
+        drawCritter(n, x, y, 0.62, 1);
+        text(n, x, y + 12, 10, '#4a2060', 'center', 600);
+      });
+    });
+  </script>
+</body>
+</html>

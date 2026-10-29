@@ -6,6 +6,7 @@ const nameBox = document.getElementById('nameBox');
 function update(dt) {
   S.t += dt;
   updateFx(dt);
+  if (pressed.r) { readAloud = !readAloud; if (!readAloud && window.speechSynthesis) speechSynthesis.cancel(); }
   if (!nameBox.hidden) return;
   if (dlg) return updateDialog(dt);
   SCENES[scene].update?.(dt);
@@ -15,6 +16,7 @@ function render() {
   ctx.clearRect(0, 0, W, H);
   SCENES[scene].draw();
   if (dlg) drawDialog();
+  if (scene !== 'loading') text(`R: read aloud ${readAloud ? 'on' : 'off'}  ·  M: sound ${muted ? 'off' : 'on'}`, W - 14, H - 8, 11, 'rgba(255,255,255,.75)', 'right', 500);
 }
 let last = performance.now();
 function frame(now) {
@@ -31,27 +33,35 @@ function frame(now) {
   }
 }
 
-// ?jump=<scene> skips ahead while iterating, e.g. ?jump=style
-function debugJump(where) {
+// ?jump=<where> skips ahead while iterating, e.g. ?jump=stages (the stage picker), ?jump=map, ?jump=place&id=volcano, ?jump=game&type=count&tier=2
+function debugJump(where, q = new URLSearchParams(location.search)) {
   S = newGame();
-  S.theme = new URLSearchParams(location.search).get('theme') || S.theme;
-  for (const k of MAT_ORDER) S.mats[k] = 4;
-  Object.assign(S, { shine: 55, happy: 60, poise: 40 });
+  S.shine = 100;
+  for (const k of MAT_ORDER) S.mats[k] = +(q.get('mats') ?? 4);
   saveCheckpoint();
   const go = {
     explore: () => startWorld('explore'),
     follow: () => startWorld('follow'),
-    gather: () => startWorld('gather'),
-    evening: () => { S.slot = 2; startWorld('gather'); },
-    shownight: () => { S.day = SHOW_DAY; S.slot = 2; startWorld('shownight'); },
-    show: () => { S.day = SHOW_DAY; S.slot = 2; Object.assign(S.equip, { mane: 'pink', style: 'braid', head: 'crown', neck: 'lei', back: 'wings' }); setScene('show'); },
-    runway: () => startRunway('practice'),
-    hide: () => setScene('hide', () => setScene('salon')),
+    shownight: () => { S.day = SHOW_DAY; startWorld('shownight'); },
+    kingdom: () => { S.day = SHOW_DAY; setScene('kingdom'); },
+    map: () => setScene('map'),
+    place: () => setScene('location', { id: q.get('id') || 'garden' }),
+    game: () => {
+      const type = q.get('type') || 'count';
+      const place = LOCATIONS.find(l => l.games.some(g => g.type === type)) || LOCATIONS[0];
+      setScene('minigame', { game: place.games.find(g => g.type === type), tier: +(q.get('tier') || place.tier), loc: place, onDone: () => setScene('map') });
+      const m = SCENES.minigame;
+      if (q.get('play')) { m.g.phase = 'play'; m.impl.start?.(m.g); }
+    },
+    craft: () => setScene('style', { mode: 'craft', onDone: () => setScene('night') }),
+    hide: () => setScene('hide', () => setScene('map')),
+    show: () => { S.day = SHOW_DAY; Object.assign(S.equip, { mane: 'gold', style: 'curly', head: 'tiara', neck: 'necklace', back: 'wings', tail: 'goldcuff', hooves: 'hoof_gold' }); setScene('show'); },
     night: () => setScene('night'),
     end: () => setScene('end'),
+    stages: () => setScene('stages'),
   }[where];
-  if (go) go();
-  else setScene(SCENES[where] ? where : 'salon');
+  (go || (() => setScene('map')))();
+  if (scene === 'world' && q.get('x')) WS.a.x = +q.get('x');
 }
 
 setScene('loading');

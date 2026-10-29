@@ -6,7 +6,8 @@ const FONT = "'Fredoka', 'Trebuchet MS', sans-serif";
 const EMOJI_FONT = "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
 
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+// let, not const: scenery.js points it at offscreen canvases while caching sprites
+let ctx = canvas.getContext('2d');
 const DPR = Math.min(2, window.devicePixelRatio || 1);
 canvas.width = W * DPR;
 canvas.height = H * DPR;
@@ -42,6 +43,8 @@ function loadImages() {
 // ---------------------------------------------------------------------------
 // Input
 // ---------------------------------------------------------------------------
+// ?dev (or any ?jump=) turns on testing shortcuts: ` wins the current minigame
+const DEV = /[?&](dev|jump)\b/.test(location.search);
 const keys = {};
 let pressed = {};
 addEventListener('keydown', e => {
@@ -106,6 +109,17 @@ function noise(dur, vol = 0.05, when = 0) {
   src.buffer = buf; g.gain.value = vol;
   src.connect(f).connect(g).connect(AC.destination);
   src.start(AC.currentTime + Math.max(0, when));
+}
+// read text aloud (for young players); emoji and *stage directions* markers are dropped
+let readAloud = true;
+function speak(str) {
+  if (!readAloud || muted || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const clean = str.replace(/\p{Extended_Pictographic}|️|‍/gu, '').replace(/[*_]/g, '').trim();
+  if (!clean) return;
+  const u = new SpeechSynthesisUtterance(clean);
+  u.rate = 0.92; u.pitch = 1.1;
+  speechSynthesis.speak(u);
 }
 const SFX = {
   pick() { tone(784, 0.1, 'triangle', 0.1); tone(1175, 0.14, 'triangle', 0.08, 0.07); },

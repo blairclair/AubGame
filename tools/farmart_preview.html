@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base href="/">
+  <title>Farm Art Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>body { margin: 0; background: #333; } canvas { width: 960px; height: 540px; }</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <script src="js/core.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/critters.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/scenery.js"></script>
+  <script src="js/farmart.js"></script>
+  <script src="js/farmart_a.js"></script>
+  <script src="js/farmart_b.js"></script>
+  <script src="js/farmart_c.js"></script>
+  <script>
+    // /tools/farmart_preview.html shows all animals on Farm Facts-sized cards; ?big=cow shows one large; ?t=2.5 sets the clock
+    const q = new URLSearchParams(location.search);
+    S.t = +(q.get('t') || 1.3);
+    const card = (k, x, y, w, h) => {
+      ctx.save(); ctx.beginPath(); ctx.roundRect(x, y, w, h, 14); ctx.clip();
+      const sk = ctx.createLinearGradient(0, y, 0, y + h); sk.addColorStop(0, '#d8f2ff'); sk.addColorStop(0.62, '#f4fbff'); sk.addColorStop(0.62, '#9ad870'); sk.addColorStop(1, '#7cc858');
+      ctx.fillStyle = sk; ctx.fillRect(x, y, w, h);
+      const s = Math.min(w / 260, (h - 16) / 210);
+      if (!drawAnimalArt(k, x + w / 2, y + h - 12, s)) text('missing', x + w / 2, y + h / 2, 14, '#a00', 'center', 700);
+      ctx.restore();
+      text(k, x + w / 2, y + h + 12, 14, '#fff', 'center', 700);
+    };
+    function frame() {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.fillStyle = '#4a3a5a'; ctx.fillRect(0, 0, W, H);
+      if (q.has('big')) card(q.get('big'), 180, 20, 600, 480);
+      else ANIMAL_KINDS.forEach((k, i) => card(k, 12 + (i % 4) * 236, 10 + Math.floor(i / 4) * 178, 224, 150));
+      if (q.has('anim')) { S.t += 1 / 60; requestAnimationFrame(frame); }
+    }
+    frame();
+  </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base href="/">
+  <title>Duck Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>body { margin: 0; background: #333; } canvas { width: 960px; height: 540px; }</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <script src="js/core.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/critters.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/scenery.js"></script>
+  <script src="js/ducks.js"></script>
+  <script>
+    // Every real duck species on a Duck Spotter card: open /tools/duck_preview.html
+    S.t = 1.3;
+    loadImages().then(() => {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.fillStyle = '#f4ecf8'; ctx.fillRect(0, 0, W, H);
+      // ?spots draws each duck's look-for hint ring
+      const spots = new URLSearchParams(location.search).has('spots');
+      Object.keys(DUCK_SPECIES).forEach((id, i) => {
+        const x = 12 + (i % 6) * 158, y = 12 + Math.floor(i / 6) * 262, w = 150, h = 220;
+        ctx.save(); ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.clip();
+        const wy = pondCard(x, y, w, h);
+        const [sx, sy, sr] = drawDuckFit(id, x + w / 2, wy, w - 14, wy - y - 10);
+        frontWater(x, y, w, h, wy, S.t);
+        ctx.restore();
+        if (spots) { ctx.strokeStyle = '#ff2a8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.stroke(); }
+        text(DUCK_SPECIES[id].name, x + 75, y + 236, 13, '#4a2060', 'center', 700);
+      });
+    });
+  </script>
+</body>
+</html>

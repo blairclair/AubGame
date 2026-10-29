@@ -13,17 +13,15 @@ function setScene(name, data) {
 }
 
 function newGame() {
+  const deck = {};
+  for (const t of [1, 2, 3]) deck[t] = shuffle(LOCATIONS.filter(l => l.tier === t).map(l => l.id));
   return {
-    t: 0, day: 1, slot: 0,
-    theme: pick(Object.keys(THEMES)),
+    t: 0, day: 1, visitsToday: 0, deck, log: [],
     name: 'Sparkle',
     equip: { mane: 'natural', style: 'flowing', head: null, neck: null, back: null, tail: null, hooves: null },
     owned: Object.fromEntries(WARDROBE.filter(i => i.free).map(i => [i.id, true])),
     mats: Object.fromEntries(MAT_ORDER.map(k => [k, 0])),
-    shine: 8, happy: 45, poise: 0,
-    strikes: 0,
-    checkedToday: false, basketDay: 0, applesLeft: 3,
-    tutorial: {},
+    shine: 8,
   };
 }
 const saveCheckpoint = () => { checkpoint = structuredClone(S); };
@@ -33,13 +31,10 @@ function uniLook(extra = {}) {
   const v = slot => { const id = S.equip[slot]; return id ? (ITEM[id].value || id) : null; };
   return { mane: v('mane'), style: v('style'), head: v('head'), neck: v('neck'), back: v('back'), tail: v('tail'), hooves: v('hooves'), shine: S.shine, ...extra };
 }
-const slotMatches = slot => !!S.equip[slot] && ITEM[S.equip[slot]].tags.includes(S.theme);
-const themeMatchCount = () => SLOTS.filter(s => slotMatches(s.id)).length;
-const filledCount = () => SLOTS.filter(s => S.equip[s.id] && S.equip[s.id] !== 'natural').length;
+const outfitScore = () => SLOTS.reduce((sum, s) => sum + (S.equip[s.id] ? ITEM[S.equip[s.id]].pts : 0), 0);
 const canAfford = cost => Object.entries(cost).every(([k, n]) => S.mats[k] >= n);
 function pay(cost) { for (const [k, n] of Object.entries(cost)) S.mats[k] -= n; }
 const costText = cost => Object.entries(cost).map(([k, n]) => `${MATS[k].icon}${n}`).join(' ');
-const theme = () => THEMES[S.theme];
 const daysLeft = () => SHOW_DAY - S.day;
 
 // ---------------------------------------------------------------------------
@@ -50,7 +45,12 @@ let dlg = null;
 const SPEAKERS = { aubrey: 'Aubrey', mom: 'Mom', ranger: 'Ranger Rosa', neighbor: 'Mrs. Pickett', fairy: 'Fairy Fizzlewick', narrator: '' };
 function say(lines, done) {
   dlg = { lines: lines.filter(Boolean), i: 0, chars: 0, done };
-  dlg.lines[0][3]?.();
+  showLine();
+}
+function showLine() {
+  const line = dlg.lines[dlg.i];
+  line[3]?.();
+  speak(line[2]);
 }
 function updateDialog(dt) {
   const line = dlg.lines[dlg.i];
@@ -60,8 +60,9 @@ function updateDialog(dt) {
     dlg.i++; dlg.chars = 0; SFX.blip();
     if (dlg.i >= dlg.lines.length) {
       const done = dlg.done; dlg = null;
+      if (window.speechSynthesis) speechSynthesis.cancel();
       done?.();
-    } else dlg.lines[dlg.i][3]?.();
+    } else showLine();
   }
 }
 function drawPortrait(who, face, x, y) {
@@ -75,7 +76,7 @@ function drawPortrait(who, face, x, y) {
     const s = 1.05;
     drawUnicorn(x + 50 - 92 * s, y + 66 + 176 * s, s, uniLook(), { mood: face || undefined });
   } else if (who === 'mom' || who === 'ranger' || who === 'neighbor') drawPersonPortrait(who, x, y, w, h, face === 'shock');
-  else {
+  else if (!drawCritterPortrait(who, x, y, w, h)) {
     const g = ctx.createRadialGradient(x + w / 2, y + h / 2, 5, x + w / 2, y + h / 2, 80);
     g.addColorStop(0, '#fff8d8'); g.addColorStop(1, '#d8c2ff');
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
