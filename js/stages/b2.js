@@ -2091,6 +2091,21 @@
   // Aubrey is the spinner: she runs from dot to dot (keys, or she follows your finger), trailing silk from
   // the last dot she tied off; touching the next number ties the thread there
   const WEB_BOX = [306, 126, 734, 488], WEB_AH = 76;
+  // six spider legs (three a side) growing out from behind Aubrey's waist: with her own two, she has eight!
+  // They scuttle in turn while she runs, wave when she ties off a dot, and wiggle-dance when the picture is done.
+  function webLegs(g, x, feet, done) {
+    const hip = feet - WEB_AH * 0.5, moving = g.run > 0, t = S.t;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const side of [-1, 1]) for (let i = 0; i < 3; i++) {
+      const ph = i * 2.1 + (side > 0 ? 1 : 0), sw = moving ? Math.sin(t * 16 + ph) : done ? Math.sin(t * 9 + ph) : g.twirl > 0 ? Math.sin(t * 20 + ph) : Math.sin(t * 2 + ph) * 0.25;
+      const rx = x + side * 7, ry = hip - 4 + i * 6;
+      const kx = rx + side * (18 + i * 2), ky = ry - 12 + i * 5 - sw * 4;
+      const fx = rx + side * (30 + i * 3) + sw * 4 * side, fy = ry + 14 + i * 7 - Math.max(0, sw) * 6;
+      for (const [c, w] of [[OL, 6.5], ['#8a5ad8', 4]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke(); }
+      ctx.fillStyle = '#b48cff'; circle(kx, ky, 2.4);
+      inkCircle(fx, fy, 2.8, '#ff9ac8', 1);
+    }
+  }
   MG.webdots = {
     kind: 'learn', title: () => 'Web Dot-to-Dot', icon: () => '🕸️',
     how: g => `Help Aubrey spin a silk picture! Move her with the arrow keys, or lead her with your finger, and run to the dots in order: ${g.tier === 3 ? '2, 4, 6, 8... count by twos!' : '1, 2, 3...'}`,
@@ -2181,6 +2196,7 @@
       const fr = done ? 'twirl' : g.twirl > 0 ? 'twirl' : g.run > 0 ? `run${1 + (Math.floor(g.run * 11) % 5)}` : 'idle_front';
       const hop = done ? Math.abs(Math.sin(g.t2 * 7)) * 10 : g.twirl > 0 ? Math.sin(g.twirl / 0.45 * Math.PI) * 8 : 0;
       ctx.fillStyle = 'rgba(40,20,60,.18)'; ellipse(g.ax, g.ay + WEB_AH * 0.5, 16, 4);
+      webLegs(g, g.ax, g.ay + WEB_AH * 0.5 - hop, done);
       drawAubrey(g.ax, g.ay + WEB_AH * 0.5, fr, g.face, hop, WEB_AH / IMG.idle_front.height);
       if (done) outlined(`A ${g.name}!`, 520, 140, 34, g.col);
       else text(`Next: ${this.label(g, g.got)}`, 520, 492, 20, '#8a5aa0', 'center', 700);
