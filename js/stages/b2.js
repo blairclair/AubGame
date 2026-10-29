@@ -2552,7 +2552,38 @@
   // --- Bird Song: four birds sing; repeat the growing tune ------------------------------------------
   const SONGBIRDS = [['#ff5a5a', 523, 'red'], ['#4f8fe8', 659, 'blue'], ['#ffd23a', 784, 'yellow'], ['#4fc86a', 1047, 'green']];
   const SB_X = [210, 390, 570, 750], SB_Y = 360;
-  const chirp = f => { tone(f, 0.28, 'triangle', 0.1, 0, f * 1.12); tone(f * 1.5, 0.12, 'sine', 0.04, 0.12, f * 1.7); };
+  // real-sounding birdsong: each syllable is a pure whistle that slides in pitch, with a fast warble on top.
+  // Every bird has its own little phrase, centred on its pitch, so the tune game still works by ear.
+  // syllables: [start, length, from, to] (times in seconds, pitches as multiples of the bird's note)
+  const SB_PHRASES = [
+    { syl: [[0, 0.12, 1.0, 1.28], [0.15, 0.17, 1.22, 0.94]], wob: 14, dep: 0.012 },                                   // red: "cheer-up!"
+    { syl: [[0, 0.05, 0.9, 1.0], [0.07, 0.05, 0.94, 1.04], [0.14, 0.05, 0.98, 1.08], [0.21, 0.09, 1.02, 1.18]], wob: 34, dep: 0.02 }, // blue: rising trill
+    { syl: [[0, 0.09, 0.92, 1.3], [0.12, 0.09, 0.92, 1.3], [0.25, 0.06, 1.12, 1.05]], wob: 26, dep: 0.015 },            // yellow: "sweet-sweet-tsip"
+    { syl: [[0, 0.17, 1.3, 0.92], [0.2, 0.17, 0.92, 1.22]], wob: 9, dep: 0.01 },                                       // green: "tee-oo-ee" whistle
+  ];
+  function birdPhrase(b) {
+    if (typeof AC === 'undefined' || !AC || muted) return;
+    const base = SONGBIRDS[b][1] * 1.5, ph = SB_PHRASES[b], t0 = AC.currentTime + 0.01;
+    for (const [st, len, f0, f1] of ph.syl) {
+      const t = t0 + st, o = AC.createOscillator(), gn = AC.createGain(), lfo = AC.createOscillator(), lg = AC.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(base * f0, t);
+      o.frequency.exponentialRampToValueAtTime(base * f1, t + len);
+      lfo.frequency.value = ph.wob; lg.gain.value = base * ph.dep;
+      lfo.connect(lg).connect(o.frequency);
+      gn.gain.setValueAtTime(0.0001, t);
+      gn.gain.exponentialRampToValueAtTime(0.1, t + Math.min(0.02, len * 0.3));
+      gn.gain.setValueAtTime(0.1, t + len * 0.6);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(gn).connect(AC.destination);
+      // a soft breathy overtone so it sounds like a bird, not a beep
+      const o2 = AC.createOscillator(), g2 = AC.createGain();
+      o2.type = 'sine'; o2.frequency.setValueAtTime(base * f0 * 2, t); o2.frequency.exponentialRampToValueAtTime(base * f1 * 2, t + len);
+      g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(0.018, t + 0.015); g2.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o2.connect(g2).connect(AC.destination);
+      for (const x of [o, o2, lfo]) { x.start(t); x.stop(t + len + 0.03); }
+    }
+  }
   function songBird(x, y, s, col, lit, t, dir = 1) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s * dir * (lit ? 1.12 : 1), s * (lit ? 1.12 : 1));
     if (lit) { ctx.fillStyle = 'rgba(255,246,168,.55)'; circle(0, -42, 62); }
@@ -2578,7 +2609,7 @@
     start(g) { speak('Listen carefully!'); },
     listen(g, delay = 0.6) { Object.assign(g, { state: 'listen', si: -1, st: -delay, input: 0 }); },
     len: g => g.lens[g.round],
-    sing(g, b, dur) { g.lit[b] = dur; chirp(SONGBIRDS[b][1]); },
+    sing(g, b, dur) { g.lit[b] = dur; birdPhrase(b); },
     update(g, dt, id) {
       tickDown(g.lit, dt);
       const on = g.tier === 3 ? 0.45 : 0.55, gap = 0.2;
