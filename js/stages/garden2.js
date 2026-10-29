@@ -1,644 +1,858 @@
 'use strict';
-// Mrs. Pickett's Garden, game 2: Ladybug Lunch. Each ladybug needs an exact number of
-// spots; every aphid she munches off the rose bush gives her one more (a golden aphid gives
-// two). Pick bunches that ADD UP to the number (the number sentence builds as she eats),
-// before she gets too hungry. Shoo the sneaky ant before it carries a bunch away!
+// Mrs. Pickett's Garden, game 2: Veggie Patch Pull. Mrs. Pickett's list shows a row of
+// vegetables in a pattern. Grab a leafy top and PULL (hold, or drag upward) until the veggie
+// pops out of the ground and sails into her basket, in the list's order. Harder tiers hide the
+// end of the list, so you have to continue the pattern. A mole tries to tug veggies underground
+// and a cheeky crow pecks at the tops: tap them to shoo them away!
 {
-  const SITES = [[235, 158], [440, 128], [650, 150], [850, 196], [300, 318], [540, 286], [770, 338]];
-  const STEMS = SITES.map(([x, y], i) => [x + (i % 2 ? 40 : -30), 470, x + (i % 2 ? -10 : 20), (y + 470) / 2, x + 30, y + 6]);
-  const qp = (s, f) => [(1 - f) ** 2 * s[0] + 2 * f * (1 - f) * s[2] + f * f * s[4], (1 - f) ** 2 * s[1] + 2 * f * (1 - f) * s[3] + f * f * s[5]];
-  const ROSES = [[345, 214, 24, 0], [742, 236, 23, 1], [560, 196, 18, 2], [890, 300, 21, 0], [168, 382, 20, 3], [470, 398, 24, 4], [640, 412, 20, 1], [350, 420, 19, 2], [800, 430, 22, 4]];
-  const ROSE_COLS = ['#ff4f7f', '#ff8fb5', '#ffd84a', '#ffffff', '#ff8a5a'];
-  const HOTEL = { x: 78, y: 268 };
-  // spot slots on the LEFT wing; the right wing mirrors them. Spots fill alternately so both wings grow.
-  const SLOTS = [[-16, -14], [-29, 2], [-13, 4], [-24, 20], [-9, 24]];
-  const slotPos = i => { const [x, y] = SLOTS[Math.floor(i / 2)]; return [i % 2 ? -x : x, y]; };
-  const LEAF = P2('M0,0 C14,-22 46,-26 72,-4 C50,18 16,16 0,0 Z');
-  const DEW = [[214, 432], [330, 452], [455, 428], [598, 446], [690, 430], [858, 442], [262, 470], [520, 470], [745, 465]];
+  // ---------------------------------------------------------------------------------------------
+  // vegetables
+  const VEG = {
+    carrot: {
+      name: 'carrot', many: 'carrots', col: 'orange', grad: ['#ffc27a', '#ff8a2a', '#e0601a'], face: 20,
+      root: P2('M-16,0 C-17,28 -7,60 0,88 C7,60 17,28 16,0 C9,-5 -9,-5 -16,0 Z'),
+      fact: 'Carrots are roots! The orange part grows down under the dirt and drinks up water for the plant.',
+    },
+    beet: {
+      name: 'beet', many: 'beets', col: 'purple', grad: ['#e0508a', '#b4235e', '#86104a'], face: 24,
+      root: P2('M0,-3 C19,-3 28,12 27,27 C26,42 13,51 3,53 C2,62 1,68 0,76 C-1,68 -2,62 -3,53 C-13,51 -26,42 -27,27 C-28,12 -19,-3 0,-3 Z'),
+      fact: 'Beets are so purple-red that their juice can turn your fingers pink!',
+    },
+    radish: {
+      name: 'radish', many: 'radishes', col: 'red', grad: ['#ff6a86', '#ff2f5a', '#fff4f4'], face: 17,
+      root: P2('M0,-2 C15,-2 21,10 20,21 C19,32 10,38 2,40 C1,46 1,50 0,58 C-1,50 -1,46 -2,40 C-10,38 -19,32 -20,21 C-21,10 -15,-2 0,-2 Z'),
+      fact: 'Radishes grow super fast. You can plant them and pull them up just a month later!',
+    },
+    onion: {
+      name: 'onion', many: 'onions', col: 'yellow', grad: ['#fff0a8', '#f6be4a', '#c8822a'], face: 26,
+      root: P2('M0,-4 C9,-4 12,4 20,14 C30,28 24,46 3,50 L0,56 L-3,50 C-24,46 -30,28 -20,14 C-12,4 -9,-4 0,-4 Z'),
+      fact: 'Onions grow in layers, like a present wrapped up again and again!',
+    },
+  };
+  const KIND_LIST = ['carrot', 'beet', 'radish', 'onion'];
+  const BEET_LEAF = P2('M0,0 C-15,-16 -22,-46 -2,-72 C20,-48 15,-18 0,0 Z');
+  const RAD_LEAF = P2('M0,0 C-5,-12 -21,-26 -15,-42 C-8,-56 10,-55 14,-42 C19,-27 6,-13 0,0 Z');
+
   const CFG = [null,
-    { rounds: 5, lo: 3, hi: 7, maxV: 4, bites: 2, badge: true, gold: 0, hunger: 40, antEvery: 15, antSpeed: 26 },
-    { rounds: 5, lo: 4, hi: 9, maxV: 5, bites: 2, badge: false, gold: 0, hunger: 38, antEvery: 12, antSpeed: 32 },
-    { rounds: 5, lo: 6, hi: 10, maxV: 5, bites: 3, badge: false, gold: 0.45, hunger: 40, antEvery: 9, antSpeed: 38 }];
-  const MISS_COST = 0.6;  // a "too many" costs most of that ladybug's score
+    { len: 5, hide: [0, 0, 1], units: ['AB', 'AAB', 'ABC'], kinds: 3, mole: [8, 13], moleSteal: 5.5, crow: null, crowStay: 6, big: 0 },
+    { len: 6, hide: [1, 2, 2], units: ['AB', 'ABC', 'AAB', 'ABB'], kinds: 3, mole: [8, 12], moleSteal: 5, crow: [10, 15], crowStay: 5.5, big: 0.15 },
+    { len: 7, hide: [2, 2, 3], units: ['ABC', 'AAB', 'ABB', 'AABB', 'ABCD'], kinds: 4, mole: [6, 10], moleSteal: 4.5, crow: [8, 12], crowStay: 5, big: 0.25 }];
+  const ROUNDS = 3;
+  const BASE = 17;  // how much of a veggie's shoulder peeks out of the soil
+  const PULL_TIME = 0.8;  // seconds of holding to pop a normal veggie (dragging up is faster)
+  const ROWS = [350, 472];
+  const COLS = [[300, 445, 590, 735, 878], [330, 475, 620, 765, 902]];
+  const BASKET = { x: 150, y: 478 };
+  const BED = { x0: 236, x1: 948, y0: 256, y1: 500 };
+  const SOIL = '#6a4230', SOIL_L = '#8c5a3c', SOIL_D = '#4c2c20';
+  const easeBack = k => { const c = 1.9; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; };
+  const cap = s => s[0].toUpperCase() + s.slice(1);
+  const aName = k => (k === 'carrot' ? 'an orange carrot' : `a ${VEG[k].col} ${VEG[k].name}`);
 
-  // can some of these bunch values add up to exactly n?
-  // can at most k of these bunch values add up to exactly n?
-  const canMake = (vals, n, k = 99) => {
-    if (n === 0) return true;
-    if (k <= 0) return false;
-    return vals.some((v, i) => v <= n && canMake(vals.filter((_, j) => j !== i), n - v, k - 1));
+  // offscreen layer at device resolution; swaps the global ctx while painting
+  const bake = paint => {
+    const c = document.createElement('canvas');
+    c.width = W * DPR; c.height = H * DPR;
+    const old = ctx;
+    ctx = c.getContext('2d'); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    try { paint(); } finally { ctx = old; }
+    return c;
   };
-  const bitesLeft = g => g.cfg.bites - g.parts.length;
-  // is eating a bunch worth v right now a good bite? (fits, and the rest can still be made)
-  const fits = (g, v) => v <= need(g) && need(g) - v <= g.cfg.maxV * (bitesLeft(g) - 1);
-  const need = g => g.target - g.spots - g.queue;
-  const live = q => q.n > 0 && q.shoo <= 0;
-  // a bunch worth v spots: golden aphids (worth 2 each) at higher tiers when v is even
-  function bunch(g, i, v, armed, grow = 0) {
-    const gold = v % 2 === 0 && Math.random() < g.cfg.gold;
-    return { n: gold ? v / 2 : v, gold, val: v, x: SITES[i][0], y: SITES[i][1], grow, wait: 0, shoo: 0, armed, eaten: false };
-  }
-  // a decoy: a value that can't be finished from here (too big, or nothing left pairs with it),
-  // so a careless tap costs a miss while a child who adds it up never needs it
-  function decoy(g, others, rem, bl) {
-    const c = g.cfg;
-    const dead = [];
-    for (let v = 1; v <= c.maxV; v++) if (v > rem || (v !== rem && !canMake(others, rem - v, bl - 1))) dead.push(v);
-    return dead.length ? pick(dead) : randInt(Math.ceil(c.maxV / 2), c.maxV);
-  }
-  function newBunch(g, i) {
-    const c = g.cfg, rem = need(g);
-    const others = g.bunches.filter((q, j) => j !== i && live(q)).map(q => q.val);
-    const good = [];
-    for (let s = 1; s <= c.maxV; s++) if (rem <= 0 || canMake([...others, s], rem, bitesLeft(g))) good.push(s);
-    // when the target is already reachable, new bunches lean big, so careless picks overshoot
-    const v = good.length ? (canMake(others, rem, bitesLeft(g)) ? (Math.random() < 0.7 ? decoy(g, others, rem, bitesLeft(g)) : pick(good)) : pick(good)) : Math.min(c.maxV, Math.max(1, rem));
-    g.bunches[i] = bunch(g, i, v, false);
-  }
-  function newRound(g) {
-    const c = g.cfg;
-    g.target = randInt(c.lo, c.hi);
-    Object.assign(g, { tap: null, spots: 0, queue: 0, fillT: 0, miss: 0, idle: 0, parts: [], hunger: c.hunger, hurried: false, ant: null, antT: c.antEvery * 0.6 });
-    // place a guaranteed way to make the target, then fill the other leaves with bigger decoys
-    const parts = [];
-    let left = g.target;
-    for (let k = c.bites; k > 0 && left > 0; k--) {
-      // split the target into at most `bites` bunches, none bigger than maxV
-      const s = k === 1 ? left : randInt(Math.max(1, left - c.maxV * (k - 1)), Math.min(c.maxV, left - 1));
-      parts.push(s); left -= s;
-    }
-    const order = shuffle(SITES.map((_, i) => i));
-    g.bunches = SITES.map(() => null);
-    const placed = [];
-    order.forEach((si, k) => {
-      const v = k < parts.length ? parts[k] : decoy(g, placed, g.target, c.bites);
-      placed.push(v);
-      g.bunches[si] = bunch(g, si, v, true, k * -0.08);
-    });
-    Object.assign(g.bug, { x: HOTEL.x + 4, y: HOTEL.y + 10, vx: 0, vy: 0, st: 'enter', dest: null, aim: null, sc: 0.2, dizzy: 0, loop: 0 });
-    g.say = `This ladybug needs ${NUM_WORDS[g.target]} spots, in ${NUM_WORDS[c.bites]} bites or less. Find aphids that add up to ${NUM_WORDS[g.target]}!`;
-    g.progress = `Ladybug ${g.round + 1} of ${c.rounds}`;
-  }
-  // tapping near a bunch aims at that bunch; she flies over the others on the way
-  function aimAt(g, x, y) {
-    const b = g.bug;
-    const near = g.bunches.filter(live).sort((p, q) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y))[0];
-    b.aim = near && Math.hypot(near.x - x, near.y - y) < 70 ? near : null;
-    b.dest = b.aim ? { x: b.aim.x, y: b.aim.y } : { x, y }; g.idle = 0;
-  }
-  const finishRound = (g, val) => {
-    g.results.push(val); g.round++;
-    g.score = g.results.reduce((a, v) => a + v, 0) / g.cfg.rounds;
-  };
+  let BG = null;
 
-  // ------------------------------------------------------------------ art
-  function rose(x, y, r, col, t, k, live_ = true) {
-    if (live_) y += Math.sin(t * 1.6 + k) * 2;
-    const dk = mix(col, '#a0204a', col === '#ffffff' ? 0.25 : 0.4), lt = mix(col, '#ffffff', 0.35);
-    ctx.lineJoin = 'round';
-    // sepals peek out under the flower
-    for (let i = 0; i < 5; i++) { const a = i * 1.257 + k; inkEllipse(x + Math.cos(a) * r * 0.85, y + Math.sin(a) * r * 0.85, r * 0.42, r * 0.16, a, '#4fae46', 1); }
-    for (let i = 0; i < 7; i++) { const a = i * 0.898 + k; inkEllipse(x + Math.cos(a) * r * 0.55, y + Math.sin(a) * r * 0.55, r * 0.52, r * 0.42, a, mix(col, dk, 0.25), 1.1); }
-    for (let i = 0; i < 5; i++) { const a = i * 1.257 + k + 0.6; inkEllipse(x + Math.cos(a) * r * 0.3, y + Math.sin(a) * r * 0.3, r * 0.42, r * 0.34, a, col, 1); }
-    inkCircle(x, y, r * 0.36, lt, 1);
-    ctx.strokeStyle = dk; ctx.lineWidth = Math.max(1.4, r * 0.08); ctx.lineCap = 'round';
-    ctx.beginPath();
-    for (let a = 0; a < Math.PI * 4; a += 0.25) { const rr = r * 0.32 * (1 - a / (Math.PI * 4.3)); ctx.lineTo(x + Math.cos(a + k) * rr, y + Math.sin(a + k) * rr); }
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,.55)'; ellipse(x - r * 0.35, y - r * 0.45, r * 0.18, r * 0.09, -0.6);
-  }
-  // a glossy leaf with veins; ang tilts it, s scales it
-  function glossyLeaf(x, y, ang, s = 1, eaten = false) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s); ctx.translate(-36, 0);
-    const gr = ctx.createLinearGradient(0, -20, 0, 14);
-    gr.addColorStop(0, eaten ? '#d8e89a' : '#8ee070'); gr.addColorStop(1, eaten ? '#a8c060' : '#3f9a3a');
-    ink(LEAF, gr, 1.5);
-    ctx.strokeStyle = eaten ? '#8aa050' : '#2f7a2e'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(4, 0); ctx.quadraticCurveTo(36, -4, 66, -4); ctx.stroke();
-    ctx.lineWidth = 1.3;
-    for (const vx of [18, 32, 46]) {
-      ctx.beginPath(); ctx.moveTo(vx, -2); ctx.lineTo(vx + 9, -13); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(vx, -2); ctx.lineTo(vx + 8, 8); ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(255,255,255,.4)'; ellipse(26, -10, 12, 2.6, -0.2);
-    if (eaten) {  // nibbled: little bite marks and crumbs
-      ctx.fillStyle = '#a07a3a';
-      for (const [cx, cy] of [[22, 3], [40, -2], [52, 4]]) circle(cx, cy, 1.6);
-      ctx.strokeStyle = OL; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(46, -15, 5, 0.2, Math.PI - 0.2); ctx.stroke();
-    }
-    ctx.restore();
-  }
-  function dew(x, y, r, t, k) {
-    ctx.fillStyle = 'rgba(200,240,255,.85)'; circle(x, y, r);
-    ctx.strokeStyle = 'rgba(90,150,200,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = '#fff'; circle(x - r * 0.35, y - r * 0.35, r * 0.35);
-    const tw = Math.sin(t * 2.2 + k * 1.9);
-    if (tw > 0.8) star(x + r * 0.2, y - r * 0.6, 4 + (tw - 0.8) * 25, 'rgba(255,255,255,.9)', 4);
-  }
-  function aphid(x, y, s, t, i, gold) {
-    const wig = Math.sin(t * 10 + i * 1.7);
-    ctx.save(); ctx.translate(x, y + Math.abs(Math.sin(t * 5 + i)) * -2); ctx.rotate(Math.sin(t * 2 + i) * 0.15 - 0.3 + i * 0.4); ctx.scale(s, s);
-    ctx.strokeStyle = OL; ctx.lineWidth = 1.7; ctx.lineCap = 'round';
-    for (const d of [-1, 1]) for (const k of [-4, 0, 4]) {
-      ctx.beginPath(); ctx.moveTo(k, 2); ctx.lineTo(k + d * 2 + wig * 2 * d, 2 + d * 8); ctx.stroke();
-    }
-    for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(8, -2 * d); ctx.quadraticCurveTo(14, -7 * d, 17 + wig, -10 * d); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(-9, -3); ctx.lineTo(-14, -6); ctx.moveTo(-9, 3); ctx.lineTo(-14, 6); ctx.stroke();  // little tail tubes
-    inkEllipse(0, 0, 10.5, 8, 0, gold ? '#ffd23a' : '#9ee05a', 1.4);
-    ctx.fillStyle = gold ? '#fff2a0' : '#d0f8a0'; ellipse(-2, -3.5, 5.5, 2.6);
-    ctx.fillStyle = OL; circle(6, -2.5, 2); circle(6, 2.5, 2);
-    ctx.fillStyle = '#fff'; circle(6.6, -3, 0.7); circle(6.6, 2, 0.7);
-    ctx.restore();
-    if (gold && Math.sin(t * 3 + i * 2) > 0.6) star(x + 9 * s, y - 10 * s, 5, '#fff8c0', 4);
-  }
-  function ant(x, y, ang, t, s, carry) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s);
-    ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.lineCap = 'round';
-    for (const d of [-1, 1]) for (const k of [-6, 0, 6]) {
-      const w = Math.sin(t * 16 + k + (d > 0 ? Math.PI : 0)) * 4;
-      ctx.beginPath(); ctx.moveTo(k, 0); ctx.lineTo(k + w, d * 7); ctx.lineTo(k + w * 1.3 - 2, d * 12); ctx.stroke();
-    }
-    for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(14, d * 2); ctx.quadraticCurveTo(20, d * 8, 25 + Math.sin(t * 8) * 1.5, d * 9); ctx.stroke(); }
-    ctx.fillStyle = OL; ellipse(-12, 0, 10, 7.5); circle(1, 0, 6.5); circle(13, 0, 7.5);
-    ctx.fillStyle = '#7a3a2a'; ellipse(-12, 0, 8, 5.8); circle(1, 0, 4.8); circle(13, 0, 6);
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; ellipse(-14, -2.5, 3.5, 1.5); circle(12, -2.5, 1.6);
-    ctx.fillStyle = '#fff'; circle(16, -2.5, 2.2); ctx.fillStyle = OL; circle(16.8, -2.5, 1.2);
-    ctx.restore();
-    if (carry) for (let k = 0; k < carry.n; k++) aphid(x - 4 + k * 9, y - 14 - k * 3, 0.75, t, k, carry.gold);
-  }
-
-  const paintSky = () => {
-    const sk = ctx.createLinearGradient(0, 0, 0, 330);
-    sk.addColorStop(0, '#8ed4ff'); sk.addColorStop(1, '#eaf8ff');
-    ctx.fillStyle = sk; ctx.fillRect(0, 0, W, H);
-    // far hills and a soft hedge band
-    ctx.fillStyle = '#bfe6b0'; ctx.beginPath(); ctx.moveTo(0, 300);
-    for (let x = 0; x <= W; x += 40) ctx.lineTo(x, 270 + Math.sin(x / 140) * 22);
-    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
-    ctx.fillStyle = '#9ed492'; ctx.beginPath(); ctx.moveTo(0, 330);
-    for (let x = 0; x <= W; x += 40) ctx.lineTo(x, 318 + Math.sin(x / 90 + 1) * 14);
-    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
-    // white trellis with climbing vines and tiny roses
-    const ty = 236;
-    ctx.strokeStyle = OL; ctx.lineWidth = 7;
-    const lat = (col, lw) => {
-      ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath();
-      for (let x = -200; x < W + 200; x += 48) { ctx.moveTo(x, ty); ctx.lineTo(x + 180, ty + 180); ctx.moveTo(x + 180, ty); ctx.lineTo(x, ty + 180); }
-      ctx.stroke();
-    };
-    ctx.save(); ctx.beginPath(); ctx.rect(120, ty, W - 120, 180); ctx.clip();
-    lat(OL, 7); lat('#fff8ee', 3.5);
-    ctx.restore();
-    for (const px of [120, 330, 540, 750, 950]) inkRect(px - 6, ty - 14, 12, 200, '#fff8ee', 2.5, 3);
-    inkRect(110, ty - 18, W - 100, 12, '#fff8ee', 2.5, 4);
-    // vines along the trellis
-    ctx.strokeStyle = '#4f9a42'; ctx.lineWidth = 3;
-    ctx.beginPath();
-    for (let x = 120; x < W; x += 6) ctx.lineTo(x, ty + 6 + Math.sin(x / 36) * 10);
-    ctx.stroke();
-    for (let x = 140; x < W; x += 34) {
-      const y = ty + 6 + Math.sin(x / 36) * 10;
-      glossyLeaf(x, y + (x % 68 ? 8 : -8), x % 68 ? 0.6 : -0.6, 0.32);
-      if (x % 102 < 34) rose(x + 10, y - 2, 9, ROSE_COLS[(x / 34 | 0) % ROSE_COLS.length], 0, x, false);
-    }
-    // a soft back hedge with scalloped top
-    const hy = 372;
-    ctx.fillStyle = OL; for (let x = 100; x < W + 40; x += 50) circle(x, hy, 38);
-    ctx.fillStyle = '#5aa64e'; for (let x = 100; x < W + 40; x += 50) circle(x, hy, 35);
-    ctx.fillStyle = '#6cba5c'; for (let x = 100; x < W + 40; x += 50) circle(x - 8, hy - 10, 18);
-    ctx.fillStyle = '#5aa64e'; ctx.fillRect(60, hy, W, 120);
-    // ground
-    ctx.fillStyle = '#7cc864'; ctx.fillRect(0, 456, W, H);
-  };
-  const paintStems = () => {
-    for (const pass of [0, 1, 2]) for (const s of STEMS) {
-      ctx.strokeStyle = [OL, '#3f8a34', '#6cc058'][pass]; ctx.lineWidth = [11, 7, 2][pass]; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(s[0] + (pass === 2 ? -2 : 0), s[1]); ctx.quadraticCurveTo(s[2] + (pass === 2 ? -2 : 0), s[3], s[4] + (pass === 2 ? -1 : 0), s[5]); ctx.stroke();
-    }
-    STEMS.forEach((s, i) => {
-      for (const f of [0.3, 0.55, 0.78]) {
-        const [px, py] = qp(s, f), d = f === 0.55 ? -1 : 1;
-        ctx.beginPath(); ctx.moveTo(px - 3, py); ctx.lineTo(px + d * 9, py - 4); ctx.lineTo(px + 3, py - 4); ctx.closePath();
-        ctx.fillStyle = '#c0704a'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 1.5; ctx.stroke();
-      }
-      const [lx, ly] = qp(s, 0.45);
-      glossyLeaf(lx + (i % 2 ? -26 : 26), ly, i % 2 ? Math.PI + 0.4 : -0.4, 0.55);
-    });
-  };
-  const paintFront = () => {
-    // two rows of bush blobs: a darker back row, then a brighter front row; outline first, fill second
-    const back = [], front = [];
-    for (let i = 0; i < 17; i++) back.push([170 + i * 48 + (i % 3) * 6, 436 + (i % 2) * 8, 38 + (i % 4) * 6]);
-    for (let i = 0; i < 16; i++) front.push([150 + i * 52 + (i % 2) * 10, 480 + (i % 3) * 6, 40 + (i % 3) * 8]);
-    for (const [row, base, top] of [[back, '#3f9a3a', '#55b24a'], [front, '#5cb84e', '#78d062']]) {
-      ctx.fillStyle = OL; for (const [x, y, r] of row) circle(x, y, r + 3);
-      ctx.fillStyle = base; for (const [x, y, r] of row) circle(x, y, r);
-      ctx.fillStyle = top; for (const [x, y, r] of row) circle(x - r * 0.25, y - r * 0.3, r * 0.58);
-      ctx.fillStyle = 'rgba(255,255,255,.2)'; for (const [x, y, r] of row) circle(x - r * 0.38, y - r * 0.48, r * 0.2);
-      if (row === back) for (let i = 0; i < row.length; i += 2) glossyLeaf(row[i][0] + 10, row[i][1] - row[i][2] + 6, -0.5 + (i % 4) * 0.3, 0.45);
-    }
-    // bug hotel: a little wooden house on a post, full of holes and sticks
-    const { x, y } = HOTEL;
-    inkRect(x - 7, y + 40, 14, GY - y - 24, '#a8784a', 3, 3);
-    inkRect(x - 44, y - 30, 88, 74, '#c8925a', 3, 6);
-    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x - 40, y - 26, 10, 66);
-    ctx.beginPath(); ctx.moveTo(x - 56, y - 26); ctx.lineTo(x, y - 70); ctx.lineTo(x + 56, y - 26); ctx.closePath();
-    ctx.fillStyle = '#e0604a'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,.3)'; tri(x - 40, y - 30, x, y - 62, x - 20, y - 30);
-    for (const [hx, hy] of [[-24, -12], [0, -12], [24, -12], [-24, 26], [24, 26]]) {
-      inkCircle(x + hx, y + hy, 10, '#e8c08a', 1.2);
-      ctx.fillStyle = '#5a3a2a'; circle(x + hx, y + hy, 4);
-    }
-    inkCircle(x, y + 22, 15, '#3a2420', 1.5);
-    rrect(x - 30, y + 48, 60, 18, 6, '#fff6e0', OL, 2);
-    text('BUGS', x, y + 57, 12, '#7a4a2a', 'center', 800);
-    // Mrs. Pickett's tea stump with a teapot and cup
-    const sx = 178, sy = 470;
-    inkRect(sx - 34, sy - 10, 68, 50, '#a8784a', 3, 6);
-    inkEllipse(sx, sy - 10, 34, 9, 0, '#e8c08a', 1.5);
-    ctx.strokeStyle = '#c09060'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(sx, sy - 10, 20, 5, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = OL; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(sx + 2, sy - 28); ctx.quadraticCurveTo(sx + 24, sy - 34, sx + 28, sy - 46); ctx.stroke();  // spout
-    ctx.beginPath(); ctx.arc(sx - 22, sy - 26, 8, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();  // handle
-    ctx.strokeStyle = '#6ab0e0'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(sx + 2, sy - 28); ctx.quadraticCurveTo(sx + 24, sy - 34, sx + 28, sy - 46); ctx.stroke();
-    inkEllipse(sx - 4, sy - 26, 18, 15, 0, '#8ac8f0', 1.5);
-    inkEllipse(sx - 4, sy - 40, 10, 4, 0, '#6ab0e0', 1.2);
-    inkCircle(sx - 4, sy - 45, 3.5, '#ff8fb5', 1);
-    ctx.fillStyle = '#fff'; for (const [dx, dy] of [[-12, -26], [2, -20], [-6, -32]]) circle(sx - 4 + dx + 8, sy + dy, 2.6);
-    ctx.fillStyle = 'rgba(255,255,255,.55)'; ellipse(sx - 12, sy - 31, 4, 2.2, -0.5);
-    inkRect(sx + 14, sy - 26, 14, 14, '#fff6f0', 1.5, 3);  // tea cup
-    ctx.fillStyle = '#ff8fb5'; circle(sx + 21, sy - 19, 2.5);
-    // a green watering can by the bush
-    const wx = 810, wy = 506;
-    ctx.strokeStyle = OL; ctx.lineWidth = 9; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(wx - 24, wy - 16); ctx.lineTo(wx - 56, wy - 40); ctx.stroke();
-    ctx.strokeStyle = '#5ab08a'; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(wx - 24, wy - 16); ctx.lineTo(wx - 56, wy - 40); ctx.stroke();
-    inkEllipse(wx - 60, wy - 43, 9, 5, -0.6, '#7ac8a0', 1.5);
-    ctx.strokeStyle = OL; ctx.lineWidth = 3.5;
-    ctx.beginPath(); ctx.arc(wx, wy - 36, 18, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
-    inkRect(wx - 26, wy - 36, 52, 40, '#5ab08a', 3, 8);
-    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(wx - 20, wy - 32, 8, 32);
-    flower(wx + 4, wy - 16, 9, '#ffd0e0', '#ffd84a', 1.4);
-  };
-
-  // the ladybug from above, head up. n = slots shown, spots = filled count, open 0..1 = wings out
-  function ladybug(x, y, s, n, spots, t, open, tilt, pop = -1, popT = 0, walk = 0) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(s, s);
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.fillStyle = 'rgba(40,20,60,.16)'; if (open < 0.5) ellipse(4, 42, 34, 8);
-    if (open > 0) {  // see-through flying wings flutter behind the shell
-      const f = Math.sin(t * 50) * 0.35;
-      for (const d of [-1, 1]) {
-        ctx.save(); ctx.globalAlpha = 0.65 * open;
-        inkEllipse(d * 38, 10, 36, 15, d * (0.5 + f), '#eef8ff', 1.4);
-        ctx.strokeStyle = 'rgba(120,150,200,.6)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(d * 8, 4); ctx.lineTo(d * 62, 10 + d * f * 20); ctx.stroke();
+  // ---------------------------------------------------------------------------------------------
+  // vegetable art. origin = the crown (where leaves meet root); root hangs down, tops grow up.
+  // Two passes so overlapping leaves + root read as one outlined shape: pass 0 ink, pass 1 colour.
+  function tops(k, pass, t, sway, nib) {
+    const v = VEG[k], L = 1 - nib * 0.35;
+    if (k === 'carrot') {
+      const angs = [-0.55, -0.18, 0.2, 0.56];
+      angs.forEach((a0, i) => {
+        const a = a0 + sway * (1 + i * 0.2) + Math.sin(t * 2.2 + i) * 0.04;
+        const len = (60 + (i % 2) * 10) * L, tx = Math.sin(a) * len, ty = -Math.cos(a) * len;
+        const mx = Math.sin(a * 0.5) * len * 0.5, my = -len * 0.55;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = pass ? '#58b848' : OL; ctx.lineWidth = pass ? 3.5 : 8;
+        ctx.beginPath(); ctx.moveTo(0, -2); ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke();
+        for (const f of [0.4, 0.58, 0.76, 0.94]) {
+          const px = 2 * f * (1 - f) * mx + f * f * tx, py = -2 * (1 - f) * (1 - f) + 2 * f * (1 - f) * my + f * f * ty;
+          for (const d of [-1, 1]) {
+            const r = f > 0.9 ? 8 : 7;
+            ctx.beginPath(); ctx.ellipse(px + d * 6, py - 2, r, 4, a + d * 0.9, 0, Math.PI * 2);
+            if (pass) { ctx.fillStyle = f > 0.7 ? '#7ad464' : '#4fb444'; ctx.fill(); } else { ctx.lineWidth = 5; ctx.stroke(); }
+          }
+        }
+      });
+    } else if (k === 'onion') {
+      // tall, straight hollow tubes
+      [-0.32, -0.1, 0.12, 0.34].forEach((a0, i) => {
+        const a = a0 + sway * 0.6 + Math.sin(t * 1.8 + i) * 0.025, len = (78 + (i % 2) * 14) * L;
+        const tx = Math.sin(a) * len, ty = -Math.cos(a) * len - 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = pass ? '#6ccf6a' : OL; ctx.lineWidth = pass ? 6 : 11;
+        ctx.beginPath(); ctx.moveTo(0, -2); ctx.quadraticCurveTo(tx * 0.4, ty * 0.6, tx, ty); ctx.stroke();
+        if (pass) { ctx.strokeStyle = '#a8ec98'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-1, -8); ctx.quadraticCurveTo(tx * 0.4 - 1.5, ty * 0.6, tx - 1, ty + 6); ctx.stroke(); }
+      });
+    } else {
+      const leaf = k === 'beet' ? BEET_LEAF : RAD_LEAF;
+      const angs = k === 'radish' ? [-0.8, -0.28, 0.28, 0.8] : [-0.6, 0, 0.6];
+      const fill = k === 'beet' ? '#3f9e4c' : '#5cc84a';
+      const vein = k === 'beet' ? '#c8235e' : '#3e9a36';
+      angs.forEach((a0, i) => {
+        const a = a0 + sway * (1 + i * 0.25) + Math.sin(t * 2 + i * 1.7) * 0.05;
+        ctx.save(); ctx.rotate(a); ctx.scale(1, L);
+        if (!pass) { ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.stroke(leaf); } else {
+          ctx.fillStyle = fill; ctx.fill(leaf);
+          ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.save(); ctx.clip(leaf); ellipse(-8, -40, 6, 18, 0.2); ctx.restore();
+          ctx.strokeStyle = vein; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-2, -30, -2, k === 'radish' ? -46 : -64); ctx.stroke();
+          ctx.lineWidth = 1.4;
+          for (const yy of [-22, -36, -50]) { ctx.beginPath(); ctx.moveTo(-1, yy); ctx.lineTo(-10, yy - 8); ctx.moveTo(-1, yy + 4); ctx.lineTo(8, yy - 4); ctx.stroke(); }
+        }
         ctx.restore();
-      }
+      });
     }
-    // legs: tuck up when flying, step in a walking rhythm when landed
-    ctx.strokeStyle = OL; ctx.lineWidth = 3.5;
-    for (const d of [-1, 1]) for (const [ly, k] of [[-8, 0], [6, 1], [20, 2]]) {
-      const ph = (k + (d > 0 ? 1 : 0)) % 2 ? 0 : Math.PI;
-      const w = open > 0 ? Math.sin(t * 6 + k) : Math.sin(t * (walk ? 16 : 3) + ph) * (walk ? 6 : 2);
-      const reach = open > 0 ? 36 : 46;
-      ctx.beginPath(); ctx.moveTo(d * 28, ly); ctx.lineTo(d * (reach - 6), ly + (k - 1) * 4 + w * 0.5); ctx.lineTo(d * reach, ly + (k - 1) * 9 + w); ctx.stroke();
+  }
+  function root(k, pass, mood) {
+    const v = VEG[k];
+    if (!pass) { ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.stroke(v.root); return; }
+    const gr = ctx.createLinearGradient(-20, 0, 20, k === 'carrot' ? 60 : 50);
+    if (k === 'radish') {
+      const g2 = ctx.createLinearGradient(0, -4, 0, 56);
+      g2.addColorStop(0, v.grad[0]); g2.addColorStop(0.42, v.grad[1]); g2.addColorStop(0.75, v.grad[2]); g2.addColorStop(1, v.grad[2]);
+      ctx.fillStyle = g2;
+    } else { gr.addColorStop(0, v.grad[0]); gr.addColorStop(0.5, v.grad[1]); gr.addColorStop(1, v.grad[2]); ctx.fillStyle = gr; }
+    ctx.fill(v.root);
+    ctx.save(); ctx.clip(v.root);
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    if (k === 'carrot') ellipse(-8, 22, 3.5, 16, 0.12); else ellipse(-11, 16, 5, 9, 0.5);
+    ctx.strokeStyle = k === 'carrot' ? '#c8541a' : k === 'beet' ? '#7a0c3e' : 'rgba(120,80,120,.45)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    if (k === 'onion') {
+      ctx.strokeStyle = 'rgba(170,100,30,.55)';
+      for (const d of [-14, -6, 6, 14]) { ctx.beginPath(); ctx.moveTo(d * 0.3, 0); ctx.quadraticCurveTo(d * 1.6, 24, d * 0.5, 48); ctx.stroke(); }
+    } else {
+      const rings = k === 'carrot' ? [[10, 1], [30, -1], [46, 1], [62, -1]] : [[38, 1], [44, -1]];
+      for (const [y, d] of rings) { ctx.beginPath(); ctx.moveTo(d * 4, y); ctx.quadraticCurveTo(d * 10, y + 2, d * 13, y - 1); ctx.stroke(); }
     }
-    ctx.lineWidth = 2.5;
-    const bob = Math.sin(t * 5) * 3;
-    for (const d of [-1, 1]) {
-      const ex = d * 21 + Math.sin(t * 5 + d) * 2, ey = -64 + bob;
-      ctx.beginPath(); ctx.moveTo(d * 6, -44); ctx.quadraticCurveTo(d * 10, -58, ex, ey); ctx.stroke();
-      inkCircle(ex, ey, 3.8, '#2e2438', 0.8);
-    }
-    // outline head + shell together, then fill; the dark body shows where the wing cases part
-    ctx.fillStyle = OL; circle(0, -32, 21); ellipse(0, 4, 41, 39);
-    ctx.fillStyle = '#2e2438'; circle(0, -32, 18); ellipse(0, 4, 38, 36);
-    const sp = open * 0.16;
-    for (const d of [-1, 1]) {
-      ctx.save(); ctx.translate(0, -26); ctx.rotate(d * sp); ctx.translate(0, 26);
-      ctx.beginPath(); ctx.ellipse(0, 4, 38, 36, 0, d < 0 ? Math.PI / 2 : -Math.PI / 2, d < 0 ? Math.PI * 1.5 : Math.PI / 2); ctx.closePath();
-      const gr = ctx.createRadialGradient(d * 14, -10, 4, 0, 6, 44);
-      gr.addColorStop(0, '#ff7a6a'); gr.addColorStop(0.6, '#ee3a3a'); gr.addColorStop(1, '#c42a3a');
-      ctx.fillStyle = gr; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.stroke();
-      ctx.restore();
-    }
-    // spots: filled black (bouncing in), waiting ones dashed
-    for (let i = 0; i < n; i++) {
-      const [sx, sy] = slotPos(i);
-      const d = sx < 0 ? -1 : 1, a = d * sp, c = Math.cos(a), si = Math.sin(a);
-      const rx = sx * c - (sy + 26) * si, ry = sx * si + (sy + 26) * c - 26;
-      if (i < spots) {
-        const k = i === pop && popT < 0.4 ? 1 + Math.sin(popT / 0.4 * Math.PI) * 0.7 : 1;
-        ctx.fillStyle = '#2e2438'; circle(rx, ry, 6.5 * k);
-        ctx.fillStyle = 'rgba(255,255,255,.35)'; circle(rx - 2, ry - 2, 1.8);
-      } else {
-        ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(255,240,240,.95)'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(rx, ry, 6, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-      }
-    }
-    // shiny shell highlight
-    ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.arc(0, 4, 31, Math.PI * 1.12, Math.PI * 1.38); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,.75)'; circle(-26, -18, 2.6);
-    // face
-    for (const d of [-1, 1]) {
-      ctx.fillStyle = '#fff'; circle(d * 7, -36, 6);
-      ctx.fillStyle = OL; circle(d * 7 + 1, -35, 3.4);
-      ctx.fillStyle = '#fff'; circle(d * 7 + 2.2, -37, 1.4);
-      ctx.fillStyle = 'rgba(255,130,170,.8)'; ellipse(d * 12, -26, 4, 2.6);
-    }
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, -28, 5, 0.2, Math.PI - 0.2); ctx.stroke();
+    ctx.restore();
+    if (mood == null) return;
+    // a little face: surprised while being pulled, happy in the basket
+    const fy = v.face;
+    ctx.fillStyle = 'rgba(255,120,150,.55)'; ellipse(-11, fy + 6, 4.5, 2.6); ellipse(11, fy + 6, 4.5, 2.6);
+    ctx.fillStyle = '#3a2440'; ellipse(-6, fy, 2.8, 3.6); ellipse(6, fy, 2.8, 3.6);
+    ctx.fillStyle = '#fff'; circle(-5, fy - 1.4, 1.1); circle(7, fy - 1.4, 1.1);
+    ctx.strokeStyle = '#3a2440'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+    if (mood === 'o') { ctx.fillStyle = '#7a2a3a'; ellipse(0, fy + 8, 2.6, 3.4); }
+    else if (mood === 'sad') { ctx.beginPath(); ctx.arc(0, fy + 11, 4, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(0, fy + 5, 4.5, 0.2, Math.PI - 0.2); ctx.stroke(); }
+  }
+  // a whole veggie; mood null = no face
+  function veg(k, x, y, s, rot, t, { sway = 0, nib = 0, mood = null, noRoot = false } = {}) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+    for (const pass of [0, 1]) { tops(k, pass, t, sway, nib); if (!noRoot) root(k, pass, pass ? mood : null); }
     ctx.restore();
   }
 
-  // ------------------------------------------------------------------ game
-  MG.ladybuglunch = {
-    kind: 'learn', title: () => 'Ladybug Lunch', icon: () => '🐞',
-    how: g => `Each ladybug needs just the right number of spots. Every aphid she eats gives her one spot${g.cfg.gold ? ', and golden aphids give two' : ''}! She only has room for ${NUM_WORDS[g.cfg.bites]} bites, so tap bunches that add up to her number before she gets hungry. Too many is a tummy ache! Tap the sneaky ant to shoo it.`,
+  // ---------------------------------------------------------------------------------------------
+  // the cached garden: sky, fence, flowers, lawn, the raised bed with its soil ridges
+  const paintBG = () => {
+    const sk = ctx.createLinearGradient(0, 0, 0, 260);
+    sk.addColorStop(0, '#7cc8ff'); sk.addColorStop(1, '#dff4ff');
+    ctx.fillStyle = sk; ctx.fillRect(0, 0, W, H);
+    // soft sunbeams from the top left
+    ctx.fillStyle = 'rgba(255,250,210,.22)';
+    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(-40, -40); ctx.lineTo(260 + i * 190, 260); ctx.lineTo(330 + i * 190, 260); ctx.closePath(); ctx.fill(); }
+    // hills
+    ctx.fillStyle = '#a9dc8e'; ctx.beginPath(); ctx.moveTo(0, 220);
+    for (let x = 0; x <= W; x += 30) ctx.lineTo(x, 196 + Math.sin(x / 150) * 20 + Math.sin(x / 47) * 4);
+    ctx.lineTo(W, 300); ctx.lineTo(0, 300); ctx.fill();
+    ctx.fillStyle = '#8fd07a'; ctx.beginPath(); ctx.moveTo(0, 240);
+    for (let x = 0; x <= W; x += 30) ctx.lineTo(x, 222 + Math.sin(x / 110 + 2) * 12);
+    ctx.lineTo(W, 300); ctx.lineTo(0, 300); ctx.fill();
+    // distant trees
+    for (const [x, r] of [[60, 34], [120, 26], [590, 30], [650, 22], [940, 32]]) {
+      ctx.fillStyle = '#6fb460'; circle(x, 214 - r * 0.6, r); ctx.fillStyle = '#82c46c'; circle(x - r * 0.3, 206 - r * 0.8, r * 0.55);
+    }
+    // white picket fence
+    const fy = 214;
+    for (let x = -10; x < W + 20; x += 30) {
+      ctx.beginPath(); ctx.moveTo(x, fy + 66); ctx.lineTo(x, fy + 8); ctx.lineTo(x + 10, fy - 4); ctx.lineTo(x + 20, fy + 8); ctx.lineTo(x + 20, fy + 66); ctx.closePath();
+      ctx.fillStyle = '#fffaf4'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.fillStyle = 'rgba(160,140,200,.18)'; ctx.fillRect(x + 14, fy + 8, 5, 56);
+    }
+    for (const yy of [fy + 18, fy + 46]) inkRect(-10, yy, W + 20, 9, '#fffaf4', 2.2, 3);
+    // hollyhocks and sunflowers along the fence
+    const holly = (x, h, col) => {
+      ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x, fy + 70); ctx.lineTo(x, fy + 70 - h); ctx.stroke();
+      ctx.strokeStyle = '#4a9a3e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, fy + 70); ctx.lineTo(x, fy + 70 - h); ctx.stroke();
+      for (let i = 0; i < 5; i++) flower(x + (i % 2 ? 6 : -6), fy + 70 - h + i * 16, 9 - i * 0.6, col, '#fff3a0', 1.2);
+    };
+    holly(178, 120, '#ff8fc0'); holly(206, 96, '#ffffff'); holly(560, 104, '#d79bff'); holly(612, 118, '#ff8fc0');
+    const sunflower = (x, h) => {
+      ctx.strokeStyle = OL; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(x, fy + 70); ctx.quadraticCurveTo(x + 8, fy + 70 - h / 2, x, fy + 70 - h); ctx.stroke();
+      ctx.strokeStyle = '#4a9a3e'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, fy + 70); ctx.quadraticCurveTo(x + 8, fy + 70 - h / 2, x, fy + 70 - h); ctx.stroke();
+      const cy = fy + 70 - h;
+      for (const pass of [0, 1]) for (let i = 0; i < 12; i++) {
+        const a = i * Math.PI / 6;
+        ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * 17, cy + Math.sin(a) * 17, 11, 5, a, 0, Math.PI * 2);
+        if (pass) { ctx.fillStyle = i % 2 ? '#ffd23a' : '#ffbf1a'; ctx.fill(); } else { ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.stroke(); }
+      }
+      inkCircle(x, cy, 12, '#8a4a22', 1.5);
+      ctx.fillStyle = '#5e2e14'; for (let i = 0; i < 7; i++) circle(x + Math.cos(i * 2.4) * 6, cy + Math.sin(i * 2.4) * 6, 1.6);
+    };
+    sunflower(26, 132); sunflower(232, 150); sunflower(516, 122);
+    // the lawn
+    const lg = ctx.createLinearGradient(0, 280, 0, H);
+    lg.addColorStop(0, '#86d066'); lg.addColorStop(1, '#5fb84c');
+    ctx.fillStyle = lg; ctx.fillRect(0, 280, W, H);
+    ctx.strokeStyle = '#4fa63e'; ctx.lineWidth = 2;
+    for (let i = 0; i < 70; i++) {
+      const x = (i * 137) % W, y = 290 + ((i * 71) % 250);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y - 8); ctx.moveTo(x + 4, y); ctx.lineTo(x + 6, y - 9); ctx.stroke();
+    }
+    for (const [x, y, c] of [[30, 520, '#ffffff'], [212, 300, '#ffd84a'], [24, 330, '#ff9fc8'], [214, 520, '#c9a0ff'], [190, 404, '#ffffff']]) flower(x, y, 8, c, '#ffcf3a', 1);
+    // stepping stones to the bed
+    for (const [x, y] of [[214, 362], [206, 432]]) { inkEllipse(x, y, 20, 9, 0, '#cfc6d6', 1.2); ctx.fillStyle = 'rgba(255,255,255,.4)'; ellipse(x - 5, y - 3, 8, 3); }
+    // the raised bed: back plank, soil, side planks
+    const { x0, x1, y0, y1 } = BED;
+    inkRect(x0 - 6, y0 - 14, x1 - x0 + 12, 26, '#c48a54', 2.6, 6);
+    ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(x0, y0 - 10, x1 - x0, 5);
+    const sg = ctx.createLinearGradient(0, y0, 0, y1);
+    sg.addColorStop(0, '#5a3626'); sg.addColorStop(1, '#6e4430');
+    ctx.fillStyle = sg; ctx.fillRect(x0, y0 + 10, x1 - x0, y1 - y0 + 30);
+    ctx.strokeStyle = OL; ctx.lineWidth = 2.6; ctx.strokeRect(x0, y0 + 10, x1 - x0, y1 - y0 + 30);
+    // soil crumbs texture
+    for (let i = 0; i < 260; i++) {
+      const x = x0 + 6 + ((i * 97) % (x1 - x0 - 12)), y = y0 + 16 + ((i * 53) % (y1 - y0 + 10));
+      ctx.fillStyle = i % 3 ? 'rgba(40,20,10,.35)' : 'rgba(170,120,80,.35)'; circle(x, y, 1.5 + (i % 3) * 0.6);
+    }
+    // raised soil ridges for the two rows (ink first, then fill)
+    ROWS.forEach((ry, r) => {
+      const xs = COLS[r];
+      ctx.fillStyle = OL; ctx.beginPath(); ctx.ellipse((xs[0] + xs[4]) / 2, ry + 4, (xs[4] - xs[0]) / 2 + 66, 21, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = SOIL_L; ctx.beginPath(); ctx.ellipse((xs[0] + xs[4]) / 2, ry + 4, (xs[4] - xs[0]) / 2 + 64, 19, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#a0704a'; ctx.beginPath(); ctx.ellipse((xs[0] + xs[4]) / 2, ry - 2, (xs[4] - xs[0]) / 2 + 52, 9, 0, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 40; i++) { ctx.fillStyle = i % 2 ? 'rgba(60,30,15,.4)' : 'rgba(200,150,100,.4)'; circle(xs[0] - 50 + i * 16 + (i % 3) * 3, ry + 4 + ((i * 7) % 12) - 6, 1.8); }
+    });
+    // little tools and pebbles in the bed
+    for (const [x, y] of [[262, 420], [924, 418], [520, 412], [380, 300], [810, 300]]) { inkEllipse(x, y, 6, 4, 0.3, '#cfc6d6', 1); }
+    // trowel stuck in the soil at the right end
+    ctx.save(); ctx.translate(930, 300); ctx.rotate(0.25);
+    inkRect(-4, -44, 8, 30, '#d86a8a', 2, 3);
+    ctx.beginPath(); ctx.moveTo(-11, -14); ctx.lineTo(11, -14); ctx.lineTo(0, 16); ctx.closePath();
+    ctx.fillStyle = '#c8d4e0'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.restore();
+    // side planks and the front plank
+    inkRect(x0 - 12, y0 - 10, 16, y1 - y0 + 60, '#b47a48', 2.6, 5);
+    inkRect(x1 - 4, y0 - 10, 16, y1 - y0 + 60, '#b47a48', 2.6, 5);
+    inkRect(x0 - 14, y1 + 6, x1 - x0 + 28, 30, '#c48a54', 2.8, 6);
+    ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(x0 - 8, y1 + 10, x1 - x0 + 16, 5);
+    ctx.strokeStyle = 'rgba(120,70,40,.5)'; ctx.lineWidth = 1.5;
+    for (let x = x0 + 40; x < x1; x += 120) { ctx.beginPath(); ctx.moveTo(x, y1 + 14); ctx.quadraticCurveTo(x + 30, y1 + 20, x + 60, y1 + 16); ctx.stroke(); }
+    for (const x of [x0 + 8, x1 - 8]) { ctx.fillStyle = '#6a4a3a'; circle(x, y1 + 21, 2.5); }
+  };
+
+  // ---------------------------------------------------------------------------------------------
+  // critters and props
+  function mole(x, y, rise, t, st, bonkT) {
+    // the molehill
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x - 60, y - 120, 120, 120 + 6); ctx.clip();
+    const up = (1 - rise) * 56, tug = st === 'tug' ? Math.sin(t * 12) * 3 : 0;
+    ctx.translate(x + tug, y + up);
+    ctx.lineJoin = 'round';
+    // body + head outline first, then fills
+    ctx.fillStyle = OL; ellipse(0, -22, 27, 30); circle(0, -50, 22);
+    ctx.fillStyle = '#6a5a6e'; ellipse(0, -22, 24.5, 27.5); circle(0, -50, 19.5);
+    ctx.fillStyle = '#8a7a8e'; ellipse(-6, -56, 9, 7);
+    ctx.fillStyle = '#d8c4cc'; ellipse(0, -16, 14, 16);
+    // nose
+    inkCircle(0, -42, 7, '#ff8fb0', 1.3);
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; circle(-2, -44, 2);
+    // eyes: squinty, or spinning when bonked
+    ctx.strokeStyle = '#2a1a30'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+    if (st === 'bonk') {
+      for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(d * 9 - 3, -57); ctx.lineTo(d * 9 + 3, -51); ctx.moveTo(d * 9 + 3, -57); ctx.lineTo(d * 9 - 3, -51); ctx.stroke(); }
+    } else for (const d of [-1, 1]) { ctx.beginPath(); ctx.arc(d * 9, -54, 3.4, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,120,150,.5)'; ellipse(-14, -45, 4, 2.5); ellipse(14, -45, 4, 2.5);
+    // big pink digging paws
+    for (const d of [-1, 1]) {
+      const px = d * 22 + (st === 'tug' ? Math.sin(t * 12 + d) * 3 : 0), py = -30;
+      inkEllipse(px, py, 10, 8, d * 0.4, '#ff9fbf', 1.4);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6;
+      for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(px + d * 6 + i * 3, py - 3); ctx.lineTo(px + d * 11 + i * 3, py - 7); ctx.stroke(); }
+    }
+    ctx.restore();
+    // dirt mound in front
+    ctx.fillStyle = OL; ellipse(x, y + 2, 34, 13);
+    ctx.fillStyle = '#7a4c34'; ellipse(x, y + 2, 32, 11);
+    ctx.fillStyle = '#9a6a48'; ellipse(x - 6, y - 3, 18, 4);
+    ctx.fillStyle = SOIL_D; for (const [dx, dy] of [[-22, 6], [18, 4], [4, 9]]) circle(x + dx, y + dy, 3);
+    if (st === 'bonk') for (let i = 0; i < 3; i++) {
+      const a = t * 6 + i * 2.1;
+      star(x + Math.cos(a) * 26, y - 62 + up + Math.sin(a) * 8, 7, '#ffe04a', 5);
+    }
+  }
+  function crow(x, y, dir, flap, t, peck, carry) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (carry) veg(carry, 6, 34, 0.55, 0.3 + Math.sin(t * 8) * 0.2, t, { mood: 'sad' });
+    const w = Math.sin(flap) * 0.9;
+    const head = peck ? Math.max(0, Math.sin(t * 9)) * 10 : 0;
+    // legs
+    ctx.strokeStyle = '#e8902a'; ctx.lineWidth = 3;
+    if (!flap || peck) { ctx.beginPath(); ctx.moveTo(-4, 14); ctx.lineTo(-6, 26); ctx.moveTo(6, 14); ctx.lineTo(6, 26); ctx.stroke(); }
+    // ink pass: tail, body, head, wing
+    const tail = P2('M-20,0 L-46,-8 L-48,6 L-44,14 L-18,10 Z');
+    const wing = P2('M0,0 C-10,-6 -34,-8 -44,2 C-34,6 -18,10 0,8 Z');
+    const hx = 22, hy = -14 + head;
+    ctx.strokeStyle = OL; ctx.lineWidth = 5;
+    ctx.stroke(tail); ctx.beginPath(); ctx.ellipse(0, 2, 24, 16, -0.1, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx, hy, 13, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#2e2a48'; ctx.fill(tail);
+    ctx.beginPath(); ctx.ellipse(0, 2, 24, 16, -0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx, hy, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4a4470'; ellipse(-4, -4, 12, 6, -0.2);
+    // beak
+    ctx.beginPath(); ctx.moveTo(hx + 9, hy - 5); ctx.lineTo(hx + 26, hy + 1 + head * 0.3); ctx.lineTo(hx + 9, hy + 5); ctx.closePath();
+    ctx.fillStyle = '#ffc23a'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.stroke();
+    // eye
+    inkCircle(hx + 2, hy - 3, 5, '#fff', 1);
+    ctx.fillStyle = '#1a1020'; circle(hx + 3.5, hy - 3, 2.6);
+    ctx.fillStyle = '#fff'; circle(hx + 4.4, hy - 4.2, 0.9);
+    // wing (flaps up when flying)
+    ctx.save(); ctx.translate(4, -4); ctx.rotate(flap ? -0.3 + w : 0.15);
+    ctx.strokeStyle = OL; ctx.lineWidth = 4.5; ctx.stroke(wing);
+    ctx.fillStyle = '#3c3660'; ctx.fill(wing);
+    ctx.strokeStyle = '#5a5488'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-14, 3); ctx.lineTo(-38, 3); ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+  }
+  function basket(x, y, n, bounce, front) {
+    const sq = 1 + bounce * 0.12;
+    ctx.save(); ctx.translate(x, y + 40); ctx.scale(sq, 1 / sq); ctx.translate(0, -40);
+    const body = P2('M-72,-14 L72,-14 L58,44 C40,50 -40,50 -58,44 Z');
+    if (!front) {
+      // handle and back rim (behind the pile)
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = OL; ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(0, -10, 62, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+      ctx.strokeStyle = '#d8a060'; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(0, -10, 62, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+      ctx.strokeStyle = '#f0c080'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -12, 62, Math.PI * 1.15, Math.PI * 1.5); ctx.stroke();
+      inkEllipse(0, -14, 72, 12, 0, '#8a5a30', 1.3);
+    } else {
+      ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.stroke(body);
+      ctx.fillStyle = '#d89a58'; ctx.fill(body);
+      ctx.save(); ctx.clip(body);
+      ctx.strokeStyle = '#b07038'; ctx.lineWidth = 2.5;
+      for (let r = 0; r < 4; r++) for (let c = -6; c <= 6; c++) {
+        const yy = -6 + r * 13, xx = c * 12 + (r % 2) * 6;
+        ctx.beginPath(); ctx.ellipse(xx, yy, 6, 4.5, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(-60, -12, 120, 6);
+      ctx.restore();
+      inkRect(-76, -20, 152, 12, '#e8b070', 2.4, 6);
+      // a gingham bow
+      inkEllipse(-48, -12, 11, 7, -0.4, '#ff8fb5', 1.2); inkEllipse(-30, -12, 11, 7, 0.4, '#ff8fb5', 1.2); inkCircle(-39, -12, 5, '#ff6fa0', 1.2);
+      if (n) { rrect(-20, 18, 40, 22, 11, 'rgba(60,30,40,.55)'); text(String(n), 0, 29, 16, '#fff', 'center', 800); }
+    }
+    ctx.restore();
+  }
+  function glove(x, y, closed, t) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.25);
+    ctx.lineJoin = 'round';
+    const pink = '#ff8fc0';
+    // ink pass then fill pass
+    for (const pass of [0, 1]) {
+      const st = (fn) => { fn(); if (pass) { ctx.fillStyle = pink; ctx.fill(); } else { ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke(); } };
+      st(() => { ctx.beginPath(); ctx.ellipse(0, 10, 15, 17, 0, 0, Math.PI * 2); });
+      if (closed) for (let i = 0; i < 4; i++) st(() => { ctx.beginPath(); ctx.ellipse(-10 + i * 7, -4, 4.5, 6, 0, 0, Math.PI * 2); });
+      else for (let i = 0; i < 4; i++) st(() => { ctx.beginPath(); ctx.ellipse(-10 + i * 7, -10 + Math.abs(i - 1.5) * 2, 4, 11, (i - 1.5) * 0.12, 0, Math.PI * 2); });
+      st(() => { ctx.beginPath(); ctx.ellipse(-15, 8, 5, 9, -0.6, 0, Math.PI * 2); });
+    }
+    inkRect(-15, 24, 30, 10, '#fff4f8', 1.6, 4);
+    ctx.fillStyle = '#ff6fa0'; for (let i = 0; i < 4; i++) circle(-10 + i * 7, 29, 1.6);
+    ctx.restore();
+  }
+  function butterfly(x, y, t, col) {
+    const f = Math.abs(Math.sin(t * 14));
+    ctx.save(); ctx.translate(x, y);
+    for (const pass of [0, 1]) for (const d of [-1, 1]) {
+      ctx.beginPath(); ctx.ellipse(d * 7 * f, -4, 8 * f + 1, 8, d * 0.4, 0, Math.PI * 2);
+      ctx.moveTo(d * 5 * f, 6); ctx.ellipse(d * 5 * f, 6, 5 * f + 1, 5, -d * 0.3, 0, Math.PI * 2);
+      if (pass) { ctx.fillStyle = col; ctx.fill(); } else { ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.stroke(); }
+    }
+    ctx.fillStyle = OL; ellipse(0, 0, 2.2, 8);
+    ctx.restore();
+  }
+  function bee(x, y, t) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.globalAlpha = 0.75;
+    for (const d of [-1, 1]) inkEllipse(d * 5, -10, 6, 9 * Math.abs(Math.sin(t * 40)) + 2, d * 0.5, '#eaf6ff', 1);
+    ctx.globalAlpha = 1;
+    inkEllipse(0, 0, 12, 9, 0, '#ffd23a', 1.4);
+    ctx.fillStyle = OL; ctx.fillRect(-3, -8, 3.5, 16); ctx.fillRect(4, -7, 3, 14);
+    ctx.fillStyle = OL; circle(9, -2, 1.6);
+    ctx.restore();
+  }
+  function worm(x, y, k, t) {
+    if (k <= 0) return;
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 30, y - 60, 60, 60 + 3); ctx.clip();
+    const h = k * 28, sw = Math.sin(t * 7) * 5;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = OL; ctx.lineWidth = 15; ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.quadraticCurveTo(x + sw, y - h * 0.5, x + sw * 0.4, y - h); ctx.stroke();
+    ctx.strokeStyle = '#ff9fae'; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.quadraticCurveTo(x + sw, y - h * 0.5, x + sw * 0.4, y - h); ctx.stroke();
+    ctx.fillStyle = OL; circle(x + sw * 0.4 - 2.4, y - h - 1, 1.6); circle(x + sw * 0.4 + 2.4, y - h - 1, 1.6);
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // game logic
+  const plotAt = (g, x, y) => {
+    let best = -1, bd = 1e9;
+    g.plots.forEach((p, i) => {
+      if (p.st !== 'ripe') return;
+      const dx = x - p.x, dy = y - (p.y - 34);
+      if (Math.abs(dx) < 64 && dy > -76 && dy < 50) { const d = dx * dx + dy * dy; if (d < bd) { bd = d; best = i; } }
+    });
+    return best;
+  };
+  const needKind = g => g.order[g.slot];
+  function chooseKind(g) {
+    const want = needKind(g);
+    if (want && !g.plots.some(p => p.kind === want && (p.st === 'ripe' || p.st === 'sprout' || p.st === 'air'))) return want;
+    // otherwise keep the patch varied: favour whatever kind is least common right now
+    const cnt = k => g.plots.filter(p => p.kind === k && p.st !== 'empty').length;
+    const ks = shuffle(g.kinds).sort((a, b) => cnt(a) - cnt(b));
+    return Math.random() < 0.7 ? ks[0] : pick(g.kinds);
+  }
+  function sprout(g, p, kind) {
+    Object.assign(p, { st: 'sprout', kind, grow: 0, pull: 0, sink: 0, nib: 0, big: Math.random() < g.cfg.big, held: false, flash: 0 });
+  }
+  function newBasket(g) {
+    const c = g.cfg;
+    const unit = pick(c.units);
+    const letters = [...new Set(unit)];
+    const ks = shuffle(g.kinds).slice(0, letters.length);
+    const map = Object.fromEntries(letters.map((l, i) => [l, ks[i]]));
+    const hide = c.hide[g.round];
+    const len = Math.min(8, Math.max(c.len, unit.length + 1 + hide));
+    g.order = Array.from({ length: len }, (_, i) => map[unit[i % unit.length]]);
+    g.hidden = g.order.map((_, i) => i >= len - hide);
+    Object.assign(g, { slot: 0, slotMiss: 0, idle: 0, pile: [], cardIn: 0, mode: 'play', warnedHidden: false });
+    // make sure every kind on the list is growing somewhere in the patch
+    for (const k of new Set(g.order)) {
+      if (!g.plots.some(p => p.kind === k && p.st === 'ripe')) {
+        const p = g.plots.find(q => q.st === 'ripe' && g.plots.filter(r => r.kind === q.kind && r.st === 'ripe').length > 1) || g.plots.find(q => q.st !== 'air');
+        if (p) sprout(g, p, k);
+      }
+    }
+    const shown = g.order.filter((_, i) => !g.hidden[i]).map(k => VEG[k].name).join(', ');
+    g.say = hide ? `Mrs. Pickett's list goes: ${shown}... What comes next? Pull them up in order!` : `Mrs. Pickett's list: ${shown}. Pull them up in that order!`;
+    g.progress = `Basket ${g.round + 1} of ${ROUNDS}`;
+    g.msg = hide ? 'Finish my pattern!' : 'Pull them in order!'; g.msgT = 3;
+  }
+  function slotSay(g) {
+    if (g.hidden[g.slot]) return 'What comes next in the pattern? Pull it up!';
+    return `Now pull up ${aName(needKind(g))}!`;
+  }
+  const scoreOf = g => clamp(1 - 0.07 * g.miss - 0.08 * g.theft, 0, 1);
+
+  function popOut(g, i) {
+    const p = g.plots[i];
+    p.held = false; g.grab = -1;
+    const k = p.kind, s = p.big ? 1.25 : 1;
+    const fromY = p.y - BASE - p.pull / (p.big ? 1.7 : 1) * 44;
+    for (let j = 0; j < 14; j++) g.crumbs.push({ x: p.x + rand(-20, 20), y: p.y, vx: rand(-160, 160), vy: rand(-320, -120), r: rand(2, 4.5), life: rand(0.6, 1) });
+    tone(320, 0.12, 'triangle', 0.1, 0, 900); SFX.pop();
+    // the mole or crow on this veggie loses the tug-of-war
+    if (g.mole && g.mole.i === i && g.mole.st !== 'bonk') bonkMole(g, true);
+    if (g.crow && g.crow.i === i && (g.crow.st === 'in' || g.crow.st === 'peck')) shooCrow(g, true);
+    if (k === needKind(g)) {
+      g.hidden[g.slot] = false;
+      g.slot++; g.slotMiss = 0; g.idle = 0; g.pickHop = 1;
+      p.st = 'empty'; p.regrow = rand(1.6, 2.6); p.pull = 0;
+      g.flyers.push({ k, s, x0: p.x, y0: fromY, x: p.x, y: fromY, t: 0, dur: 0.75, rot: 0, vr: rand(6, 10) * (Math.random() < 0.5 ? -1 : 1) });
+      floatText(p.x, fromY - 60, `${cap(VEG[k].name)}!`, '#ffe680', false, 26);
+      g.msg = pick(['Lovely!', 'Wonderful, dear!', 'Splendid!', 'Just right!']); g.msgT = 1.6;
+      if (g.slot < g.order.length) {
+        g.say = slotSay(g);
+        if (g.hidden[g.slot] && !g.warnedHidden) { g.warnedHidden = true; speak(g.say); }
+      }
+    } else {
+      g.miss++; g.slotMiss++; g.idle = 0;
+      p.st = 'air'; p.airT = 0;
+      SFX.miss(); tone(300, 0.25, 'sine', 0.06, 0.08, 160);
+      const want = needKind(g);
+      g.msg = `Oops, that's a ${VEG[k].name}!`; g.msgT = 2.2;
+      speak(g.hidden[g.slot] && g.slotMiss < 2 ? `Oops, that's a ${VEG[k].name}. Look at the pattern again!` : `Oops, that's a ${VEG[k].name}. We need ${aName(want)}!`);
+    }
+  }
+  function bonkMole(g, tug) {
+    const m = g.mole;
+    m.st = 'bonk'; m.t = 0;
+    SFX.hit(); tone(200, 0.15, 'square', 0.05, 0.05, 90);
+    const p = g.plots[m.i];
+    floatText(p.x + m.side * 52, p.y - 80, tug ? 'You win the tug!' : 'Bonk! Shoo!', '#fff', false, 22);
+    burst(p.x + m.side * 52, p.y - 50, 10, { colors: ['#ffe04a', '#fff6a8', '#ffb3e0'] });
+    g.moleT = rand(...g.cfg.mole);
+  }
+  function shooCrow(g, tug) {
+    const cr = g.crow;
+    cr.st = 'flee'; cr.t = 0; cr.vx = (cr.x < W / 2 ? -1 : 1) * 320; cr.vy = -300;
+    tone(700, 0.18, 'sawtooth', 0.05, 0, 420); tone(640, 0.18, 'sawtooth', 0.05, 0.16, 380);
+    for (let j = 0; j < 8; j++) g.feathers.push({ x: cr.x, y: cr.y, vx: rand(-90, 90), vy: rand(-120, 0), rot: rand(0, 6), life: 1.6 });
+    floatText(cr.x, cr.y - 40, tug ? 'Ha! Too slow, crow!' : 'Shoo, crow!', '#fff', false, 22);
+    g.crowT = rand(...g.cfg.crow);
+  }
+
+  MG.veggiepatchpull = {
+    kind: 'learn', title: () => 'Veggie Patch Pull', icon: () => '🥕',
+    how: g => `Hold a leafy top, or pull it up, till the veggie POPS! Pick them in the order on Mrs. Pickett's list.${g.cfg.hide.some(h => h) ? ' For a ?, keep the pattern going.' : ''} Tap the mole${g.cfg.crow ? ' and crow' : ''} to shoo them!`,
     init(g) {
       g.cfg = CFG[g.tier] || CFG[1];
-      Object.assign(g, { round: 0, results: [], bug: { x: 0, y: 0, vx: 0, vy: 0, sc: 1 }, clock: 0, msgT: 0, msg: '', pop: -1, popT: 9, cheer: 0, petals: [], crumbs: [] });
-      for (let i = 0; i < 9; i++) g.petals.push({ x: rand(0, W), y: rand(60, 460), s: rand(0.6, 1.1), ph: rand(0, 6), col: pick(['#ffc0d4', '#ffe0a0', '#ffffff']) });
-      newRound(g);
+      BG = BG || bake(paintBG);
+      g.kinds = KIND_LIST.slice(0, g.cfg.kinds);
+      const kinds = shuffle([...g.kinds, ...g.kinds, ...g.kinds]);
+      g.plots = [];
+      ROWS.forEach((y, r) => COLS[r].forEach((x, c) => g.plots.push({ x, y, row: r, kind: kinds[g.plots.length % kinds.length], st: 'ripe', grow: 1, pull: 0, sink: 0, nib: 0, big: false, held: false, seed: rand(0, 6), wig: 0, regrow: 0, flash: 0 })));
+      Object.assign(g, {
+        round: 0, miss: 0, theft: 0, grab: -1, flyers: [], crumbs: [], feathers: [], clock: 0, msg: '', msgT: 0,
+        mole: null, moleT: rand(...g.cfg.mole) * 0.7, crow: null, crowT: g.cfg.crow ? rand(...g.cfg.crow) : 0,
+        cursor: 0, useKeys: false, pickHop: 0, basketB: 0, transT: 0, creakT: 0, lastY: 0,
+        flies: [0, 1, 2].map(i => ({ x: rand(260, 900), y: rand(170, 260), ph: rand(0, 6), col: ['#ffb3e0', '#b8e6ff', '#fff08a'][i] })),
+        wormT: 3, worm: null,
+      });
+      newBasket(g);
     },
     start(g) { speak(g.say); },
     update(g, dt) {
-      const c = g.cfg, b = g.bug;
-      g.clock += dt; g.msgT = Math.max(0, g.msgT - dt); g.popT += dt; g.cheer = Math.max(0, g.cheer - dt);
-      b.dizzy = Math.max(0, b.dizzy - dt);
-      for (const p of g.petals) { p.y += dt * 18 * p.s; p.x += Math.sin(g.t + p.ph) * dt * 20; if (p.y > 470) { p.y = 70; p.x = rand(0, W); } }
-      for (const k of g.crumbs) { k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 500 * dt; k.life -= dt; }
-      g.crumbs = g.crumbs.filter(k => k.life > 0);
-      for (let i = 0; i < g.bunches.length; i++) {
-        const q = g.bunches[i];
-        if (q.n > 0) q.grow = Math.min(1, q.grow + dt * 2.5);
-        if (q.shoo > 0) { q.shoo -= dt; if (q.shoo <= 0) q.n = 0; }
-        const far = Math.hypot(b.x - q.x, b.y - q.y);
-        // each bunch can be eaten once. An eaten leaf only regrows while she is well away from it,
-        // and a regrown bunch only counts after she has left and come back on purpose.
-        if (q.n === 0 && (q.wait -= dt) <= 0 && b.st === 'fly' && g.queue === 0 && far > 150 && g.ant?.i !== i) newBunch(g, i);
-        if (q.n > 0 && !q.armed && far > 110) q.armed = true;
+      const c = g.cfg;
+      g.clock += dt; g.msgT -= dt; g.pickHop = Math.max(0, g.pickHop - dt * 2.5); g.basketB = Math.max(0, g.basketB - dt * 4);
+      g.cardIn = Math.min(1, g.cardIn + dt * 2.5);
+      // ---- ambient life
+      for (const f of g.flies) { f.ph += dt; f.x += Math.cos(f.ph * 0.6) * 50 * dt; f.y = 200 + Math.sin(f.ph * 0.9) * 40; if (f.x > 930) f.x = 260; if (f.x < 250) f.x = 920; }
+      for (const cb of g.crumbs) { cb.life -= dt; cb.vy += 900 * dt; cb.x += cb.vx * dt; cb.y += cb.vy * dt; }
+      g.crumbs = g.crumbs.filter(cb => cb.life > 0);
+      for (const fe of g.feathers) { fe.life -= dt; fe.vy += 60 * dt; fe.x += fe.vx * dt + Math.sin(fe.life * 6) * 30 * dt; fe.y += fe.vy * dt; fe.rot += dt * 3; }
+      g.feathers = g.feathers.filter(fe => fe.life > 0);
+      g.wormT -= dt;
+      if (!g.worm && g.wormT <= 0) {
+        const r = randInt(0, 1), gap = randInt(0, 3);
+        g.worm = { x: (COLS[r][gap] + COLS[r][gap + 1]) / 2, y: ROWS[r] + 6, t: 0 };
       }
-      // feed queued spots in one at a time, bouncing onto the shell, so the child can count along
-      if (g.queue > 0 && (g.fillT -= dt) <= 0) {
-        g.queue--; g.spots++; g.fillT = 0.3; g.pop = g.spots - 1; g.popT = 0;
-        tone(392 * Math.pow(2, (g.spots + 3) / 12), 0.16, 'triangle', 0.09);
-        const [sx, sy] = slotPos(g.spots - 1);
-        burst(b.x + sx * 1.25, b.y + sy * 1.25, 5, { colors: ['#2e2438', '#ff6a5a', '#fff'], spread: 70, up: 40, size: [2, 4] });
-        floatText(b.x + sx, b.y + sy - 24, String(g.spots), '#fff', false, 22);
-        if (g.queue === 0) {
-          const sum = g.parts.length > 1 ? `${g.parts.map(v => NUM_WORDS[v]).join(' plus ')} makes ${NUM_WORDS[g.spots]}.` : `${NUM_WORDS[g.spots]}.`;
-          if (g.spots === g.target) {
-            b.st = 'home'; b.loop = 1.2; b.lx = b.x; b.ly = Math.max(150, b.y - 55); g.cheer = 1.8;
-            SFX.sparkle(); burst(b.x, b.y, 28, { colors: ['#fff6a8', '#ff8fb5', '#ff5a5a', '#ffffff'] });
-            speak(`${sum} Perfect! Home she goes!`);
-          } else speak(`${sum} She needs ${NUM_WORDS[need(g)]} more, in ${NUM_WORDS[bitesLeft(g)]} ${bitesLeft(g) > 1 ? 'bites' : 'bite'}.`);
+      if (g.worm) { g.worm.t += dt; if (g.worm.t > 3) { g.worm = null; g.wormT = rand(4, 8); } }
+      // ---- plots
+      for (const p of g.plots) {
+        p.wig = Math.max(0, p.wig - dt * 3); p.flash = Math.max(0, p.flash - dt);
+        if (p.st === 'empty') { p.regrow -= dt; if (p.regrow <= 0 && g.mode === 'play') sprout(g, p, chooseKind(g)); }
+        else if (p.st === 'sprout') { p.grow = Math.min(1, p.grow + dt * 1.4); if (p.grow >= 1) p.st = 'ripe'; }
+        else if (p.st === 'air') {
+          p.airT += dt;
+          if (p.airT >= 1.1) { p.st = 'ripe'; p.pull = 0; p.wig = 1; tone(150, 0.1, 'triangle', 0.08); for (let j = 0; j < 8; j++) g.crumbs.push({ x: p.x + rand(-16, 16), y: p.y, vx: rand(-100, 100), vy: rand(-200, -60), r: rand(2, 4), life: 0.7 }); }
+        } else if (p.st === 'ripe' && !p.held) p.pull = Math.max(0, p.pull - dt * 1.5);
+      }
+      // ---- flyers into the basket
+      for (const f of g.flyers) {
+        f.t += dt; const k = Math.min(1, f.t / f.dur);
+        f.x = lerp(f.x0, BASKET.x, k); f.y = lerp(f.y0, BASKET.y - 30, k) - Math.sin(k * Math.PI) * 150;
+        f.rot += f.vr * dt;
+        if (k >= 1 && !f.landed) {
+          f.landed = true; g.pile.push(f.k); g.basketB = 1;
+          SFX.hit(); burst(BASKET.x, BASKET.y - 20, 8, { colors: ['#fff6a8', '#b8ffb0', '#ffd0a0'] });
         }
       }
-      // the sneaky ant climbs a stem to carry a bunch away; tap it to shoo it off
-      if (b.st === 'fly' && !g.ant && (g.antT -= dt) <= 0) {
-        const opts = g.bunches.map((q, i) => i).filter(i => live(g.bunches[i]) && g.bunches[i] !== b.aim && Math.hypot(b.x - g.bunches[i].x, b.y - g.bunches[i].y) > 140);
-        if (opts.length) { g.ant = { i: pick(opts), f: 0, st: 'up', carry: null, vy: 0 }; SFX.blip(); }
-        g.antT = c.antEvery * rand(0.8, 1.2);
+      g.flyers = g.flyers.filter(f => !f.landed);
+      // ---- basket complete?
+      if (g.mode === 'play' && g.slot >= g.order.length && !g.flyers.length) {
+        g.mode = 'trans'; g.transT = 3.2; g.round++;
+        g.grab = -1; for (const p of g.plots) p.held = false;
+        SFX.sparkle(); burst(BASKET.x, BASKET.y - 40, 26, { colors: ['#ff8fc0', '#ffe04a', '#8fe08a', '#8fd0ff'] });
+        const counts = {}; for (const k of g.order) counts[k] = (counts[k] || 0) + 1;
+        const star_ = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+        g.msg = 'Basket full! Hooray!'; g.msgT = 3;
+        speak(`Basket full! Fun fact: ${VEG[star_].fact}`);
+        if (g.mole && g.mole.st !== 'bonk') { g.mole.st = 'down'; g.mole.t = 0; }
+        if (g.crow && (g.crow.st === 'in' || g.crow.st === 'peck')) shooCrow(g, false);
       }
-      const a = g.ant;
-      if (a) {
-        const s = STEMS[a.i], len = 380;
-        if (a.st === 'up') {
-          a.f += dt * c.antSpeed / len;
-          if (a.f >= 1) {
-            const q = g.bunches[a.i];
-            if (live(q) && q !== b.aim && Math.hypot(b.x - q.x, b.y - q.y) > 60) {
-              a.carry = { n: q.n, gold: q.gold, val: q.val }; q.n = 0; q.wait = 2.5;
-              SFX.miss(); g.msg = 'The ant took them!'; g.msgT = 1.4; g.msgX = q.x; g.msgY = q.y - 30;
-            }
-            a.f = 1; a.st = 'down';
-          }
-        } else if (a.st === 'down') {
-          a.f -= dt * c.antSpeed * 1.3 / len;
-          if (a.f <= 0) g.ant = null;
-        } else if (a.st === 'flee') {
-          a.vy += 700 * dt; a.x += a.vx * dt; a.y += a.vy * dt; a.spin += dt * 12;
-          if (a.y > H + 40) g.ant = null;
-        }
-        if (a.st !== 'flee') { const [x, y] = qp(s, a.f); a.x = x; a.y = y; }
+      if (g.mode === 'trans') {
+        g.transT -= dt;
+        if (g.transT <= 0) { if (g.round >= ROUNDS) { g.score = scoreOf(g); g.done = true; return; } newBasket(g); speak(g.say); }
       }
-      // hunger: a gentle patience timer while she is waiting for lunch
-      if (b.st === 'fly' && g.queue === 0) {
-        g.hunger -= dt;
-        if (g.hunger < 10 && !g.hurried) { g.hurried = true; speak('Hurry, she is getting hungry!'); }
-        if (g.hunger <= 0) {
-          b.st = 'home'; b.loop = 0; b.sad = true; g.ant = null;
-          speak('Oh dear, she got too hungry and flew home for a nap.');
-          g.msg = 'Too hungry!'; g.msgT = 1.8; g.msgX = null;
-        }
+      // ---- the mole
+      g.moleT -= dt;
+      if (!g.mole && g.moleT <= 0 && g.mode === 'play') {
+        const cand = g.plots.map((p, i) => i).filter(i => g.plots[i].st === 'ripe' && i !== g.grab && !(g.crow && g.crow.i === i));
+        const want = cand.filter(i => g.plots[i].kind === needKind(g));
+        if (cand.length) {
+          const i = want.length && Math.random() < 0.6 ? pick(want) : pick(cand);
+          g.mole = { i, side: g.plots[i].x > 840 ? -1 : 1, t: 0, rise: 0, st: 'up' };
+          tone(160, 0.2, 'triangle', 0.08, 0, 260); tone(260, 0.12, 'triangle', 0.06, 0.2);
+          g.msg = 'A mole! Tap it!'; g.msgT = 2;
+        } else g.moleT = 2;
       }
-      if (b.st === 'enter') {
-        b.sc = Math.min(1, b.sc + dt * 2); b.y -= dt * 60; b.x += dt * 120;
-        if (pointer.clicked && pointer.y > 64) g.tap = { x: pointer.x, y: pointer.y };  // remember a tap made while she pops out
-        if (b.sc >= 1) {
-          b.st = 'fly'; b.sad = false; b.dest = { x: HOTEL.x + 120, y: HOTEL.y - 40 };
-          if (g.tap) { aimAt(g, g.tap.x, g.tap.y); g.tap = null; }
-        }
-      } else if (b.st === 'fly' || b.st === 'home') {
-        if (b.st === 'fly' && g.queue === 0 && b.dizzy <= 0) {
-          g.idle += dt;
-          if (pointer.clicked && pointer.y > 64) {
-            if (a && a.st !== 'flee' && Math.hypot(pointer.x - a.x, pointer.y - a.y) < 40) {
-              // shooed! if it was carrying aphids, they hop back onto their leaf
-              a.st = 'flee'; a.vx = rand(-120, 120); a.vy = -260; a.spin = 0;
-              SFX.pop(); floatText(a.x, a.y - 30, 'Shoo!', '#fff', false, 24);
-              const q = g.bunches[a.i];
-              if (a.carry && q.n === 0) Object.assign(q, { n: a.carry.n, gold: a.carry.gold, val: a.carry.val, grow: 0.3, shoo: 0, eaten: false, armed: false });
-              a.carry = null; g.idle = 0;
-            } else {
-              aimAt(g, pointer.x, pointer.y);
+      if (g.mole) {
+        const m = g.mole, p = g.plots[m.i];
+        m.t += dt;
+        if (m.st === 'up') { m.rise = Math.min(1, m.rise + dt * 3); if (m.rise >= 1) m.st = 'tug'; }
+        else if (m.st === 'tug') {
+          if (p.st !== 'ripe') { m.st = 'down'; m.t = 0; }
+          else if (!p.held) {
+            p.sink += dt / c.moleSteal; p.wig = Math.max(p.wig, 0.5);
+            if (p.sink >= 1) {
+              p.st = 'empty'; p.regrow = 3; p.sink = 0; g.theft++; m.st = 'down'; m.t = 0; m.ate = true;
+              SFX.fail(); g.msg = 'The mole took it!'; g.msgT = 2;
+              floatText(p.x, p.y - 70, 'Gulp!', '#ffd0d0', false, 22);
+              g.moleT = rand(...c.mole);
             }
           }
-          let kx = 0, ky = 0;
-          if (goLeft()) kx--; if (goRight()) kx++; if (keys.arrowup || keys.w) ky--; if (goDown()) ky++;
-          if (kx || ky) { b.dest = { x: b.x + kx * 60, y: b.y + ky * 60 }; b.aim = null; g.idle = 0; }
+        } else { m.rise = Math.max(0, m.rise - dt * (m.st === 'bonk' && m.t < 0.5 ? 0.6 : 2.5)); if (m.rise <= 0) g.mole = null; }
+      }
+      for (const p of g.plots) if (p.sink > 0 && !(g.mole && g.plots[g.mole.i] === p && g.mole.st === 'tug')) p.sink = Math.max(0, p.sink - dt * 2);
+      // ---- the crow
+      if (c.crow) {
+        g.crowT -= dt;
+        if (!g.crow && g.crowT <= 0 && g.mode === 'play') {
+          const cand = g.plots.map((p, i) => i).filter(i => g.plots[i].st === 'ripe' && i !== g.grab && !(g.mole && g.mole.i === i));
+          if (cand.length) {
+            const i = pick(cand), fromR = Math.random() < 0.5;
+            g.crow = { i, x: fromR ? W + 50 : 200, y: 70, st: 'in', t: 0, dir: fromR ? -1 : 1 };
+            tone(620, 0.16, 'sawtooth', 0.04, 0, 420); tone(600, 0.16, 'sawtooth', 0.04, 0.2, 400);
+            g.msg = 'Caw! A crow!'; g.msgT = 2;
+          } else g.crowT = 2;
         }
-        if (b.st === 'home' && b.loop > 0) {
-          // a happy loop-the-loop before flying home
-          b.loop -= dt;
-          const f = 1 - Math.max(0, b.loop) / 1.2, A = f * Math.PI * 2;
-          b.x = b.lx + Math.sin(A) * 55; b.y = b.ly + Math.cos(A) * 55; b.spin = -A;
-          if (Math.random() < 0.5) burst(b.x, b.y + 20, 1, { colors: ['#fff6a8', '#ffb3e0'], spread: 30, up: 10 });
-          if (b.loop <= 0) { b.spin = 0; b.dest = { x: HOTEL.x, y: HOTEL.y + 12 }; }
+        if (g.crow) {
+          const cr = g.crow, p = g.plots[cr.i];
+          cr.t += dt;
+          if (cr.st === 'in') {
+            const tx = p.x, ty = p.y - 84;
+            const dx = tx - cr.x, dy = ty - cr.y, d = Math.hypot(dx, dy);
+            if (p.st !== 'ripe') shooCrow(g, false);
+            else if (d < 8) { cr.st = 'peck'; cr.t = 0; cr.x = tx; cr.y = ty; }
+            else { const sp = Math.min(d, 230 * dt); cr.x += dx / d * sp; cr.y += dy / d * sp + Math.sin(cr.t * 8) * 0.8; cr.dir = dx < 0 ? -1 : 1; }
+          } else if (cr.st === 'peck') {
+            if (p.st !== 'ripe') shooCrow(g, false);
+            else if (!p.held) {
+              p.nib = Math.min(1, cr.t / c.crowStay); p.wig = Math.max(p.wig, 0.3);
+              if (cr.t >= c.crowStay) {
+                cr.st = 'carry'; cr.carry = p.kind; cr.vx = (p.x < W / 2 ? -1 : 1) * 220; cr.vy = -200; cr.dir = Math.sign(cr.vx);
+                p.st = 'empty'; p.regrow = 3.5; p.nib = 0; g.theft++;
+                SFX.fail(); g.msg = 'The crow took one!'; g.msgT = 2;
+                g.crowT = rand(...c.crow);
+              }
+            }
+          } else {
+            cr.x += cr.vx * dt; cr.y += cr.vy * dt;
+            if (cr.y < -80 || cr.x < -80 || cr.x > W + 80) g.crow = null;
+          }
+        }
+      }
+      for (const p of g.plots) if (p.nib > 0 && !(g.crow && g.crow.i === g.plots.indexOf(p) && g.crow.st === 'peck')) p.nib = Math.max(0, p.nib - dt * 0.5);
+      // ---- input
+      g.score = scoreOf(g);
+      if (g.mode !== 'play') return;
+      g.idle += dt;
+      if (pointerMoved(g)) g.useKeys = false;
+      // keyboard: arrows choose a plant, hold space to pull
+      const ci = g.cursor, cc = ci % 5, cr_ = Math.floor(ci / 5);
+      if (pressed.arrowleft) { g.cursor = cr_ * 5 + Math.max(0, cc - 1); g.useKeys = true; }
+      if (pressed.arrowright) { g.cursor = cr_ * 5 + Math.min(4, cc + 1); g.useKeys = true; }
+      if (pressed.arrowup) { g.cursor = cc; g.useKeys = true; }
+      if (pressed.arrowdown) { g.cursor = 5 + cc; g.useKeys = true; }
+      const hitCrow = (x, y) => g.crow && (g.crow.st === 'in' || g.crow.st === 'peck') && Math.hypot(x - g.crow.x, y - g.crow.y) < 58;
+      const hitMole = (x, y) => {
+        if (!g.mole || g.mole.st === 'bonk' || g.mole.st === 'down') return false;
+        const p = g.plots[g.mole.i];
+        return Math.hypot(x - (p.x + g.mole.side * 52), y - (p.y - 34)) < 52;
+      };
+      if (pointer.clicked) {
+        if (hitCrow(pointer.x, pointer.y)) shooCrow(g, false);
+        else if (hitMole(pointer.x, pointer.y)) bonkMole(g, false);
+        else if (g.worm && Math.hypot(pointer.x - g.worm.x, pointer.y - g.worm.y + 20) < 26) {
+          floatText(g.worm.x, g.worm.y - 50, 'Hi, wormy!', '#ffd0e0', false, 18); tone(1200, 0.08, 'sine', 0.06, 0, 1600); g.worm.t = Math.max(g.worm.t, 2.6);
         } else {
-          if (b.st === 'home') b.dest = { x: HOTEL.x, y: HOTEL.y + 12 };
-          if (b.dest) {
-            const dx = b.dest.x - b.x, dy = b.dest.y - b.y, d = Math.hypot(dx, dy);
-            const sp = b.st === 'home' ? 320 : 380;
-            if (d < 6) { b.vx *= 0.8; b.vy *= 0.8; if (b.st === 'fly') b.dest = null; }
-            else { b.vx = lerp(b.vx, dx / d * Math.min(sp, d * 5), Math.min(1, dt * 8)); b.vy = lerp(b.vy, dy / d * Math.min(sp, d * 5), Math.min(1, dt * 8)); }
-          } else { b.vx *= 0.85; b.vy *= 0.85; }
-          b.x = clamp(b.x + b.vx * dt, 40, W - 40); b.y = clamp(b.y + b.vy * dt, 96, 440);
-        }
-        if (b.st === 'home') {
-          if (b.loop <= 0 && Math.hypot(b.x - HOTEL.x, b.y - HOTEL.y - 12) < 18) {
-            b.sc = Math.max(0, b.sc - dt * 3);
-            if (b.sc <= 0) {
-              finishRound(g, b.sad ? 0 : Math.max(0, 1 - g.miss * MISS_COST));
-              if (g.round >= c.rounds) { g.done = true; return; }
-              newRound(g); speak(g.say);
-            }
-          }
-        } else if (g.queue === 0 && b.dizzy <= 0) {
-          // touching a bunch: eat it, or "too many!"
-          for (const q of g.bunches) {
-            if (!live(q) || !q.armed || q.grow < 0.6 || Math.hypot(b.x - q.x, b.y - q.y) > 46) continue;
-            // only land on the bunch she was sent to, or (steering by keys) one she stops on
-            if (b.aim ? q !== b.aim : Math.hypot(b.vx, b.vy) > 90) continue;
-            b.aim = null;
-            if (fits(g, q.val)) {
-              g.queue = q.val; g.fillT = 0.2; g.parts.push(q.val);
-              for (let k = 0; k < q.n; k++) tone(1500 + k * 180, 0.07, 'sine', 0.06, k * 0.07, 2100 + k * 180);  // squeak!
-              SFX.pop();
-              for (let k = 0; k < 14; k++) g.crumbs.push({ x: q.x + rand(-14, 14), y: q.y + rand(-8, 8), vx: rand(-140, 140), vy: rand(-220, -60), life: rand(0.5, 0.9), col: pick(q.gold ? ['#ffd23a', '#fff2a0'] : ['#9ee05a', '#d0f8a0', '#5fbf4a']) });
-              q.n = 0; q.eaten = true; q.wait = 1.4; b.dest = null;
-            } else {
-              g.miss++; q.shoo = 0.6; q.wait = 1.6; b.dizzy = 1.1; SFX.fail();
-              const over = q.val > need(g);
-              g.msg = over ? 'Too many!' : 'Not enough!'; g.msgT = 1.6; g.msgX = null;
-              const away = Math.atan2(b.y - q.y, b.x - q.x);
-              b.vx = Math.cos(away) * 420; b.vy = Math.sin(away) * 420; b.dest = null;
-              speak(over ? `Oops, that's ${NUM_WORDS[q.val]}. Too many! She needs ${NUM_WORDS[need(g)]} more.`
-                : `That's only ${NUM_WORDS[q.val]}. Not enough! She needs ${NUM_WORDS[need(g)]} more, in ${NUM_WORDS[bitesLeft(g)]} ${bitesLeft(g) > 1 ? 'bites' : 'bite'}.`);
-            }
-            break;
-          }
+          const i = plotAt(g, pointer.x, pointer.y);
+          if (i >= 0) { g.grab = i; g.grabKey = false; g.lastY = pointer.y; g.plots[i].held = true; g.useKeys = false; tone(500, 0.05, 'triangle', 0.06); }
         }
       }
-      // hint: after a while, a bunch that fits glows
-      g.hint = -1;
-      if (b.st === 'fly' && g.idle > (g.tier === 1 ? 7 : 11)) {
-        const rem = need(g), vals = g.bunches.map(q => (live(q) ? q.val : 0));
-        g.hint = vals.indexOf(rem);
-        if (g.hint < 0) g.hint = vals.findIndex((v, i) => v > 0 && fits(g, v) && canMake(vals.filter((_, j) => j !== i), rem - v, bitesLeft(g) - 1));
+      if (pressed[' ']) {
+        const p = g.plots[g.cursor];
+        if (g.crow && g.crow.i === g.cursor && (g.crow.st === 'in' || g.crow.st === 'peck')) shooCrow(g, false);
+        else if (g.mole && g.mole.i === g.cursor && (g.mole.st === 'up' || g.mole.st === 'tug')) bonkMole(g, false);
+        else if (p.st === 'ripe') { g.grab = g.cursor; g.grabKey = true; p.held = true; g.useKeys = true; }
       }
-      if (g.clock > 300) g.done = true;  // safety net so a stuck game still ends
+      if (g.grab >= 0) {
+        const p = g.plots[g.grab];
+        const holding = g.grabKey ? keys[' '] : pointer.down;
+        if (!holding || p.st !== 'ripe') { p.held = false; g.grab = -1; }
+        else {
+          const need = p.big ? 1.7 : 1;
+          const drag = g.grabKey ? 0 : Math.max(0, g.lastY - pointer.y) / 110;
+          g.lastY = pointer.y;
+          p.pull += dt / PULL_TIME + drag;
+          p.wig = 1;
+          g.creakT -= dt;
+          if (g.creakT <= 0) {
+            g.creakT = 0.09;
+            tone(180 + (p.pull / need) * 520, 0.07, 'triangle', 0.05);
+            g.crumbs.push({ x: p.x + rand(-22, 22), y: p.y - 2, vx: rand(-70, 70), vy: rand(-170, -70), r: rand(1.5, 3.5), life: 0.6 });
+          }
+          if (p.pull >= need) popOut(g, g.grab);
+        }
+      }
+      // hints: glow the right kind after two mistakes, or after a long pause
+      const hintOn = g.slotMiss >= 2 || g.idle > (g.hidden[g.slot] ? 12 : 7);
+      if (hintOn) for (const p of g.plots) if (p.st === 'ripe' && p.kind === needKind(g)) p.flash = Math.max(p.flash, 0.3);
     },
     draw(g) {
-      const t = g.t, b = g.bug, c = g.cfg;
-      blit(sprite('garden2_sky', W, H, 0, 0, paintSky), 0, 0);
-      // soft sunlight rays from the top corner
-      ctx.save(); ctx.translate(900, -20); ctx.rotate(Math.sin(t * 0.2) * 0.05);
-      for (let i = 0; i < 7; i++) {
-        const a0 = Math.PI * 0.55 + i * 0.12;
-        ctx.fillStyle = `rgba(255,250,210,${0.1 + 0.05 * Math.sin(t * 0.8 + i)})`;
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 900, a0, a0 + 0.05); ctx.closePath(); ctx.fill();
+      const t = g.clock;
+      ctx.drawImage(BG, 0, 0, W, H);
+      // drifting clouds (live, behind the card)
+      for (let i = 0; i < 3; i++) {
+        const x = ((t * (8 + i * 3) + i * 380) % (W + 240)) - 120, y = 98 + i * 34;
+        ctx.fillStyle = 'rgba(255,255,255,.85)';
+        circle(x, y, 20); circle(x + 22, y - 10, 24); circle(x + 48, y, 19); ctx.fillRect(x, y, 48, 18);
+      }
+      // ---- Mrs. Pickett's list
+      const n = g.order.length, sw = 70, cw = n * sw + 26, cx = 590, cy = 104;
+      const slide = g.mode === 'trans' ? Math.min(1, (3.2 - g.transT) / 0.5) : 0;
+      const yOff = (1 - easeOut(g.cardIn)) * -120 + slide * -150;
+      ctx.save(); ctx.translate(0, yOff);
+      ctx.save(); ctx.shadowColor = 'rgba(40,20,60,.3)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+      rrect(cx - cw / 2, cy - 38, cw, 78, 14, '#fffaf0', OL, 3);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(120,170,220,.35)'; ctx.lineWidth = 1.5;
+      for (const yy of [cy - 14, cy + 10, cy + 34]) { ctx.beginPath(); ctx.moveTo(cx - cw / 2 + 8, yy); ctx.lineTo(cx + cw / 2 - 8, yy); ctx.stroke(); }
+      inkCircle(cx - cw / 2 + 14, cy - 30, 6, '#ff6fa0', 1.2);
+      inkCircle(cx + cw / 2 - 14, cy - 30, 6, '#ff6fa0', 1.2);
+      for (let i = 0; i < n; i++) {
+        const x = cx - cw / 2 + 13 + sw / 2 + i * sw, y = cy + 2;
+        const cur = i === g.slot && g.mode === 'play', done = i < g.slot;
+        const bob = cur ? Math.sin(t * 6) * 3 : 0;
+        if (cur) { ctx.fillStyle = 'rgba(255,220,90,.55)'; circle(x, y + bob, 33 + Math.sin(t * 6) * 2); }
+        rrect(x - 29, y - 30 + bob, 58, 60, 12, done ? '#e6f8dc' : cur ? '#fff6c8' : '#fff', cur ? '#ff9a3a' : 'rgba(91,63,115,.55)', cur ? 3.5 : 2);
+        if (g.hidden[i]) {
+          ctx.setLineDash([5, 4]); rrect(x - 22, y - 23 + bob, 44, 46, 10, null, '#b48ae0', 2); ctx.setLineDash([]);
+          outlined('?', x, y + 2 + bob + Math.sin(t * 4 + i) * 2, 30, '#c58aff', 'center', '#fff');
+        } else {
+          const k = g.order[i], ys = { carrot: 0.36, beet: 0.42, radish: 0.48, onion: 0.4 }[k];
+          veg(k, x, y - 4 + bob, ys, 0, t, { sway: 0 });
+          if (done) { inkCircle(x + 20, y + 20, 10, '#5cc860', 1.2); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + 15, y + 20); ctx.lineTo(x + 19, y + 24); ctx.lineTo(x + 25, y + 15); ctx.stroke(); }
+        }
+        if (cur) { ctx.fillStyle = '#ff7a3a'; tri(x - 9, y + 40 + bob, x + 9, y + 40 + bob, x, y + 30 + bob); }
       }
       ctx.restore();
-      blit(sprite('garden2_stems', W, H, 0, 0, paintStems), 0, 0);
-      ROSES.slice(0, 4).forEach(([x, y, r, ci], k) => rose(x, y, r, ROSE_COLS[ci], t, k));
-      for (const p of g.petals) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.sin(t * 2 + p.ph)); ctx.fillStyle = p.col; ellipse(0, 0, 6 * p.s, 3.5 * p.s); ctx.restore(); }
-      g.bunches.forEach((q, i) => {
-        glossyLeaf(q.x + 2, q.y + 12, (i % 2 ? 0.25 : -0.2) + Math.sin(t * 1.3 + i) * 0.03, 1, q.n <= 0 && q.eaten);
-        dew(q.x - 26, q.y + 10, 3.2, t, i);
-        if (g.hint === i) {
-          const gr = ctx.createRadialGradient(q.x, q.y, 4, q.x, q.y, 60);
-          gr.addColorStop(0, `rgba(255,250,170,${0.5 + Math.sin(t * 6) * 0.25})`); gr.addColorStop(1, 'rgba(255,250,170,0)');
-          ctx.fillStyle = gr; circle(q.x, q.y, 60);
-        }
-        if (q.n <= 0) return;
-        const s = clamp(q.grow, 0, 1) * 1.35;
-        for (let k = 0; k < q.n; k++) {
-          let ax = q.x + (k - (q.n - 1) / 2) * 23, ay = q.y + (k % 2 ? -7 : 5);
-          if (q.shoo > 0) { const f = 0.6 - q.shoo; ax += Math.cos(k * 2.1) * f * 260; ay += Math.sin(k * 2.1) * f * 200 - f * 80; }
-          aphid(ax, ay, s, t, k, q.gold);
-        }
-        if (c.badge && q.shoo <= 0 && q.grow > 0.6) {
-          inkCircle(q.x + 32, q.y - 26, 14, '#fffbe8', 1.2);
-          text(String(q.val), q.x + 32, q.y - 25, 18, '#3f8a2a', 'center', 800);
-        }
-      });
-      blit(sprite('garden2_front', W, H, 0, 0, paintFront), 0, 0);
-      ROSES.slice(4).forEach(([x, y, r, ci], k) => rose(x, y, r, ROSE_COLS[ci], t, k + 4));
-      DEW.forEach(([x, y], k) => dew(x, y, 3.5, t, k + 7));
-      if (g.ant) {
-        const a = g.ant, s = STEMS[a.i];
-        const f2 = clamp(a.f + (a.st === 'down' ? -0.02 : 0.02), 0, 1), [nx, ny] = qp(s, f2);
-        const ang = a.st === 'flee' ? a.spin : Math.atan2(ny - a.y, nx - a.x);  // faces the way it walks
-        ant(a.x, a.y, ang, t, 1.6, a.carry);
-        if (a.st === 'up') { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 8); emoji('❗', a.x + 16, a.y - 30, 20); ctx.globalAlpha = 1; }
+      // ---- the patch, back row then front row
+      for (const row of [0, 1]) {
+        g.plots.forEach((p, i) => {
+          if (p.row !== row) return;
+          const s = p.big ? 1.25 : 1;
+          if (p.st === 'empty') {
+            ctx.fillStyle = SOIL_D; ellipse(p.x, p.y + 2, 18, 6);
+            ctx.fillStyle = 'rgba(0,0,0,.25)'; ellipse(p.x, p.y + 3, 12, 3.5);
+          } else if (p.st === 'sprout') {
+            const k = easeBack(p.grow);
+            ctx.save(); ctx.beginPath(); ctx.rect(p.x - 140, 0, 280, p.y + 1); ctx.clip();
+            veg(p.kind, p.x, p.y - BASE * p.grow, s * Math.max(0.05, k), 0, t, { sway: Math.sin(t * 2 + p.seed) * 0.05 });
+            ctx.restore();
+          } else {
+            let lift, x = p.x, rot, mood = null, clip = true;
+            if (p.st === 'air') {
+              const k = p.airT / 1.1;
+              lift = BASE + 44 + Math.sin(Math.min(1, k) * Math.PI) * 90;
+              rot = Math.sin(p.airT * 26) * 0.3 * (1 - k);
+              mood = 'sad'; clip = k > 0.15 && k < 0.85;
+              if (k > 0.85) clip = true;
+            } else {
+              lift = BASE + p.pull / (p.big ? 1.7 : 1) * 44 - p.sink * 64;
+              rot = Math.sin(t * 34 + p.seed) * 0.08 * p.wig;
+              x += Math.sin(t * 40) * 2.5 * p.wig * (p.held ? 1 : 0.5);
+              if (p.pull > 0.25) mood = 'o';
+            }
+            if (p.flash > 0) {
+              const gl = ctx.createRadialGradient(x, p.y - 40, 4, x, p.y - 40, 70);
+              gl.addColorStop(0, `rgba(255,250,170,${0.55 + Math.sin(t * 8) * 0.25})`); gl.addColorStop(1, 'rgba(255,250,170,0)');
+              ctx.fillStyle = gl; circle(x, p.y - 40, 70);
+              if (Math.sin(t * 8 + p.seed) > 0.6) star(x + Math.sin(t * 3 + p.seed) * 30, p.y - 70 + Math.cos(t * 4) * 10, 6, '#fff6a8', 4);
+            }
+            const sway = Math.sin(t * 1.6 + p.seed) * 0.06 + (p.held ? Math.sin(t * 30) * 0.08 : 0);
+            if (clip) { ctx.save(); ctx.beginPath(); ctx.rect(x - 160, 0, 320, p.y + 1); ctx.clip(); }
+            veg(p.kind, x, p.y - lift, s, rot, t, { sway, nib: p.nib, mood });
+            if (clip) ctx.restore();
+            // the soil lip in front of the stem
+            ctx.fillStyle = OL; ellipse(p.x, p.y + 3, 26, 8);
+            ctx.fillStyle = SOIL_L; ellipse(p.x, p.y + 3, 24, 6);
+            ctx.fillStyle = '#a8784e'; ellipse(p.x - 6, p.y + 1, 10, 2.5);
+            if (p.held) {  // pull meter: a ring around the grab point
+              const need = p.big ? 1.7 : 1, k = clamp(p.pull / need, 0, 1);
+              ctx.lineCap = 'round';
+              ctx.strokeStyle = 'rgba(40,20,60,.45)'; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(p.x, p.y + 28, 16, 0, Math.PI * 2); ctx.stroke();
+              ctx.strokeStyle = mix('#ffcf3a', '#5cd860', k); ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(p.x, p.y + 28, 16, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
+            }
+          }
+          if (g.useKeys && g.cursor === i && g.mode === 'play') {
+            ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 30;
+            rrect(p.x - 52, p.y - 100, 104, 122, 18, null, '#fff', 3.5); ctx.setLineDash([]);
+          }
+          if (g.mole && g.mole.i === i) mole(p.x + g.mole.side * 52, p.y + 6, g.mole.rise, t, g.mole.st, g.mole.t);
+        });
+        if (g.worm && (g.worm.y > 400) === (row === 1)) worm(g.worm.x, g.worm.y, Math.min(1, g.worm.t * 3, (3 - g.worm.t) * 3), t);
       }
-      if (g.phase === 'play') drawCritter('Mrs. Pickett', 905, GY + 34, 0.55, -1);  // the scene draws her itself on the results panel
-      for (const k of g.crumbs) { ctx.fillStyle = k.col; circle(k.x, k.y, 3.2); }
-      // the ladybug
-      const flying = b.st !== 'enter' && (Math.hypot(b.vx, b.vy) > 30 || b.st === 'home');
-      const bob = flying ? Math.sin(t * 8) * 3 : 0;
-      const tilt = b.st === 'home' && b.loop > 0 ? b.spin : clamp(b.vx / 900, -0.35, 0.35) + (b.dizzy > 0 ? Math.sin(t * 20) * 0.25 : 0);
-      ladybug(b.x, b.y + bob, 1.25 * b.sc, g.target, g.spots, t, flying ? 1 : 0, tilt, g.pop, g.popT, g.queue > 0 ? 1 : 0);
-      if (b.dizzy > 0) for (let k = 0; k < 3; k++) { const a = t * 6 + k * 2.1; star(b.x + Math.cos(a) * 36, b.y - 60 + Math.sin(a) * 10, 8, '#ffe36b', 5); }
-      if (g.msgT > 0) {
-        const mx = g.msgX ?? b.x, my = g.msgX != null ? g.msgY : b.y - 96;
-        outlined(g.msg, clamp(mx, 120, W - 120), my, 28, '#ff8a5a', 'center', '#fff');
-      }
-      if (g.cheer > 0) outlined('Perfect!', b.x, Math.max(80, b.y - 96 - (1.8 - g.cheer) * 20), 32, '#ff6fb5', 'center', '#fff');
-      this.drawCounter(g);
-    },
-    // a number line of spots grouped by what she ate, the number sentence, and her hunger
-    drawCounter(g) {
-      const n = g.target, t = g.t;
-      const pw = Math.max(380, n * 30 + 150), x0 = W / 2 - pw / 2, y0 = 458;
-      darkPanel(x0, y0, pw, 76, 24);
-      const lx = x0 + 22;
-      let i = 0;
-      g.parts.forEach((v, pi) => {
-        rrect(lx + i * 30 - 3, y0 + 8, v * 30 - 4, 30, 15, pi % 2 ? 'rgba(255,210,120,.25)' : 'rgba(160,230,255,.22)');
-        i += v;
+      // ---- soil crumbs
+      for (const cb of g.crumbs) { ctx.globalAlpha = clamp(cb.life * 2, 0, 1); ctx.fillStyle = OL; circle(cb.x, cb.y, cb.r + 1.2); ctx.fillStyle = SOIL_L; circle(cb.x, cb.y, cb.r); }
+      ctx.globalAlpha = 1;
+      // ---- Mrs. Pickett with her basket
+      const hop = Math.sin(g.pickHop * Math.PI) * 16;
+      drawCritter('Mrs. Pickett', 62, 474 - hop, 0.8, 1);
+      basket(BASKET.x, BASKET.y, 0, g.basketB, false);
+      g.pile.forEach((k, j) => {
+        const px = BASKET.x - 44 + (j % 5) * 22, py = BASKET.y - 36 - Math.floor(j / 5) * 14 - (j % 2) * 5;
+        veg(k, px, py, 0.5, -0.5 + (j % 5) * 0.25, t, { mood: 'happy', sway: Math.sin(t * 2 + j) * 0.05 });
       });
-      for (let k = 0; k < n; k++) {
-        const cx = lx + 12 + k * 30, cy = y0 + 23;
-        if (k < g.spots) {
-          const pk = k === g.pop && g.popT < 0.35 ? 1 + Math.sin(g.popT / 0.35 * Math.PI) * 0.4 : 1;
-          inkCircle(cx, cy, 11 * pk, '#ee3a3a', 1.2, '#fff'); ctx.fillStyle = '#2e2438'; circle(cx, cy, 4 * pk);
-        } else { ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
-      }
-      // number sentence: 2 + 3 + ? = 7
-      const rem = g.target - g.spots - g.queue;
-      const bits = g.parts.map(String);
-      if (rem > 0) for (let k = 0; k < Math.max(1, bitesLeft(g)); k++) bits.push('?');
-      const sent = `${bits.join(' + ')} = ${g.target}`;
-      ctx.font = `800 22px ${FONT}`;
-      const sw = ctx.measureText(sent).width;
-      let sx = lx + 2;
-      bits.forEach((s, k) => {
-        const col = s === '?' ? (Math.sin(t * 5) > 0 ? '#ffe36b' : '#fff3b0') : k % 2 ? '#ffd890' : '#b8ecff';
-        text(s, sx, y0 + 56, 22, col, 'left', 800); ctx.font = `800 22px ${FONT}`; sx += ctx.measureText(s).width;
-        if (k < bits.length - 1) { text(' + ', sx, y0 + 56, 22, '#fff', 'left', 800); ctx.font = `800 22px ${FONT}`; sx += ctx.measureText(' + ').width; }
-      });
-      text(` = ${g.target}`, sx, y0 + 56, 22, '#fff', 'left', 800);
-      if (rem > 0 && g.parts.length) text(`(${rem} more)`, lx + sw + 14, y0 + 56, 16, '#ffe9a0', 'left', 700);
-      // bites left: little leaf plates, dimmed once used
-      for (let k = 0; k < g.cfg.bites; k++) {
-        ctx.globalAlpha = k < g.parts.length ? 0.3 : 1;
-        glossyLeaf(x0 + pw - 80, y0 + 16 + k * 20 + (g.cfg.bites === 2 ? 10 : 0), -0.1, 0.32);
+      basket(BASKET.x, BASKET.y, g.pile.length, g.basketB, true);
+      // speech bubble
+      if (g.msgT > 0 && g.msg) {
+        ctx.font = `700 16px ${FONT}`;
+        const bw = Math.max(110, ctx.measureText(g.msg).width + 28), bx = 12, by = 116;
+        ctx.globalAlpha = clamp(g.msgT * 3, 0, 1);
+        rrect(bx, by, bw, 38, 16, '#fff', OL, 2.5);
+        ctx.fillStyle = '#fff'; tri(bx + 30, by + 36, bx + 50, by + 36, bx + 36, by + 50);
+        ctx.strokeStyle = OL; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(bx + 30, by + 37); ctx.lineTo(bx + 36, by + 50); ctx.lineTo(bx + 50, by + 37); ctx.stroke();
+        text(g.msg, bx + bw / 2, by + 19, 16, '#7a3a8a', 'center', 700);
         ctx.globalAlpha = 1;
       }
-      // hunger: a leaf pie that shrinks while she waits
-      const hx = x0 + pw - 36, hy = y0 + 38, f = clamp(g.hunger / g.cfg.hunger, 0, 1);
-      inkCircle(hx, hy, 22, 'rgba(255,255,255,.15)', 1.2, '#fff');
-      ctx.fillStyle = f > 0.5 ? '#7ad86a' : f > 0.25 ? '#ffc04a' : '#ff6a5a';
-      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.arc(hx, hy, 20, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2); ctx.closePath(); ctx.fill();
-      ladybug(hx, hy + 2 + (f < 0.25 ? Math.sin(t * 20) * 1.5 : 0), 0.22, 0, 0, t, 0, 0);
+      // ---- flying veggies, the crow, feathers, butterflies
+      for (const f of g.flyers) veg(f.k, f.x, f.y, f.s * 0.8, f.rot, t, { mood: 'happy' });
+      if (g.crow) {
+        const cr = g.crow, flying = cr.st !== 'peck';
+        crow(cr.x, cr.y, cr.dir, flying ? t * 18 : 0, t, cr.st === 'peck', cr.carry);
+        if (cr.st === 'peck' && Math.sin(t * 9) > 0.9) burst(cr.x + cr.dir * 30, cr.y + 20, 1, { colors: ['#6cc058'], spread: 40, up: 30, size: [2, 4] });
+      }
+      for (const fe of g.feathers) {
+        ctx.save(); ctx.translate(fe.x, fe.y); ctx.rotate(fe.rot); ctx.globalAlpha = clamp(fe.life, 0, 1);
+        inkEllipse(0, 0, 9, 3.5, 0, '#3c3660', 1); ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+      g.flies.forEach((f, i) => butterfly(f.x, f.y + Math.sin(t * 3 + i) * 10, t + i, f.col));
+      bee(600 + Math.sin(t * 0.7) * 300, 300 + Math.sin(t * 2.3) * 40, t);
+      // ---- the gardening glove follows the pointer over the patch
+      if (g.mode === 'play' && !g.useKeys) {
+        if (g.grab >= 0) { const p = g.plots[g.grab]; glove(p.x + 6, p.y - BASE - 10 - p.pull / (p.big ? 1.7 : 1) * 44 - 34, true, t); }
+        else if (pointer.x > BED.x0 && pointer.y > 160) glove(pointer.x + 10, pointer.y + 6, false, t);
+      }
+      if (g.mode === 'trans') {
+        const k = clamp((3.2 - g.transT) / 0.4, 0, 1);
+        outlined(g.round >= ROUNDS ? 'All done!' : 'Basket full!', 590, 210 - (1 - easeBack(k)) * 40, 46, '#ffe680', 'center', OL);
+      }
     },
   };
 
   restage('garden', {
-    games: [['maze', 'petal', { what: 'petals' }], ['ladybuglunch', 'berry', {}]],
+    games: [['maze', 'petal', { what: 'petals' }], ['veggiepatchpull', 'berry', {}]],
     mid: [
-      "N:Oh, thank you, dear! Now, see my roses? They're covered in tiny green aphids.",
-      'N:My ladybugs gobble them up, and every aphid gives a ladybug one more spot!',
-      'N:But each ladybug needs JUST the right number of spots. Not one too many! And watch out for that sneaky ant.',
-      'A:thinking:So I pick aphids that add up... exactly. I can do that!',
+      'N:Thank you, dear! Now, would you help me pick my veggies? Carrots, beets, radishes, all ready to pull!',
+      "N:Here's my list. Pick them in just that order, and if the end is missing, keep the pattern going!",
+      'N:Grab the leafy tops and give a good PULL! Oh, and shoo that greedy mole and that cheeky crow.',
+      'A:excited:Pull, pull, POP! Let me at those veggies!',
     ],
   });
 }
