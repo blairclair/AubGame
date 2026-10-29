@@ -887,7 +887,7 @@
     ['moth', 'moth', 1, 'Moths flutter round the moonlight.'],
     ['butterfly', '🦋', 0, 'Butterflies love the warm sunshine.'], ['bee', '🐝', 0, 'Bees visit flowers in the day.'],
     ['squirrel', '🐿️', 0, 'Squirrels gather nuts in the day.'], ['robin', '🐦', 0, 'Robins sing in the morning.'],
-    ['rooster', '🐓', 0, 'Roosters crow when the sun comes up.'], ['ladybird', '🐞', 0, 'Ladybirds warm up in the sun.'],
+    ['rooster', '🐓', 0, 'Roosters crow when the sun comes up.'], ['ladybug', '🐞', 0, 'Ladybugs warm up in the sun.'],
     ['duck', '🦆', 0, 'Ducks paddle about in the day.'], ['sheep', '🐑', 0, 'Sheep munch grass all day long.'],
   ];
   const ndDraw = (a, x, y, size) => {

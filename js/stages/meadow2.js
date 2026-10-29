@@ -7,7 +7,7 @@
   const CX = 372, CY = 268;          // where critters stop on the big leaf
   const STAGE_B = 408;               // below this are the Bug Book pages
   const CLS = [
-    { id: 'insect', name: 'Insect', hint: '6 legs, 3 parts', col: '#ff8fb8', mini: 'ladybird', ms: 0.36 },
+    { id: 'insect', name: 'Insect', hint: '6 legs, 3 parts', col: '#ff8fb8', mini: 'ladybug', ms: 0.36 },
     { id: 'spider', name: 'Spider family', hint: '8 legs, 2 parts', col: '#b48ae8', mini: 'spider', ms: 0.27 },
     { id: 'lots', name: 'Lots of legs', hint: 'more than 8 legs', col: '#ffad5a', mini: 'centipede', ms: 0.2 },
     { id: 'none', name: 'No legs', hint: '0 legs', col: '#6cc0f0', mini: 'snail', ms: 0.3 },
@@ -39,7 +39,7 @@
   const part = (x, rx, ry, col, label) => ({ x, y: 0, rx, ry, col, label });
 
   const KINDS = {
-    ladybird: { cls: 'insect', fact: 'A ladybird is an insect!', b: () => ({
+    ladybug: { cls: 'insect', fact: 'A ladybug is an insect!', b: () => ({
       parts: [part(-6, 38, 35, '#ff4a3d', 'abdomen'), part(34, 12, 23, '#2a2230', 'thorax'), part(53, 12, 13, '#2a2230', 'head')],
       legs: insectLegs([38, 28, 18], 15, 0.88), ants: antPair(60, 6, 70, 14, 76, 24), eye: [56, 5, 4.5] }) },
     bee: { cls: 'insect', fact: 'A bee is an insect!', b: () => ({
@@ -175,7 +175,7 @@
   }
   function decor(kind, c, t) {
     const P = c.parts;
-    if (kind === 'ladybird') {
+    if (kind === 'ladybug') {
       ctx.save(); ctx.beginPath(); ctx.ellipse(P[0].x, 0, P[0].rx, P[0].ry, 0, 0, TAU); ctx.clip();
       ctx.fillStyle = '#2a2230';
       for (const [x, y, r] of [[-4, 16, 7], [-4, -16, 7], [-28, 12, 6], [-28, -12, 6], [16, 21, 5.5], [16, -21, 5.5], [-40, 0, 4]]) circle(x, y, r);
@@ -395,8 +395,8 @@
     init(g) {
       const t = g.tier - 1;
       const pools = [
-        ['ladybird', ['spider', 'bee', 'snail', 'woodlouse']],
-        ['ant', ['spider', 'beetle', 'worm', 'centipede', 'ladybird']],
+        ['ladybug', ['spider', 'bee', 'snail', 'woodlouse']],
+        ['ant', ['spider', 'beetle', 'worm', 'centipede', 'ladybug']],
         ['grasshopper', ['spider', 'ant', 'slug', 'millipede', 'bee', 'woodlouse']],
       ][t];
       Object.assign(g, {
