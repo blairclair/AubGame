@@ -71,14 +71,17 @@ SCENES.minigame = {
     if (g.phase !== 'play' && g.loc) drawCritter(g.loc.npc.name, 872, GY + 40, 0.72, -1);
 
     if (g.phase === 'ready') {
-      panel(W / 2 - 300, 100, 600, 350, 24);
-      emoji(this.impl.icon(g), W / 2, 164, 64);
-      outlined(this.impl.title(g), W / 2, 226, 30, '#ff6fb5', 'center', '#fff');
-      const lines = wrap(this.how, 520, 20);
-      lines.forEach((l, i) => text(l, W / 2, 266 + i * 28, 20, '#5a2a6e', 'center', 500));
+      // long instructions get smaller text and push the button (and the panel) down, so nothing overlaps
+      const long = wrap(this.how, 520, 20).length > 3, sz = long ? 18 : 20, lh = long ? 24 : 28, up = long ? 16 : 0;
+      const lines = wrap(this.how, long ? 540 : 520, sz);
+      const winsY = 266 - up + (lines.length - 1) * lh + lh + 12, btnY = Math.max(378, winsY + 22);
+      panel(W / 2 - 300, 100, 600, btnY + 72 - 100, 24);
+      emoji(this.impl.icon(g), W / 2, 164 - up, long ? 54 : 64);
+      outlined(this.impl.title(g), W / 2, 226 - up, 30, '#ff6fb5', 'center', '#fff');
+      lines.forEach((l, i) => text(l, W / 2, 266 - up + i * lh, sz, '#5a2a6e', 'center', 500));
       const m = MATS[g.mat];
-      text(`Wins: ${m.icon} ${m.name}  (${TIER_NAMES[m.tier]})`, W / 2, 278 + lines.length * 28, 16, '#9a7aaa', 'center', 600);
-      button('start', W / 2 - 100, 378, 200, 56, "Let's go!", { color: '#5fb87a', size: 22 });
+      text(`Wins: ${m.icon} ${m.name}  (${TIER_NAMES[m.tier]})`, W / 2, winsY, 16, '#9a7aaa', 'center', 600);
+      button('start', W / 2 - 100, btnY, 200, 56, "Let's go!", { color: '#5fb87a', size: 22 });
     }
     if (g.phase === 'result') {
       panel(W / 2 - 240, 120, 480, 290, 24);
