@@ -992,7 +992,7 @@
   };
   MG.wishfishing = {
     kind: 'action', title: () => 'Wish Fishing', icon: () => '🪣',
-    how: () => 'Move the bucket with the arrows or the mouse. Scoop up wish-coins, then pull the bucket to the top to wish! Dodge the bats and spiders.',
+    how: () => 'Aubrey rides the bucket! Move it up and down with the arrows or the mouse, and she grabs the wish-coins she can reach. Then pull her up to the top to wish! Dodge the bats and spiders.',
     init(g) {
       Object.assign(g, { timeLeft: 70, target: [8, 10, 12][g.tier - 1], banked: 0, held: 0, by: WF.top + 14, inv: 0, crank: 0, drops: [], jolt: 0 });
       g.coins = [214, 274, 334, 394, 454].map(y => this.coin(y));
@@ -1003,7 +1003,7 @@
     coin(y) { return { y, x: rand(WF.L + 30, WF.R - 30), vx: pick([-1, 1]) * rand(45, 85), ph: rand(0, 6), gone: 0 }; },
     start(g) { speak(g.say); },
     update(g, dt) {
-      g.timeLeft -= dt; g.inv -= dt; g.jolt = Math.max(0, g.jolt - dt);
+      g.timeLeft -= dt; g.inv -= dt; g.jolt = Math.max(0, g.jolt - dt); g.grab = Math.max(0, (g.grab || 0) - dt);
       const prev = g.by;
       let v = 0;
       if (keys.arrowup || keys.w) v -= 1;
@@ -1017,7 +1017,8 @@
         if (c.gone > 0) { if ((c.gone -= dt) <= 0) Object.assign(c, this.coin(c.y), { gone: 0 }); continue; }
         c.x += c.vx * dt;
         if (c.x < WF.L + 22 || c.x > WF.R - 22) { c.vx *= -1; c.x = clamp(c.x, WF.L + 22, WF.R - 22); }
-        if (g.held < 3 && Math.abs(c.x - bx) < 44 && Math.abs(c.y - bcy) < 30) {
+        if (g.held < 3 && Math.abs(c.x - bx) < 62 && Math.abs(c.y - bcy) < 34) { // within Aubrey's reach from the bucket
+          g.grab = 0.35; g.grabX = c.x; g.grabY = c.y;
           g.held++; c.gone = 1.4; SFX.pop(); burst(c.x, c.y, 10, { colors: ['#ffe36b', '#fff6a8'] });
         }
       }
@@ -1048,6 +1049,27 @@
       g.progress = `Wishes: ${g.banked} of ${g.target}`;
       g.score = g.banked / g.target;
       if (g.banked >= g.target || g.timeLeft <= 0) g.done = true;
+    },
+    // one hand holds the rope; the other reaches for the nearest wish-coin (and snatches it when she grabs one)
+    drawArms(g, ax, atop, ah, bx) {
+      const sy = atop + ah * 0.21, bcy = g.by + 22;
+      let tx = null, ty = null;
+      if (g.grab > 0) { tx = g.grabX; ty = g.grabY; }
+      else if (g.held < 3) {
+        let best = 150;
+        for (const c of g.coins) { const d = Math.hypot(c.x - ax, c.y - bcy); if (c.gone <= 0 && Math.abs(c.y - bcy) < 70 && d < best) { best = d; tx = c.x; ty = c.y; } }
+      }
+      const arm = (x0, y0, x1, y1) => {
+        ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 3; ctx.stroke(); inkCircle(x1, y1, 3, '#f6cfb0', 1);
+      };
+      const reachL = tx !== null && tx < ax;
+      // rope hand on the side away from the coin
+      arm(ax + (tx === null || reachL ? 9 : -9), sy, bx - 1, sy - 14); // the hand nearer the rope holds it, unless that one is reaching
+      if (tx !== null) {
+        const sx = ax + (reachL ? -9 : 9), dx = tx - sx, dy = ty - sy, d = Math.hypot(dx, dy), L = Math.min(d, g.grab > 0 ? 64 : 46);
+        arm(sx, sy, sx + dx / d * L, sy + dy / d * L);
+      }
     },
     draw(g) {
       const t = S.t, bx = WF.x + (g.jolt ? Math.sin(g.jolt * 60) * 6 : 0);
@@ -1084,9 +1106,13 @@
       // the rope and bucket
       ctx.strokeStyle = '#e8d0a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(WF.x, 112); ctx.lineTo(bx, g.by); ctx.stroke();
       ctx.strokeStyle = '#6a7080'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(bx, g.by + 8, 30, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
-      for (let i = 0; i < g.held; i++) wishCoin(bx - 18 + i * 18, g.by + 6, 0.7, i);
+      // Aubrey sits in the bucket, just left of the rope: her legs hide behind the bucket's front
+      const ax = bx - 13, as = 0.45, ah = IMG.idle_front.height * as, atop = g.by + 48 - ah;
+      drawAubrey(ax, g.by + 48, 'idle_front', 1, 0, as);
+      for (let i = 0; i < g.held; i++) wishCoin(bx + 8 + i * 12, g.by + 4, 0.6, i);
       ink(P2(`M${bx - 38},${g.by + 6} L${bx + 38},${g.by + 6} L${bx + 30},${g.by + 48} L${bx - 30},${g.by + 48} Z`), '#b07a4a', 2);
       ctx.fillStyle = '#6a7080'; ctx.fillRect(bx - 36, g.by + 14, 72, 4); ctx.fillRect(bx - 32, g.by + 38, 64, 4);
+      this.drawArms(g, ax, atop, ah, bx);
       if (g.held >= 3 && Math.floor(t * 3) % 2) outlined('Full! Pull it up!', bx, g.by + 72, 20, '#fff6a8');
       // floating wish-coins, bats and spiders
       for (const c of g.coins) if (c.gone <= 0) wishCoin(c.x, c.y + Math.sin(t * 2 + c.ph) * 5, 1, c.ph);
