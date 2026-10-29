@@ -3043,9 +3043,12 @@
 
   // --- Colour Mixing: drop two colours into the crystal to make the one Otto asks for -------------------
   const PAINTS = { red: '#ff4040', yellow: '#ffd23a', blue: '#3a7ff0', white: '#ffffff', black: '#3a3448' };
-  const MIXES = { 'red+yellow': ['orange', '#ff9a2a'], 'blue+yellow': ['green', '#4cc85a'], 'blue+red': ['purple', '#9a4ae0'], 'red+white': ['pink', '#ff9ac8'], 'blue+white': ['light blue', '#9ad0ff'], 'black+white': ['grey', '#a09cb0'] };
-  const MIX_TARGETS = [['orange', 'green', 'purple'], ['orange', 'green', 'purple', 'pink', 'light blue'], ['orange', 'green', 'purple', 'pink', 'light blue', 'grey']];
-  const MIX_POTS = [['red', 'yellow', 'blue'], ['red', 'yellow', 'blue', 'white'], ['red', 'yellow', 'blue', 'white', 'black']];
+  const MIXES = { 'red+yellow': ['orange', '#ff9a2a'], 'blue+yellow': ['green', '#4cc85a'], 'blue+red': ['purple', '#9a4ae0'], 'red+white': ['pink', '#ff9ac8'], 'blue+white': ['light blue', '#9ad0ff'], 'black+white': ['grey', '#a09cb0'],
+    'black+red': ['dark red', '#a8243a'], 'black+blue': ['dark blue', '#25458a'], 'white+yellow': ['pale yellow', '#fff2a0'] };
+  // every level has at least as many colours to ask for as it has rounds, so Otto never asks for the same one twice
+  const MIX_TARGETS = [['orange', 'green', 'purple', 'pink', 'light blue'], ['orange', 'green', 'purple', 'pink', 'light blue', 'grey'],
+    ['orange', 'green', 'purple', 'pink', 'light blue', 'grey', 'dark red', 'dark blue', 'pale yellow']];
+  const MIX_POTS = [['red', 'yellow', 'blue', 'white'], ['red', 'yellow', 'blue', 'white', 'black'], ['red', 'yellow', 'blue', 'white', 'black']];
   function mixResult(a, b) {
     if (a === b) return [a, PAINTS[a]];
     const k = [a, b].sort().join('+');
@@ -3074,7 +3077,7 @@
     how: () => 'Otto asks for a colour. Drag TWO colours into the mixing bowl, then stir round and round to see what colour they make! (Number keys add paint, Space stirs.)',
     init(g) {
       const tg = MIX_TARGETS[g.tier - 1], rounds = g.tier === 1 ? 5 : 6;
-      Object.assign(g, { round: 0, rounds, total: 0, pots: MIX_POTS[g.tier - 1], order: [...shuffle(tg), ...shuffle(tg)].slice(0, rounds), shake: {} });
+      Object.assign(g, { round: 0, rounds, total: 0, pots: MIX_POTS[g.tier - 1], order: shuffle(tg).slice(0, rounds), shake: {} });
       this.next(g);
     },
     start(g) { speak(g.say); },
