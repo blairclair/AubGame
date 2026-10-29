@@ -1372,7 +1372,7 @@
   // --- Ice Floe Hop: frogger-style hops across drifting ice to reach the fish ---------------------
   MG.floehop = {
     kind: 'action', title: () => 'Ice Floe Hop', icon: () => '🐧',
-    how: () => 'Hop Pengu across the water to the fish! Press up, or tap above Pengu, to hop. Only land on the ice!',
+    how: () => 'Pengu rides on Aubrey\'s head! Hop across the water to the fish. Press up, or tap above Aubrey, to hop. Only land on the ice!',
     init(g) {
       const n = [4, 5, 6][g.tier - 1], spd = [42, 56, 70][g.tier - 1], [l0, l1] = [[150, 200], [125, 175], [110, 150]][g.tier - 1];
       const laneH = (480 - 130) / n;
@@ -1382,10 +1382,10 @@
         return { y: 480 - (i + 0.5) * laneH, v, floes, span: Math.max(W + 300, floes[floes.length - 1].x + floes[floes.length - 1].len + 100) };
       });
       Object.assign(g, { n, laneH, timeLeft: 80, target: [3, 4, 5][g.tier - 1], fish: 0, splashes: 0, row: 0, px: W / 2, hop: 0, from: null, to: null, splash: 0, cheer: 0, face: 1 });
-      g.say = 'Hop on the ice floes! Up arrow to hop.';
+      g.say = 'Pengu is riding on your head! Hop on the ice floes. Up arrow to hop.';
     },
     start(g) { speak(g.say); },
-    rowY(g, r) { return r === 0 ? 506 : r > g.n ? 98 : g.lanes[r - 1].y; },
+    rowY(g, r) { return r === 0 ? 506 : r > g.n ? 126 : g.lanes[r - 1].y; }, // far shore: she stops at the lip, so her head stays below the header
     floeAt(g, r, x, margin = 8) { return r >= 1 && r <= g.n ? g.lanes[r - 1].floes.find(f => x > f.x - margin && x < f.x + f.len + margin) : null; },
     tryHop(g, dr, dx) {
       if (g.hop > 0 || g.splash > 0 || g.cheer > 0) return;
@@ -1411,8 +1411,8 @@
         if (g.hop <= 0) {
           g.row = g.toRow; g.px = g.toX;
           if (g.row === g.n + 1) {
-            g.fish++; g.cheer = 1.1; SFX.sparkle(); burst(g.px, 90, 24, { colors: ['#8ad4ff', '#fff6a8', '#ffb3e0'] });
-            floatText(g.px, 70, 'Yum! A fish!', '#fff6a8', false, 24); speak(g.fish >= g.target ? 'Yum yum! All the fish!' : 'Yum! A fish! Go back for more!');
+            g.fish++; g.cheer = 2; g.fishX = 90 + 156 * clamp(Math.round((g.px - 90) / 156), 0, 5); // Pengu waddles to the nearest fish hole SFX.sparkle(); burst(g.px, 90, 24, { colors: ['#8ad4ff', '#fff6a8', '#ffb3e0'] });
+            floatText(g.px, 150, 'Yum! A fish!', '#fff6a8', false, 24); speak(g.fish >= g.target ? 'Yum yum! All the fish!' : 'Yum! A fish! Go back for more!');
           } else if (g.row >= 1 && !this.floeAt(g, g.row, g.px)) this.dunk(g);
           else SFX.step();
         }
@@ -1474,20 +1474,39 @@
         if (j > 0.05) emoji('🐟', x, 104 - j * 26, 30);
       }
       text('Fish!', 26, 82, 16, '#2a5a98', 'left', 800);
-      // Pengu
-      let x = g.px, y = this.rowY(g, g.row), s = 0.9, lift = 0;
+      // Aubrey hops the floes with Pengu riding on her head
+      let x = g.px, y = this.rowY(g, g.row), lift = 0;
+      const AS = 0.4;
       if (g.hop > 0) { const k = 1 - g.hop / 0.26, ty = this.rowY(g, g.toRow); x = lerp(g.from[0], g.toX, k); y = lerp(g.from[1], ty, k); lift = Math.sin(k * Math.PI) * 26; }
+      const fr = g.hop > 0 ? 'jump' : 'idle_front', im = IMG[fr], feet = y + 22 - lift;
+      // top of her head in this frame (the side-on jump sprite's head sits forward of centre)
+      const hx = x + (fr === 'jump' ? 30 * AS * g.face : 1.5 * AS), hy = feet - im.height * AS + 4;
+      const pengOnHead = (px, py) => penguin(px, py, 0.42, g.hop > 0 ? 0 : t, true, g.face);
       if (g.splash > 0) {
         const k = 1 - g.splash / 0.9;
-        ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 10, 20 + k * 40, 6 + k * 10, 0, 0, Math.PI * 2); ctx.stroke();
-        if (k < 0.5) { ctx.save(); ctx.globalAlpha = 1 - k * 2; penguin(x, y + 10 + k * 40, s, t, true, g.face); ctx.restore(); }
-        outlined('Splash!', x, y - 50, 24, '#b8e6ff');
+        ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 14, 26 + k * 40, 7 + k * 10, 0, 0, Math.PI * 2); ctx.stroke();
+        if (k < 0.5) {
+          ctx.save(); ctx.globalAlpha = 1 - k * 2;
+          ctx.beginPath(); ctx.rect(0, 0, W, y + 14); ctx.clip(); // she sinks below the waterline
+          drawAubrey(x, feet + k * 70, 'idle_front', g.face, 0, AS); pengOnHead(hx, hy + k * 70);
+          ctx.restore();
+        }
+        outlined('Splash!', x, y - 80, 24, '#b8e6ff');
       } else {
-        ctx.fillStyle = 'rgba(10,30,70,.25)'; ellipse(x, y + 18, 22 - lift * 0.3, 6);
-        penguin(x, y + 18 - lift, s, g.hop > 0 ? 0 : t, true, g.face);
+        ctx.fillStyle = 'rgba(10,30,70,.25)'; ellipse(x, y + 22, 24 - lift * 0.3, 6);
+        drawAubrey(x, feet, fr, g.face, 0, AS);
+        if (g.cheer > 0) {
+          // made it! Pengu hops down, waddles to a fish hole and gobbles a fish
+          const k = 1 - g.cheer / 2, fx = g.fishX, gy = 118;
+          let px, py, dir = Math.sign(fx - hx) || 1;
+          if (k < 0.25) { const q = k / 0.25; px = lerp(hx, hx + dir * 30, q); py = lerp(hy, gy, q) - Math.sin(q * Math.PI) * 30; }
+          else if (k < 0.65) { const q = (k - 0.25) / 0.4; px = lerp(hx + dir * 30, fx, q); py = gy - Math.abs(Math.sin(q * Math.PI * 5)) * 4; }
+          else { px = fx; py = gy; }
+          penguin(px, py, 0.5, t * 2, true, dir);
+          if (k >= 0.65) { emoji('🐟', px + dir * 16, py - 34 - (k < 0.8 ? (0.8 - k) * 120 : 0), 26); if (k > 0.7) outlined('Yum!', px, py - 60, 20, '#fff6a8'); }
+        } else pengOnHead(hx, hy);
       }
-      if (g.cheer > 0) { emoji('🐟', x + 26, y - 40, 34); }
-      if (g.row === 0 && g.hop <= 0 && g.splash <= 0 && g.cheer <= 0) outlined('⬆', x, y - 70 + Math.sin(t * 6) * 4, 28, '#fff6a8');
+      if (g.row === 0 && g.hop <= 0 && g.splash <= 0 && g.cheer <= 0) outlined('⬆', x + 40, y - 40 + Math.sin(t * 6) * 4, 28, '#fff6a8');
     },
   };
 
