@@ -1445,19 +1445,28 @@
   }
   MG.kittenroundup = {
     kind: 'action', title: () => 'Kitten Roundup', icon: () => '🐈',
-    how: () => 'The kittens are running wild! Tap each kitten to pop it back in the basket. If a kitten hides, tap its hiding place. Hurry!',
+    how: () => 'The kittens are running wild! Move Aubrey with the arrow keys or your finger. Walk into a kitten to pick it up, then carry it back to the basket. If a kitten hides, walk to its hiding place to find it!',
     init(g) {
       const n = [5, 6, 7][g.tier - 1], spots = KR_SPOTS.slice(0, g.tier === 3 ? 4 : 3);
       g.kits = Array.from({ length: n }, (_, i) => ({ x: rand(240, 880), y: rand(320, 500), tx: 0, ty: 0, st: 'run', t: rand(0, 2), col: KIT_COLS[i % KIT_COLS.length], dir: 1, spot: -1, fx: 0, fy: 0, hopped: 0 }));
       g.kits.forEach(k => this.target(g, k));
-      Object.assign(g, { spots, timeLeft: [40, 38, 36][g.tier - 1], speed: [90, 120, 145][g.tier - 1], hopT: 6, hops: 0, maxHops: [1, 3, 4][g.tier - 1], endT: 0 });
+      // kittens scamper a bit slower than they used to, because Aubrey has to carry each one home
+      Object.assign(g, { spots, timeLeft: [70, 72, 75][g.tier - 1], speed: [55, 72, 88][g.tier - 1], hopT: 10, hops: 0, maxHops: [1, 2, 3][g.tier - 1], endT: 0,
+        ax: 420, ay: 450, vx: 0, vy: 0, face: 1, run: 0, carry: null });
     },
-    start(g) { g.say = 'Tap the kittens!'; speak('Here, kitty kitty! Tap the kittens!'); },
+    start(g) { g.say = 'Pick up the kittens and carry them to the basket!'; speak('Here, kitty kitty! Pick up the kittens and carry them to the basket!'); },
     target(g, k) { k.tx = rand(220, 900); k.ty = rand(320, 510); },
-    catchIt(g, k) {
-      k.fx = k.x; k.fy = k.y; k.st = 'fly'; k.t = 0; k.spot = -1;
-      tone(700, 0.1, 'triangle', 0.08); tone(1000, 0.15, 'sine', 0.06, 0.08); burst(k.x, k.y - 20, 10);
-      speak(pick(['Got you!', 'In you go!', 'Mew!', 'Gotcha, kitty!']));
+    // Aubrey scoops a kitten up into her arms
+    pickUp(g, k, found) {
+      k.st = 'carried'; k.t = 0; k.spot = -1; g.carry = k;
+      tone(700, 0.1, 'triangle', 0.08); tone(1000, 0.15, 'sine', 0.06, 0.08); burst(g.ax, g.ay - 60, 8);
+      speak(found ? pick(['Found you!', 'Peekaboo, kitty!']) : pick(['Got you!', 'Gotcha, kitty!', 'Mew!']));
+    },
+    // ...and pops it into the basket
+    dropIn(g) {
+      const k = g.carry; g.carry = null;
+      k.fx = g.ax; k.fy = g.ay - 54; k.st = 'fly'; k.t = 0;
+      speak(pick(['In you go!', 'Stay cosy!', 'Home you go!']));
     },
     update(g, dt) {
       g.timeLeft -= dt;
@@ -1475,24 +1484,28 @@
           } else { const sp = g.speed * (k.st === 'tohide' ? 1.3 : 1); k.x += dx / d * sp * dt; k.y += dy / d * sp * dt; }
         } else if (k.st === 'sit' && k.t > k.sitFor) { k.st = 'run'; this.target(g, k); }
         else if (k.st === 'hide' && k.t > k.hideFor) { k.st = 'run'; k.spot = -1; this.target(g, k); }
-        else if (k.st === 'fly' && k.t >= 0.6) { k.st = 'in'; SFX.pop(); }
+        else if (k.st === 'fly' && k.t >= 0.45) { k.st = 'in'; SFX.pop(); }
         else if (k.st === 'hop' && k.t >= 0.7) { k.st = 'run'; k.x = k.tx; k.y = k.ty; this.target(g, k); }
       }
-      // tap a kitten, or a hiding place with a kitten behind it
-      if (pointer.clicked && g.endT <= 0) {
-        let best = null;
-        for (const k of g.kits) {
-          if (k.st !== 'run' && k.st !== 'sit' && k.st !== 'tohide') continue;
-          const d = Math.hypot(pointer.x - k.x, pointer.y - (k.y - 22));
-          if (d < 44 && (!best || d < best.d)) best = { k, d };
-        }
-        if (best) this.catchIt(g, best.k);
-        else {
-          const si = g.spots.findIndex(s => Math.abs(pointer.x - s.x) < s.w / 2 + 10 && pointer.y < s.y + 10 && pointer.y > s.y - s.h - 20);
-          const hid = g.kits.find(k => k.st === 'hide' && k.spot === si);
-          if (hid) { hid.x = g.spots[si].x; hid.y = g.spots[si].y; this.catchIt(g, hid); }
-          else if (si >= 0) { g.spots[si].wig = 0.35; SFX.blip(); }
-        }
+      // Aubrey walks about the room: keys push her, the pointer leads her
+      if (g.endT <= 0) {
+        const sp = 260, kx = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), ky = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+        if (kx || ky) { g.vx = lerp(g.vx, kx * sp, dt * 8); g.vy = lerp(g.vy, ky * sp, dt * 8); }
+        else if (pointerMoved(g) || g.usePointer) { g.vx = clamp((pointer.x - g.ax) * 5, -sp, sp); g.vy = clamp((pointer.y + 30 - g.ay) * 5, -sp, sp); }
+        else { g.vx *= 1 - dt * 6; g.vy *= 1 - dt * 6; }
+        g.ax = clamp(g.ax + g.vx * dt, 60, 920); g.ay = clamp(g.ay + g.vy * dt, 330, 528);
+        if (Math.abs(g.vx) > 25) g.face = Math.sign(g.vx);
+        g.run = Math.hypot(g.vx, g.vy) > 40 ? g.run + dt : 0;
+        if (!g.carry) {
+          // walk into a loose kitten to pick it up, or to a hiding place to find the kitten behind it
+          const k = g.kits.find(k => (k.st === 'run' || k.st === 'sit' || k.st === 'tohide') && Math.hypot(g.ax - k.x, g.ay - 10 - k.y) < 52);
+          if (k) this.pickUp(g, k, false);
+          else {
+            const si = g.spots.findIndex(s => Math.abs(g.ax - s.x) < s.w / 2 + 24 && g.ay > s.y - 50 && g.ay < s.y + 60);
+            const hid = g.kits.find(k => k.st === 'hide' && k.spot === si);
+            if (hid) this.pickUp(g, hid, true);
+          }
+        } else if (Math.hypot(g.ax - KR_BASKET.x, g.ay - KR_BASKET.y) < 120) this.dropIn(g);
       }
       for (const s of g.spots) if (s.wig) s.wig = Math.max(0, s.wig - dt);
       // a cheeky kitten sometimes hops back out of the basket
@@ -1500,7 +1513,7 @@
       g.hopT -= dt;
       if (g.hopT <= 0 && g.hops < g.maxHops && inB.length >= 2 && inB.length < g.kits.length) {
         const k = pick(inB.filter(k => !k.hopped) .length ? inB.filter(k => !k.hopped) : inB);
-        k.st = 'hop'; k.t = 0; k.hopped = 1; k.tx = rand(260, 520); k.ty = rand(400, 500); g.hops++; g.hopT = rand(5, 7);
+        k.st = 'hop'; k.t = 0; k.hopped = 1; k.tx = rand(260, 520); k.ty = rand(400, 500); g.hops++; g.hopT = rand(9, 12);
         speak('Oh no, one jumped out!'); tone(900, 0.12, 'triangle', 0.06);
       } else if (g.hopT <= 0) g.hopT = 2;
       const home = g.kits.filter(k => k.st === 'in').length;
@@ -1508,11 +1521,14 @@
       if (g.endT > 0) { g.endT -= dt; if (g.endT <= 0) g.done = true; }
       if (g.timeLeft <= 0) g.done = true;
       g.progress = `Kittens home: ${home} of ${g.kits.length}`;
-      g.score = home / g.kits.length;
+      // a quick round-up is best: past the par time the score slowly drops (by half at most)
+      const used = [70, 72, 75][g.tier - 1] - g.timeLeft, par = [35, 40, 45][g.tier - 1];
+      g.score = home / g.kits.length * (1 - clamp((used - par) / 40, 0, 0.5));
     },
     kitPos(g, k) {
       const bx = KR_BASKET.x - 40 + (g.kits.indexOf(k) % 4) * 26, by = KR_BASKET.y - 40;
-      if (k.st === 'fly') { const e = smooth(k.t / 0.6); return [lerp(k.fx, bx, e), lerp(k.fy, by, e) - Math.sin(e * Math.PI) * 120]; }
+      if (k.st === 'fly') { const e = smooth(k.t / 0.45); return [lerp(k.fx, bx, e), lerp(k.fy, by, e) - Math.sin(e * Math.PI) * 50]; }
+      if (k.st === 'carried') return [g.ax + g.face * 4, g.ay - 46 + Math.sin(S.t * 9) * 2];
       if (k.st === 'hop') { const e = smooth(k.t / 0.7); return [lerp(bx, k.tx, e), lerp(by, k.ty, e) - Math.sin(e * Math.PI) * 110]; }
       return [k.x, k.y];
     },
@@ -1534,7 +1550,7 @@
       text(`${inB.length}`, bx, by - 2, 22, '#fff', 'center', 800);
       // hidden kittens first (only their tails peek out), then the hiding places, then the loose kittens
       const order = g.spots.map((s, i) => i).sort((a, b) => g.spots[a].y - g.spots[b].y);
-      const loose = g.kits.filter(k => k.st !== 'in' && k.st !== 'hide');
+      const loose = g.kits.filter(k => k.st !== 'in' && k.st !== 'hide' && k.st !== 'carried');
       const drawK = k => { const [x, y] = this.kitPos(g, k); drawKitten(x, y, 1, k.col, k.dir, k.t + g.kits.indexOf(k), k.st === 'run' || k.st === 'tohide'); };
       for (const i of order) {
         const s = g.spots[i];
@@ -1547,7 +1563,18 @@
         }
         ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.wig ? Math.sin(s.wig * 40) * 0.04 : 0); ctx.translate(-s.x, -s.y); krSpot(s); ctx.restore();
       }
+      // loose kittens behind her, then Aubrey with the kitten in her arms, then the ones in front of her
+      loose.forEach(k => { if (!k.drawn && this.kitPos(g, k)[1] <= g.ay) { drawK(k); k.drawn = true; } });
+      const fr = g.endT > 0 ? 'twirl' : g.run > 0 ? `run${1 + (Math.floor(g.run * 11) % 5)}` : 'idle_front';
+      ctx.fillStyle = 'rgba(60,30,20,.22)'; ellipse(g.ax, g.ay, 24, 6);
+      drawAubrey(g.ax, g.ay, fr, g.face, g.endT > 0 ? Math.abs(Math.sin(g.endT * 9)) * 10 : 0, 130 / IMG.idle_front.height);
+      if (g.carry) { const [x, y] = this.kitPos(g, g.carry); drawKitten(x, y, 0.9, g.carry.col, g.face, S.t * 2, false); }
       loose.forEach(k => { if (!k.drawn) drawK(k); k.drawn = false; });
+      if (g.carry && g.endT <= 0) {
+        // a little arrow points to the basket while she's carrying
+        const p = (S.t * 1.5) % 1; ctx.globalAlpha = 1 - p * 0.5;
+        outlined(`${g.ax > KR_BASKET.x ? '⬅' : '➡'} basket`, g.ax, g.ay - 150 - p * 4, 16, '#fff6a8'); ctx.globalAlpha = 1;
+      }
       if (g.endT > 0) outlined('All home!', W / 2, 200, 54, '#fff6a8');
     },
   };
