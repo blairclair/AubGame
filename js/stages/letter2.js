@@ -95,6 +95,7 @@
       ctx.fillStyle = '#c84a78'; ellipse(-5, -4, 2.6, 4); ellipse(5, -4, 2.6, 4);
       eye(-13, -22, 4.5, blinkShut(2)); eye(13, -22, 4.5, blinkShut(2));
       smile(0, 6, 7, live); cheeks(-22, 22, -8, 6);
+      ctx.restore();
     },
     sun(a) {
       const live = a >= 0, grow = live ? 1 + 0.18 * Math.sin(Math.min(a, 1) * Math.PI) + 0.06 : 1;
@@ -449,9 +450,9 @@
     ctx.fillStyle = '#ffe36b'; for (let i = 0; i < 10; i++) { const an = i * TAU / 10; star(560 + Math.cos(an) * 120, 506 + Math.sin(an) * 14, 5, '#ffe36b', 4); }
     drawShelf('shelfL', PROPS.shelfL, g.poke.shelfL);
     drawShelf('shelfR', PROPS.shelfR, g.poke.shelfR);
-    // little plant and an owl bookend on the shelves' tops
-    grp([[R(36, 30, 30, 26, 5), '#ff9a6a']], 2); ctx.fillStyle = '#5fca62'; for (const [dx, r] of [[-12, -0.5], [0, 0], [12, 0.5]]) { ctx.save(); ctx.translate(51 + dx * 0.4, 32); ctx.rotate(r + Math.sin(t * 1.5 + dx) * 0.05); ink(E(0, -14, 7, 16), '#5fca62', 2); ctx.restore(); }
-    grp([[E(900, 38, 16, 18), '#b08a60'], [E(892, 26, 6), '#b08a60'], [E(908, 26, 6), '#b08a60']], 2); ctx.fillStyle = '#fff'; circle(894, 34, 5); circle(906, 34, 5); eye(894, 34, 3, blinkShut(5)); eye(906, 34, 3, blinkShut(5)); ctx.fillStyle = '#ffb13d'; tri(897, 40, 903, 40, 900, 46);
+    // (the plant sits on the lamp table and the owl on the floor book stack, clear of the header)
+
+
     // the cheeky bookworm peeking out of a book on the right shelf
     const wy = 300 + Math.sin(t * 2) * 4;
     grp([[E(780, wy, 10, 9), '#9ae070'], [E(790, wy + 10, 8, 7), '#9ae070']], 2); eye(777, wy - 2, 2.5); eye(784, wy - 2, 2.5); smile(781, wy + 2, 3);
@@ -486,7 +487,7 @@
     ctx.fillStyle = 'rgba(255,111,181,.5)'; ctx.fillRect(lx - 38, 352, 76, 5);
     ctx.save(); ctx.translate(L.x + 8, 420); ctx.rotate(0.1); inkRect(0, -10, 34, 10, '#5fca62', 2, 2); ctx.restore();
     // a teacup on the table
-    grp([[R(L.x + 58, 404, 20, 16, 5), '#fff']], 2); ctx.fillStyle = '#ff9ad0'; circle(L.x + 68, 412, 3);
+    grp([[R(L.x + 64, 400, 24, 20, 5), '#ff9a6a']], 2); for (const [dx, r] of [[-10, -0.5], [0, 0], [10, 0.5]]) { ctx.save(); ctx.translate(L.x + 76 + dx * 0.4, 402); ctx.rotate(r + Math.sin(t * 1.5 + dx) * 0.05); ink(E(0, -11, 6, 13), '#5fca62', 2); ctx.restore(); }
     // the sleeping cat curled on the rug
     const K = PROPS.cat, kx = K.x + 62, ky = 492, cp2 = g.poke.cat, awake = cp2 > 0.05;
     const breathe = 1 + Math.sin(t * 2) * 0.03;
@@ -502,6 +503,8 @@
     else outlined('Meow!', kx - 40, ky - 60, 18, '#fff');
     // book stack on the floor
     ctx.save(); ctx.translate(214, 498); inkRect(-30, -10, 60, 12, '#4fa8f5', 2, 3); inkRect(-26, -20, 54, 10, '#ff7eb6', 2, 3); inkRect(-22, -30, 46, 10, '#ffd23f', 2, 3); ctx.restore();
+    const ox = 214, oy = 450;
+    grp([[E(ox, oy, 16, 18), '#b08a60'], [E(ox - 8, oy - 12, 6), '#b08a60'], [E(ox + 8, oy - 12, 6), '#b08a60']], 2); ctx.fillStyle = '#fff'; circle(ox - 6, oy - 4, 5); circle(ox + 6, oy - 4, 5); eye(ox - 6, oy - 4, 3, blinkShut(5)); eye(ox + 6, oy - 4, 3, blinkShut(5)); ctx.fillStyle = '#ffb13d'; tri(ox - 3, oy + 2, ox + 3, oy + 2, ox, oy + 8);
   }
 
   // --- the letter tile ---
@@ -560,7 +563,6 @@
     tile.found = true; tile.inTray = true; tile.fly = 0; tile.fx = tile.x; tile.fy = tile.y;
     g.trayOrder.push(tile);
     SFX.sparkle(); burst(tile.x, tile.y, 14, { colors: ['#fff6a8', '#ffe36b', '#ffffff'] });
-    floatText(tile.x, tile.y - 40, 'Found it!', '#fff6a8', false, 20);
     speak(`${tile.l.toUpperCase()}. ${tile.l.toUpperCase()} says ${SND[tile.l]}.`);
     const left = g.tiles.filter(t => t.need && !t.found).length;
     g.bubble = { str: left ? 'Ooh, a clue! Keep looking!' : 'Now drag it into the word!', t: 2.6 };
@@ -592,7 +594,6 @@
       g.trayOrder.splice(g.trayOrder.indexOf(tile), 1);
       g.pts += [1, 0.3][g.wrongs] ?? 0; g.wrongs = 0; g.helpOn = false;
       SFX.hit(); burst(match.x, match.y, 16);
-      floatText(match.x, match.y - 50, `“${SND[tile.l]}”`, '#fff6a8', false, 24);
       if (empty.length > 1) { speak(`Yes! ${SND[tile.l]}! Now find the next one.`); g.bubble = { str: 'Yes! One more letter!', t: 2.4 }; }
       else solve(g);
       return true;
@@ -747,8 +748,11 @@
       });
       // the sound clue
       const clue = g.case.clue.txt, lines = wrap(clue, 300, 16, 600);
+      ctx.globalAlpha = ci * (g.held ? 0.25 : 1);
       if (alive < 0) emoji('👂', WORD.cx - 140, CARD.y + 140 - (lines.length - 1) * 9, 18);
+      ctx.globalAlpha = ci * (g.held ? 0.25 : 1);
       if (alive < 0) lines.forEach((l, i) => text(l, WORD.cx + 10, CARD.y + 140 + (i - (lines.length - 1) / 2) * 20, 16, '#8a4a9e', 'center', 600));
+      ctx.globalAlpha = ci;
       // SOLVED stamp
       if (alive >= 0) {
         const k = ease(alive / 0.35), sc = 1 + (1 - k) * 1.5;
