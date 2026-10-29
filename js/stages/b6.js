@@ -1485,7 +1485,7 @@
       let x = g.px, y = this.rowY(g, g.row), lift = 0;
       const AS = 0.4;
       if (g.hop > 0) { const k = 1 - g.hop / 0.26, ty = this.rowY(g, g.toRow); x = lerp(g.from[0], g.toX, k); y = lerp(g.from[1], ty, k); lift = Math.sin(k * Math.PI) * 26; }
-      const fr = g.hop > 0 ? 'jump' : 'idle_front', im = IMG[fr], feet = y + 22 - lift;
+      const fr = g.hop > 0 ? 'jump' : 'idle_front', im = IMG[fr], feet = y + 6 - lift; // feet in the middle of the floe, not at its front edge
       // top of her head in this frame (the side-on jump sprite's head sits forward of centre)
       const hx = x + (fr === 'jump' ? 30 * AS * g.face : 1.5 * AS), hy = feet - im.height * AS + 4;
       const pengOnHead = (px, py) => penguin(px, py, 0.42, g.hop > 0 ? 0 : t, true, g.face);
@@ -1500,7 +1500,7 @@
         }
         outlined('Splash!', x, y - 80, 24, '#b8e6ff');
       } else {
-        ctx.fillStyle = 'rgba(10,30,70,.25)'; ellipse(x, y + 22, 24 - lift * 0.3, 6);
+        ctx.fillStyle = 'rgba(10,30,70,.25)'; ellipse(x, y + 6, 24 - lift * 0.3, 6);
         drawAubrey(x, feet, fr, g.face, 0, AS);
         if (g.cheer > 0) {
           // made it! Pengu hops down, waddles to a fish hole and gobbles a fish
