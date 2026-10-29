@@ -414,72 +414,174 @@
     },
   };
 
-  // --- Mill Clock: read the clock and pick the right time -------------------------------------
-  const timeName = (h, m) => (m === 0 ? `${h} o'clock` : m === 30 ? `half past ${h}` : `quarter past ${h}`);
-  const timeSay = (h, m) => (m === 0 ? `${NUM_WORDS[h]} o'clock` : m === 30 ? `half past ${NUM_WORDS[h]}` : `quarter past ${NUM_WORDS[h]}`);
-  const drawClock = (x, y, r, h, m) => {
-    // a wooden mill clock with a cream face
-    inkCircle(x, y, r + 18, '#b07a48', 2.5);
-    ctx.strokeStyle = 'rgba(80,40,20,.3)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r + 10, 0, TAU); ctx.stroke();
-    inkCircle(x, y, r, '#fff8e8', 2);
-    for (let i = 0; i < 60; i++) {
-      const a = i * TAU / 60, big = i % 5 === 0;
-      ctx.strokeStyle = big ? '#5a3a6e' : 'rgba(90,58,110,.4)'; ctx.lineWidth = big ? 4 : 2;
-      ctx.beginPath(); ctx.moveTo(x + Math.sin(a) * r * (big ? 0.86 : 0.91), y - Math.cos(a) * r * (big ? 0.86 : 0.91)); ctx.lineTo(x + Math.sin(a) * r * 0.96, y - Math.cos(a) * r * 0.96); ctx.stroke();
+  // --- Mill Clock: Aubrey runs across a giant clock face and drags the hands to the time Millie asks for ---
+  // she grabs a hand by running onto the glowing handle at its tip; while she holds it the hand points at her,
+  // and when she lets go (Space, a tap, or just standing still) it clicks to the nearest mark. Ring the bell to check.
+  const timeName = (h, m) => (m === 0 ? `${h} o'clock` : m === 30 ? `half past ${h}` : m === 15 ? `quarter past ${h}` : `quarter to ${h % 12 + 1}`);
+  const timeSay = (h, m) => (m === 0 ? `${NUM_WORDS[h]} o'clock` : m === 30 ? `half past ${NUM_WORDS[h]}` : m === 15 ? `quarter past ${NUM_WORDS[h]}` : `quarter to ${NUM_WORDS[h % 12 + 1]}`);
+  const MC = { x: 480, y: 312, r: 206, mLen: 172, hLen: 112, ah: 84 };
+  const mcAng = (x, y) => (Math.atan2(x - MC.x, -(y - MC.y)) + TAU) % TAU;          // 0 = straight up to 12
+  const mcTip = (a, len) => [MC.x + Math.sin(a) * len, MC.y - Math.cos(a) * len];
+  const angDiff = (a, b) => { let d = Math.abs(a - b) % TAU; return d > Math.PI ? TAU - d : d; };
+  function mcFace(t) {
+    // the big wooden mill clock lying on the mill floor, with gears turning around it
+    for (const [gx, gy, r, sp] of [[120, 470, 70, 0.4], [60, 360, 44, -0.64], [850, 150, 64, -0.45], [900, 270, 40, 0.72], [830, 470, 54, 0.53]]) {
+      ctx.save(); ctx.translate(gx, gy); ctx.rotate(t * sp);
+      for (let i = 0; i < 12; i++) { ctx.save(); ctx.rotate(i * TAU / 12); inkRect(-r * 0.13, -r - 9, r * 0.26, 18, '#b88a4a', 1.5, 3); ctx.restore(); }
+      inkCircle(0, 0, r, '#c89a58', 2); inkCircle(0, 0, r * 0.62, '#b08040', 1.5); inkCircle(0, 0, r * 0.18, '#7a5430', 1.5);
+      ctx.restore();
     }
-    for (let n = 1; n <= 12; n++) { const a = n * TAU / 12; text(String(n), x + Math.sin(a) * r * 0.72, y - Math.cos(a) * r * 0.72, r * 0.2, '#5a2a6e', 'center', 800); }
-    const ha = ((h % 12) + m / 60) * TAU / 12, ma = m * TAU / 60;
+    inkCircle(MC.x, MC.y, MC.r + 22, '#a8703e', 3);
+    ctx.strokeStyle = 'rgba(80,40,20,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(MC.x, MC.y, MC.r + 12, 0, TAU); ctx.stroke();
+    const fg = ctx.createRadialGradient(MC.x - 60, MC.y - 70, 20, MC.x, MC.y, MC.r);
+    fg.addColorStop(0, '#fffdf2'); fg.addColorStop(1, '#f6e8c8');
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(MC.x, MC.y, MC.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.stroke();
+    for (let i = 0; i < 60; i++) {
+      const a = i * TAU / 60, big = i % 5 === 0, r0 = MC.r * (big ? 0.86 : 0.91);
+      ctx.strokeStyle = big ? '#5a3a6e' : 'rgba(90,58,110,.4)'; ctx.lineWidth = big ? 4 : 2;
+      ctx.beginPath(); ctx.moveTo(...mcTip(a, r0)); ctx.lineTo(...mcTip(a, MC.r * 0.97)); ctx.stroke();
+    }
+    for (let n = 1; n <= 12; n++) { const [nx, ny] = mcTip(n * TAU / 12, MC.r * 0.74); text(String(n), nx, ny, 34, '#5a2a6e', 'center', 800); }
+  }
+  function mcHand(a, len, w, col, glow, held, t) {
+    const [tx, ty] = mcTip(a, len);
     ctx.lineCap = 'round';
-    const hand = (a, len, w, col) => {
-      ctx.strokeStyle = OL; ctx.lineWidth = w + 5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.sin(a) * len, y - Math.cos(a) * len); ctx.stroke();
-      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
-    };
-    hand(ma, r * 0.82, 7, '#ff5f7e');
-    hand(ha, r * 0.5, 13, '#4a6ae0');
-    inkCircle(x, y, 9, '#ffd84a', 1.5);
+    ctx.strokeStyle = OL; ctx.lineWidth = w + 6; ctx.beginPath(); ctx.moveTo(MC.x, MC.y); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+    // the handle at the tip that Aubrey grabs
+    if (glow) { ctx.fillStyle = `rgba(255,240,140,${0.35 + 0.25 * Math.sin(t * 6)})`; circle(tx, ty, 30); }
+    inkCircle(tx, ty, held ? 17 : 15, held ? '#fff6a8' : col, 2);
+    ctx.fillStyle = 'rgba(255,255,255,.6)'; circle(tx - 4, ty - 5, 4);
+  }
+  MG.millclock = {
+    kind: 'learn', title: () => 'Mill Clock', icon: () => '🕰️',
+    how: g => `Millie needs the giant mill clock set! Move Aubrey with the arrow keys or your finger. Run onto the round handle at the end of a hand to grab it, run round to move it, then let go with Space or a tap. The short blue hand shows the hour${g.tier > 1 ? ', the long red hand shows the minutes' : ''}. Ring the bell when it's right!`,
+    init(g) {
+      const rounds = [4, 5, 5][g.tier - 1], times = [];
+      while (times.length < rounds) {
+        const i = times.length, kinds = g.tier === 1 ? [0] : g.tier === 2 ? (i < 2 ? [0] : [0, 30]) : (i < 1 ? [0, 30] : [0, 30, 15, 45]);
+        const t = [randInt(1, 12), pick(kinds)];
+        if (!times.some(q => q[0] === t[0] && q[1] === t[1])) times.push(t);
+      }
+      Object.assign(g, { rounds, times, round: 0, total: 0, ax: MC.x, ay: MC.y + 120, vx: 0, vy: 0, face: 1, run: 0, held: null, still: 0, grabT: 0, state: 'set', t2: 0, tries: 0, hint: 0 });
+      this.next(g);
+    },
+    start(g) { speak(g.say); },
+    next(g) {
+      [g.h, g.m] = g.times[g.round];
+      // start the hands somewhere wrong
+      let mh; do mh = randInt(0, 11) * 5; while (mh === g.m);
+      let hh; do hh = randInt(0, 23) / 2; while (Math.abs(hh - (g.h % 12 + g.m / 60)) < 1);
+      Object.assign(g, { ma: mh * TAU / 60, ha: hh * TAU / 12, held: null, state: 'set', tries: 0, t2: 0 });
+      g.say = `Set the clock to ${timeSay(g.h, g.m)}!`;
+      if (g.phase === 'play') speak(g.say);
+    },
+    snap(g, which) {
+      if (which === 'm') g.ma = Math.round(g.ma / (TAU / 12)) % 12 * (TAU / 12);           // minute hand clicks to every 5 minutes
+      else g.ha = Math.round(g.ha / (TAU / 48)) % 48 * (TAU / 48);                          // hour hand clicks in quarter-hour steps
+      tone(880, 0.05, 'square', 0.04); tone(660, 0.06, 'triangle', 0.05, 0.04);
+    },
+    check(g) {
+      const wantM = g.m * TAU / 60, wantH = (g.h % 12 + g.m / 60) * TAU / 12;
+      const okM = angDiff(g.ma, wantM) < 0.05, okH = angDiff(g.ha, wantH) < TAU / 48 + 0.02;
+      g.tries++;
+      if (okM && okH) {
+        g.total += g.tries === 1 ? 1 : g.tries === 2 ? 0.5 : 0.2; g.state = 'yay'; g.t2 = 0;
+        SFX.sparkle(); burst(MC.x, MC.y, 30, { colors: ['#fff6a8', '#ff9ac8', '#9ad8ff'] });
+        for (let i = 0; i < (g.m === 0 ? g.h : 3); i++) tone(520, 0.35, 'sine', 0.07, 0.25 + i * 0.3);
+        speak(`${praise()} It's ${timeSay(g.h, g.m)}!`);
+      } else if (g.tries >= 3) {
+        // after three tries Millie sets it herself and shows how it looks, so nobody gets stuck
+        g.ma = wantM; g.ha = wantH; g.held = null; g.state = 'yay'; g.t2 = -1.2; SFX.blip();
+        speak(`Let's set it together. For ${timeSay(g.h, g.m)}, the long hand points ${g.m === 0 ? 'to the twelve' : g.m === 30 ? 'to the six' : g.m === 15 ? 'to the three' : 'to the nine'}, and the short hand ${g.m === 0 ? `points to the ${NUM_WORDS[g.h]}` : 'is near the ' + NUM_WORDS[g.m === 45 ? g.h % 12 + 1 : g.h]}.`);
+      } else if (g.tries >= 3) {
+        // after three tries Millie sets it herself and shows how it looks, so nobody gets stuck
+        g.ma = wantM; g.ha = wantH; g.held = null; g.state = 'yay'; g.t2 = -1.2; SFX.blip();
+        speak(`Let's set it together. For ${timeSay(g.h, g.m)}, the long hand points ${g.m === 0 ? 'to the twelve' : g.m === 30 ? 'to the six' : g.m === 15 ? 'to the three' : 'to the nine'}, and the short hand ${g.m === 0 ? `points to the ${NUM_WORDS[g.h]}` : 'is near the ' + NUM_WORDS[g.m === 45 ? g.h % 12 + 1 : g.h]}.`);
+      } else {
+        SFX.miss(); g.hint = 3;
+        const mWord = g.m === 0 ? 'straight up to the twelve' : g.m === 30 ? 'straight down to the six' : g.m === 15 ? 'to the three' : 'to the nine';
+        if (!okM) speak(`Not yet! For ${timeSay(g.h, g.m)}, the long red hand points ${mWord}.`);
+        else speak(g.m === 0 ? `The minutes are right! Now point the short blue hand at the ${NUM_WORDS[g.h]}.`
+          : g.m === 30 ? `The minutes are right! At half past, the short blue hand sits halfway between the ${NUM_WORDS[g.h]} and the ${NUM_WORDS[g.h % 12 + 1]}.`
+            : g.m === 15 ? `The minutes are right! At quarter past, the short hand is just a little past the ${NUM_WORDS[g.h]}.`
+              : `The minutes are right! At quarter to, the short hand is nearly at the ${NUM_WORDS[g.h % 12 + 1]}.`);
+      }
+    },
+    update(g, dt, id) {
+      g.grabT = Math.max(0, g.grabT - dt); g.hint = Math.max(0, g.hint - dt);
+      if (g.state === 'yay') {
+        if ((g.t2 += dt) > 2.8) { g.round++; if (g.round >= g.rounds) g.done = true; else this.next(g); }
+        g.progress = `Clock ${Math.min(g.round + 1, g.rounds)} of ${g.rounds}`; g.score = g.total / g.rounds; return;
+      }
+      if (id === 'mcbell' || pressed.enter) { if (g.held) { this.snap(g, g.held); g.held = null; } this.check(g); }
+      // Aubrey runs about on the clock face
+      const sp = 280, kx = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), ky = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+      const onBell = inRect({ x: W - 150, y: 448, w: 134, h: 74 });
+      if (kx || ky) { g.vx = lerp(g.vx, kx * sp, dt * 8); g.vy = lerp(g.vy, ky * sp, dt * 8); }
+      else if ((pointerMoved(g) || g.usePointer) && !onBell) { g.vx = clamp((pointer.x - g.ax) * 5, -sp, sp); g.vy = clamp((pointer.y - g.ay) * 5, -sp, sp); }
+      else { g.vx *= 1 - dt * 6; g.vy *= 1 - dt * 6; }
+      g.ax += g.vx * dt; g.ay += g.vy * dt;
+      const dr = Math.hypot(g.ax - MC.x, g.ay - MC.y);
+      if (dr > MC.r - 14) { g.ax = MC.x + (g.ax - MC.x) / dr * (MC.r - 14); g.ay = MC.y + (g.ay - MC.y) / dr * (MC.r - 14); }
+      const moving = Math.hypot(g.vx, g.vy) > 40;
+      if (Math.abs(g.vx) > 25) g.face = Math.sign(g.vx);
+      g.run = moving ? g.run + dt : 0;
+      g.still = moving ? 0 : g.still + dt;
+      if (g.held) {
+        // the hand follows her round the clock
+        if (dr > 26) { const a = mcAng(g.ax, g.ay); if (g.held === 'm') g.ma = a; else g.ha = a; }
+        const letGo = pressed[' '] || (pointer.clicked && !onBell) || g.still > 0.9;
+        if (letGo && g.grabT <= 0) { this.snap(g, g.held); g.held = null; g.grabT = 0.6; }
+      } else if (g.grabT <= 0) {
+        // grab whichever handle she runs onto (the hour handle sits nearer the middle)
+        for (const [w, a, len] of [['m', g.ma, MC.mLen], ['h', g.ha, MC.hLen]]) {
+          const [tx, ty] = mcTip(a, len);
+          if (Math.hypot(g.ax - tx, g.ay - ty) < 28) { g.held = w; g.grabT = 0.4; SFX.pick(); speak(w === 'm' ? 'The long minute hand!' : 'The short hour hand!'); break; }
+        }
+      }
+      g.progress = `Clock ${g.round + 1} of ${g.rounds}`;
+      g.score = g.total / g.rounds;
+    },
+    draw(g) {
+      const t = S.t;
+      mcFace(t);
+      // where the hands should go, after a wrong try
+      if (g.hint > 0) {
+        ctx.globalAlpha = Math.min(1, g.hint) * 0.35;
+        for (const [a, len] of [[g.m * TAU / 60, MC.mLen], [(g.h % 12 + g.m / 60) * TAU / 12, MC.hLen]]) { ctx.strokeStyle = '#7ad06a'; ctx.lineWidth = 12; ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.moveTo(MC.x, MC.y); ctx.lineTo(...mcTip(a, len)); ctx.stroke(); }
+        ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
+      const setting = g.state === 'set';
+      mcHand(g.ma, MC.mLen, 9, '#ff5f7e', setting && !g.held, g.held === 'm', t);
+      mcHand(g.ha, MC.hLen, 15, '#4a6ae0', setting && !g.held, g.held === 'h', t);
+      inkCircle(MC.x, MC.y, 13, '#ffd84a', 2);
+      // Aubrey, pulling the hand she's holding
+      const fr = g.state === 'yay' ? 'twirl' : g.run > 0 ? `run${1 + (Math.floor(g.run * 11) % 5)}` : 'idle_front';
+      const hop = g.state === 'yay' ? Math.abs(Math.sin(g.t2 * 7)) * 12 : 0;
+      ctx.fillStyle = 'rgba(40,20,60,.2)'; ellipse(g.ax, g.ay + MC.ah * 0.5, 16, 4);
+      drawAubrey(g.ax, g.ay + MC.ah * 0.5, fr, g.face, hop, MC.ah / IMG.idle_front.height);
+      if (g.held) { const [tx, ty] = mcTip(g.held === 'm' ? g.ma : g.ha, g.held === 'm' ? MC.mLen : MC.hLen); ctx.strokeStyle = 'rgba(255,240,140,.8)'; ctx.lineWidth = 3; ctx.setLineDash([4, 5]); ctx.beginPath(); ctx.moveTo(g.ax, g.ay - 4); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]); }
+      // the time to set, and Millie
+      const tw = 300;
+      rrect(16, 68, tw, 92, 20, 'rgba(255,255,255,.94)', OL, 2);
+      text('Set the clock to', 16 + tw / 2, 90, 16, '#9a6ab0', 'center', 700);
+      outlined(timeName(g.h, g.m), 16 + tw / 2, 122, 28, '#ff6fb5', 'center', '#fff');
+      text(`${g.h}:${String(g.m).padStart(2, '0')}`, 16 + tw / 2, 148, 15, '#5a2a6e', 'center', 800);
+      drawCritter('Millie Mouse', 92, GY + 40, 0.6, 1);
+      if (g.held) text(g.held === 'm' ? 'Holding the minute hand: let go with Space or a tap' : 'Holding the hour hand: let go with Space or a tap', MC.x, 524, 15, '#5a2a6e', 'center', 700);
+      if (g.state === 'yay') outlined(timeName(g.h, g.m) + '!', MC.x, 92, 34, '#fff6a8');
+      // the bell to ring when the clock is set
+      if (g.state === 'set') button('mcbell', W - 150, 448, 134, 74, 'Ring!', { icon: '🔔', color: '#ffb03a', size: 22, key: 'Enter' });
+    },
   };
-  MG.millclock = quiz({
-    title: () => 'Mill Clock', icon: () => '🕰️', unit: 'Clock',
-    how: g => (g.tier === 1 ? 'Look at the mill clock. The short blue hand shows the hour. Pick the right time!'
-      : 'Look at the mill clock. The short blue hand shows the hour, the long red hand shows the minutes. Pick the right time!'),
-    rounds: g => [5, 6, 7][g.tier - 1],
-    make(g) {
-      const kinds = g.tier === 1 ? [0] : g.tier === 2 ? (g.round < 2 ? [0] : [0, 30]) : (g.round < 1 ? [0] : g.round < 3 ? [0, 30] : [0, 30, 15]);
-      const h = randInt(1, 12), m = pick(kinds), n = g.tier === 1 ? 3 : 4;
-      const key = (a, b) => `${a}:${b}`, set = new Map([[key(h, m), [h, m]]]);
-      const mins = g.tier === 1 ? [0] : g.tier === 2 ? [0, 30] : [0, 30, 15];
-      // tempting wrong answers: same hour other minutes, the hour next door, and the hands mixed up
-      const pool = shuffle([...mins.map(mm => [h, mm]), [h % 12 + 1, m], [(h + 10) % 12 + 1, m], [m === 0 ? 12 : m === 30 ? 6 : 3, m === 0 ? 0 : 0], [randInt(1, 12), pick(mins)], [randInt(1, 12), pick(mins)]]);
-      for (const [a, b] of pool) { if (set.size >= n) break; set.set(key(a, b), [a, b]); }
-      while (set.size < n) { const a = randInt(1, 12), b = pick(mins); set.set(key(a, b), [a, b]); }
-      const choices = shuffle([...set.values()]);
-      return { h, m, choices, answer: choices.findIndex(c => c[0] === h && c[1] === m), say: 'What time does the mill clock say?' };
-    },
-    rect: (g, i) => ({ x: 560, y: 116 + i * (g.choices.length === 3 ? 118 : 96), w: 330, h: g.choices.length === 3 ? 100 : 82 }),
-    drawQ(g) {
-      panel(66, 72, 446, 452, 26);
-      outlined('What time is it?', 289, 106, 28, '#ff6fb5', 'center', '#fff');
-      drawClock(289, 318, 150, g.h, g.m);
-      emoji('🐭', 289 + Math.sin(S.t * 2) * 4, 140, 30);
-      if (g.state !== 'pick') { rrect(160, 470, 258, 42, 20, 'rgba(48,24,72,.8)'); text(timeName(g.h, g.m), 289, 491, 22, '#fff6a8', 'center', 700); }
-    },
-    drawChoice(g, c, x, y, w, h) {
-      const d = `${c[0]}:${String(c[1]).padStart(2, '0')}`;
-      outlined(timeName(c[0], c[1]), x + 24, y + h / 2 - 9, 26, '#fff', 'left', 'rgba(60,20,80,.55)');
-      text(d, x + 26, y + h / 2 + 20, 16, 'rgba(255,255,255,.85)', 'left', 700);
-      emoji('🕰️', x + w - 50, y + h / 2, 34);
-    },
-    right: g => `${praise()} It's ${timeSay(g.h, g.m)}.`,
-    wrong: g => (g.m === 0 ? 'Not quite. When the long hand points straight up, it is something o\'clock. Look at the short hand!'
-      : g.m === 30 ? 'Not quite. When the long hand points down, it is half past. Look at the short hand!'
-        : 'Not quite. When the long hand points to the three, it is quarter past. Look at the short hand!'),
-  });
 
   restage('mill', {
     bg: 'mill_bg',
     games: [['millsackstack', 'honey', {}], ['millclock', 'ribbon', {}]],
     intro: ['*:Splish, splash! The old mill wheel creaks round and round.', 'N:Squeak! The flour sacks must be stacked on the cart before the baker comes. Can you drop them nice and steady?', 'A:determined:A super tall tower, coming up!'],
-    mid: ['N:Squeak squeak! The bread goes in the oven at just the right time. Can you read the mill clock for me?', 'A:thinking:The short hand tells the hour...'],
+    mid: ['N:Squeak squeak! The giant mill clock is all muddled, and the bread must go in the oven on time!', 'N:Can you run across the clock face and pull the hands to the right times?', 'A:determined:The short hand tells the hour...'],
     outro: ['N:Golden honey for your bread, and flour-sack ribbons for your unicorn!', 'A:happy:Thank you, Millie!'],
   });
 

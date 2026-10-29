@@ -2187,7 +2187,7 @@
     },
   };
 
-  // --- Dust Bunny Sweep: push the hopping dust bunnies into the dustpan -------------------------------
+  // --- Dust Bunny Sweep: Aubrey sweeps the hopping dust bunnies into the dustpan ----------------------
   const PAN = { x: 840, y0: 384, y1: 476 };
   function dustBunny(x, y, s, t, hop, look) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s * (1 + hop * 0.15), s * (1 - hop * 0.12));
@@ -2202,28 +2202,88 @@
     ctx.fillStyle = 'rgba(255,140,170,.6)'; ellipse(-13, -12, 4, 2.5); ellipse(13, -12, 4, 2.5);
     ctx.restore();
   }
-  function drawBroom(x, y) {
+  // the broom in Aubrey's hands: the handle runs from her grip (gx, gy) down to the bristles resting on
+  // the floor at (x, y), which swish from side to side by the angle sw
+  function drawBroom(gx, gy, x, y, s, sw) {
+    const lean = Math.atan2(gx - x, y - gy), r = lean * 0.45 + sw;
+    const nx = x + Math.sin(r) * 40 * s, ny = y - Math.cos(r) * 40 * s, L = Math.hypot(gx - nx, gy - ny) || 1;
+    const tx = gx + (gx - nx) / L * 22 * s, ty = gy + (gy - ny) / L * 22 * s;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = OL; ctx.lineWidth = 11; ctx.beginPath(); ctx.moveTo(x - 4, y - 24); ctx.lineTo(x - 64, y - 190); ctx.stroke();
-    ctx.strokeStyle = '#c07a40'; ctx.lineWidth = 6; ctx.stroke();
-    ink(P2(`M${x - 18},${y - 26} L${x + 14},${y - 26} L${x + 40},${y + 16} L${x - 40},${y + 16} Z`), '#ffd76a', 2);
-    ctx.strokeStyle = '#d8a030'; ctx.lineWidth = 2; ctx.beginPath(); for (let k = -3; k <= 3; k++) { ctx.moveTo(x + k * 4, y - 18); ctx.lineTo(x + k * 11, y + 14); } ctx.stroke();
-    inkRect(x - 20, y - 32, 36, 10, '#ff5f7e', 2, 3);
+    ctx.strokeStyle = OL; ctx.lineWidth = 10 * s; ctx.beginPath(); ctx.moveTo(nx, ny); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.strokeStyle = '#c07a40'; ctx.lineWidth = 5.5 * s; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,220,170,.55)'; ctx.lineWidth = 1.6 * s; ctx.stroke();
+    ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.scale(s, s);
+    ink(P2('M-18,-42 L14,-42 L40,0 L-40,0 Z'), '#ffd76a', 2);
+    ctx.strokeStyle = '#d8a030'; ctx.lineWidth = 2; ctx.beginPath(); for (let k = -3; k <= 3; k++) { ctx.moveTo(k * 4, -34); ctx.lineTo(k * 11, -2); } ctx.stroke();
+    inkRect(-20, -48, 36, 10, '#ff5f7e', 2, 3);
+    ctx.restore();
+    // her hand wrapped round the handle
+    ctx.fillStyle = OL; circle(gx, gy, 6.5 * s); ctx.fillStyle = '#f4c4a8'; circle(gx, gy, 5 * s);
   }
+  // a soft grey puff of dust that drifts up and fades
+  const dustPuff = (g, x, y, vx, vy, r) => g.puffs.push({ x, y, vx, vy, r, life: rand(0.6, 1.1), max: 1 });
   MG.dustsweep = {
     kind: 'action', title: () => 'Dust Bunny Sweep', icon: () => '🧹',
-    how: () => 'Move the broom with the mouse or the arrow keys. Push the hopping dust bunnies into the dustpan on the right!',
+    how: () => 'Help Aubrey sweep the attic! Move her with the arrow keys, or lead her broom with your finger. Push the hopping dust bunnies into the dustpan on the right!',
     init(g) {
-      const n = [5, 7, 9][g.tier - 1];
+      const n = [5, 7, 9][g.tier - 1], dust = [];
+      // a grey film of dust all over the floor, which her broom clears as she goes
+      for (let y = 268, row = 0; y < 536; y += 18, row++) for (let x = 10 + (row % 2) * 15; x < 960; x += 30) dust.push({ x: x + rand(-6, 6), y: y + rand(-4, 4), r: rand(24, 34), d: Math.random() < 0.08 ? 0.2 : rand(0.6, 1), k: randInt(0, 5) });
       Object.assign(g, {
-        timeLeft: 50, px: 140, py: 380, facing: 1, caught: 0, total: n, say: 'Push the dust bunnies into the dustpan!',
-        bunnies: [...Array(n)].map((_, i) => ({ x: rand(260, 720), y: rand(300, 490), vx: 0, vy: 0, hopT: rand(0.5, 2.5), hop: 0, look: 1, in: false, gone: 0 })),
+        // px, py is where the broom sweeps; Aubrey stands just behind it at ax, ay
+        timeLeft: 50, px: 200, py: 400, ax: 150, ay: 400, facing: 1, side: 1, bs: 1, caught: 0, total: n, say: 'Help Aubrey sweep the dust bunnies into the dustpan!',
+        sw: 0, swA: 0, run: 0, puffs: [], dust, dust0: dust.reduce((a, c) => a + c.d, 0), dustUp: 0, sneeze: 0, sneezeCd: 5, tilt: 0,
+        bunnies: [...Array(n)].map((_, i) => ({ x: rand(320, 740), y: rand(300, 490), vx: 0, vy: 0, hopT: rand(0.5, 2.5), hop: 0, look: 1, in: false, gone: 0 })),
       });
     },
     start(g) { speak(g.say); },
+    sc: g => lerp(0.82, 1.12, clamp((g.py - 272) / 240, 0, 1)),
     update(g, dt) {
       g.timeLeft -= dt;
-      steer(g, dt, 420, 40, 820, 270, 515);
+      // mid-sneeze she stands still; otherwise the keys or the pointer move her broom and she follows it
+      if (g.sneeze > 0) { g.vx = g.vy = 0; pointerMoved(g); } else steer(g, dt, 420, 60, 830, 272, 512);
+      if (Math.abs(g.vx) > 80) g.side = Math.sign(g.vx);
+      g.bs += clamp(g.side - g.bs, -dt * 7, dt * 7);
+      const s = this.sc(g), speed = Math.hypot(g.vx, g.vy), moving = speed > 30;
+      g.ax = g.px - g.bs * 56 * s; g.ay = g.py - 2;
+      g.run = moving ? g.run + dt : 0;
+      g.swA = lerp(g.swA, moving ? 1 : 0, Math.min(1, dt * 8)); g.sw += dt * (6 + Math.min(speed, 420) / 30);
+      // the broom clears the dust film and kicks up puffs
+      for (const c of g.dust) {
+        if (c.d <= 0 || Math.abs(c.x - g.px) > 60 || Math.abs(c.y - g.py) > 40) continue;
+        if (Math.hypot(c.x - g.px, (c.y - g.py) * 1.6) > 32 * s + c.r * 0.4) continue;
+        const take = Math.min(c.d, dt * (moving ? 5 : 1.2));
+        c.d -= take; g.dustUp += take * 0.15;
+        if (Math.random() < take * 3) dustPuff(g, c.x, c.y - 4, rand(-30, 30) - g.bs * 20, rand(-50, -20), rand(6, 10));
+      }
+      if (moving && Math.random() < dt * 9) dustPuff(g, g.px + g.bs * 26 * s + rand(-10, 10), g.py - rand(2, 10), g.bs * rand(20, 60), rand(-45, -15), rand(4, 7));
+      if (moving && Math.random() < dt * 3) SFX.scrub();
+      for (let i = g.puffs.length - 1; i >= 0; i--) {
+        const p = g.puffs[i];
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - dt * 1.5; p.r += dt * 12;
+        if ((p.life -= dt) <= 0) g.puffs.splice(i, 1);
+      }
+      // all that dust tickles her nose: ah... ah... ACHOO!
+      g.dustUp = Math.max(0, g.dustUp - dt * 0.25); g.sneezeCd -= dt;
+      if (g.sneeze <= 0 && g.dustUp > 2.6 && g.sneezeCd <= 0) {
+        g.sneeze = 1.15; g.dustUp = 0; g.sneezeCd = 9;
+        tone(520, 0.22, 'sine', 0.06, 0, 720); tone(560, 0.3, 'sine', 0.06, 0.38, 820);
+      }
+      if (g.sneeze > 0) {
+        const was = g.sneeze; g.sneeze -= dt;
+        if (was > 0.42 && g.sneeze <= 0.42) {
+          const fx = g.ax + g.side * 22 * s, fy = g.ay - 128 * s;
+          noise(0.3, 0.09); tone(900, 0.25, 'sawtooth', 0.04, 0, 250);
+          floatText(fx + g.side * 40, fy - 30, 'ACHOO!', '#fff6a8', false, 30);
+          for (let k = 0; k < 18; k++) dustPuff(g, fx, fy, g.side * rand(80, 260), rand(-60, 60), rand(6, 13));
+          // the sneeze blows the nearby dust bunnies tumbling away from her nose
+          for (const b of g.bunnies) {
+            const dx = b.x - g.ax, dy = b.y - g.ay, d = Math.hypot(dx, dy);
+            if (!b.in && d < 190 && Math.sign(dx) === g.side) { b.vx += g.side * 110; b.vy += (dy / (d || 1)) * 40; b.hop = 1; }
+          }
+        }
+        g.tilt = g.sneeze > 0.42 ? -0.13 * (1 - (g.sneeze - 0.42) / 0.73) : 0.16 * (g.sneeze / 0.42);
+      } else g.tilt = 0;
       const bvx = g.vx || 0, bvy = g.vy || 0;
       for (const b of g.bunnies) {
         if (b.in) { b.gone += dt; continue; }
@@ -2240,6 +2300,9 @@
           b.vx = ux * push; b.vy = uy * push; b.hop = 0.6;
           if (Math.random() < dt * 4) SFX.scrub();
         }
+        // and they bump softly off Aubrey herself rather than hopping through her
+        const ex = b.x - g.ax, ey = (b.y - g.ay) * 1.4, e = Math.hypot(ex, ey);
+        if (e < 34) { const ux = e ? ex / e : -g.side; b.x = g.ax + ux * 34; b.vx = ux * Math.max(60, Math.abs(b.vx)); }
         const f = Math.exp(-2.6 * dt);
         b.vx *= f; b.vy *= f; b.x += b.vx * dt; b.y += b.vy * dt;
         b.look = b.vx >= 0 ? 1 : -1;
@@ -2267,7 +2330,16 @@
       for (let i = -10; i <= 22; i++) { ctx.beginPath(); ctx.moveTo(480 + (i * 60 - 480) * 0.55, 250); ctx.lineTo(i * 60, H); ctx.stroke(); }
       for (const y of [282, 322, 372, 432, 500]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
       ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 250); ctx.lineTo(W, 250); ctx.stroke();
-      ctx.fillStyle = 'rgba(220,210,235,.35)'; for (let i = 0; i < 18; i++) ellipse((i * 157) % 800 + 60, 280 + (i * 67) % 230, 10 + (i % 3) * 4, 3);
+      // the dust film: thick grey fluff where she hasn't swept yet, and a polished gleam where she has
+      for (const c of g.dust) {
+        if (c.d > 0.02) { ctx.fillStyle = `rgba(200,192,214,${0.16 * c.d})`; ellipse(c.x, c.y, c.r, c.r * 0.42); }
+      }
+      // bits of fluff and lint caught in the dust
+      ctx.strokeStyle = 'rgba(236,230,246,.7)'; ctx.lineWidth = 1.5;
+      for (const c of g.dust) if (c.d > 0.3 && c.k < 2) { ctx.globalAlpha = c.d; ctx.beginPath(); ctx.moveTo(c.x - 5, c.y); ctx.quadraticCurveTo(c.x, c.y - 4 - c.k * 2, c.x + 6, c.y + 1); ctx.stroke(); ctx.fillStyle = '#e8e0f2'; circle(c.x + 8, c.y - 3, 1.6 + c.k); }
+      ctx.globalAlpha = 1;
+      // a polished gleam on the boards she has swept clean
+      ctx.fillStyle = 'rgba(255,232,190,.13)'; for (const c of g.dust) if (c.d <= 0.02 && c.k === 3) ellipse(c.x, c.y, c.r * 0.7, 2.5);
       // the dustpan: a scoop opening to the left, with its handle
       ctx.fillStyle = `rgba(255,240,150,${0.22 + 0.1 * Math.sin(S.t * 4)})`; ellipse(PAN.x + 50, 430, 96, 76);
       ctx.strokeStyle = OL; ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(PAN.x + 98, PAN.y0 + 10); ctx.lineTo(PAN.x + 112, PAN.y0 - 50); ctx.stroke();
@@ -2280,10 +2352,33 @@
       outlined('Dustpan', PAN.x + 48, PAN.y1 + 32, 18, '#a6f0b8');
       const arrowX = PAN.x - 40 + Math.sin(S.t * 5) * 6;
       ctx.fillStyle = '#fff6a8'; tri(arrowX + 18, 430, arrowX, 418, arrowX, 442);
-      // bunnies, back to front, then the broom
-      const live = g.bunnies.filter(b => !b.in).sort((a, b) => a.y - b.y);
-      for (const b of live) { ctx.fillStyle = 'rgba(30,10,40,.25)'; ellipse(b.x, b.y, 20, 5); dustBunny(b.x, b.y - Math.sin(b.hop * Math.PI) * 14, 1, S.t, b.hop, b.look); }
-      drawBroom(g.px, g.py);
+      // bunnies and Aubrey with her broom, back to front
+      const items = g.bunnies.filter(b => !b.in).map(b => [b.y, b]);
+      items.push([g.ay + 1, null]); items.sort((a, b) => a[0] - b[0]);
+      for (const [, b] of items) {
+        if (b) { ctx.fillStyle = 'rgba(30,10,40,.25)'; ellipse(b.x, b.y, 20, 5); dustBunny(b.x, b.y - Math.sin(b.hop * Math.PI) * 14, 1, S.t, b.hop, b.look); }
+        else this.drawSweeper(g);
+      }
+      // dust puffs float over everything
+      for (const p of g.puffs) {
+        const a = clamp(p.life / 0.6, 0, 1) * 0.55;
+        ctx.fillStyle = `rgba(226,218,236,${a})`; circle(p.x, p.y, p.r);
+        ctx.fillStyle = `rgba(255,255,255,${a * 0.6})`; circle(p.x - p.r * 0.3, p.y - p.r * 0.3, p.r * 0.45);
+      }
+      if (g.sneeze > 0.42) outlined(g.sneeze > 0.8 ? 'Ah...' : 'Ah... ah...', g.ax, g.ay - 160 * this.sc(g) - 14, 22, '#fff6a8');
+    },
+    drawSweeper(g) {
+      const s = this.sc(g), sc = 150 * s / IMG.idle_front.height, still = g.sneeze > 0 || g.run <= 0.05;
+      const fr = still ? 'idle_front' : `run${1 + (Math.floor(g.run * 11) % 5)}`, im = IMG[fr], w = im.width * sc, h = im.height * sc;
+      // her grip: at her hip when standing, out in front when running; tipped with her sneeze
+      let gx = still ? g.bs * 0.34 * w : g.side * 0.26 * w, gy = still ? -0.44 * h : -0.6 * h;
+      const t = g.tilt * g.side, ct = Math.cos(t), st = Math.sin(t);
+      [gx, gy] = [g.ax + gx * ct - gy * st, g.ay + gx * st + gy * ct];
+      const sw = Math.sin(g.sw) * 0.22 * g.swA, hx = g.px + Math.sin(g.sw) * 7 * s * g.swA;
+      ctx.save(); ctx.translate(g.ax, g.ay); ctx.rotate(t);
+      drawAubrey(0, 0, fr, g.side, 0, sc);
+      ctx.restore();
+      drawBroom(gx, gy, hx, g.py + 10 * s, s * 0.78, sw);
     },
   };
 
@@ -2431,9 +2526,67 @@
     let d = clamp(u, 0, 1) * tot;
     for (let i = 0; i < segs.length; i++) { if (d <= segs[i] || i === segs.length - 1) { const k = clamp(d / segs[i], 0, 1), [x0, y0] = NB_PATH[i], [x1, y1] = NB_PATH[i + 1]; return [x0 + (x1 - x0) * k, y0 + (y1 - y0) * k, i === 0]; } d -= segs[i]; }
   }
+  // Aubrey's fairy wings. Each wing is drawn from its root on her back, pointing back (+x) and up (-y).
+  const NB_WING_UP = P2('M0,0 C2,-24 16,-50 40,-56 C58,-60 64,-44 56,-30 C46,-14 24,-6 0,0 Z');
+  const NB_WING_LO = P2('M0,0 C14,0 34,4 42,16 C48,26 40,36 28,32 C14,28 4,14 0,0 Z');
+  function nbWing(a, sx, alpha, far) {
+    ctx.save(); ctx.rotate(a); ctx.scale(sx, 1); ctx.globalAlpha = alpha;
+    const gr = ctx.createLinearGradient(0, 0, 56, -46);
+    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, far ? '#f4c8ec' : '#ffd8f2'); gr.addColorStop(1, far ? '#b8a2f4' : '#c9b4ff');
+    ink(NB_WING_LO, gr, 1.4); ink(NB_WING_UP, gr, 1.4);
+    ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(4, -4); ctx.quadraticCurveTo(18, -30, 40, -48); ctx.moveTo(6, -3); ctx.quadraticCurveTo(30, -16, 52, -32);
+    ctx.moveTo(5, 2); ctx.quadraticCurveTo(22, 8, 36, 24); ctx.stroke();
+    if (!far) { ctx.fillStyle = '#fff6a8'; circle(44, -44, 2.6); circle(30, -30, 1.8); circle(32, 24, 2); ctx.fillStyle = '#ff9ad0'; circle(50, -36, 1.8); }
+    ctx.restore();
+  }
+  // per sprite frame: wing root and hand (sprite pixels), and whether we see her from the front
+  const NB_POSE = { jump: [84, 64, 0, 2, 82], run1: [44, 62, 0, 100, 96], run2: [52, 62, 0, 112, 92], run3: [44, 62, 0, 92, 100], run4: [54, 62, 0, 118, 92], run5: [58, 64, 0, 124, 92], idle_front: [48, 74, 1, 86, 140], twirl: [100, 82, 1, 170, 134] };
+  const NB_AS = 0.5;
+  // where Aubrey's hand is on screen (the carried bit sits there)
+  function nbHand(g) {
+    const fr = g.frame || 'jump', im = IMG[fr], p = NB_POSE[fr], nat = AUB_NATIVE[fr] || 1, flip = g.facing && nat !== Math.sign(g.facing) ? -1 : 1;
+    return [g.px + (-im.width / 2 + p[3]) * NB_AS * flip, g.py + 195 * NB_AS / 2 + (-im.height + p[4]) * NB_AS];
+  }
+  function nbCarried(kind, x, y, a = 0) { if (kind === 'twig') nbTwig(x, y, a - 0.4, 40); else if (kind === 'mud') nbMud(x, y, 11); else if (kind === 'feather') nbFeather(x, y, a - 0.3, 0.9, '#ffd8e8'); }
+  function nbAubrey(g) {
+    const fr = g.frame || 'jump', im = IMG[fr], s = NB_AS, w = im.width * s, h = im.height * s, p = NB_POSE[fr];
+    const feet = g.py + 195 * s / 2, nat = AUB_NATIVE[fr] || 1, flip = g.facing && nat !== Math.sign(g.facing) ? -1 : 1;
+    // her shadow on the lawn, smaller the higher she flies
+    const hi = clamp((520 - feet) / 380, 0, 1);
+    ctx.fillStyle = `rgba(40,20,60,${0.24 - hi * 0.14})`; ellipse(g.px, 522, 30 * (1 - hi * 0.5), 6 * (1 - hi * 0.4));
+    // a sparkly trail while she flies
+    if (fr !== 'idle_front' && !fr.startsWith('run')) for (let i = 0; i < 5; i++) { const k = ((S.t * 1.8 + i / 5) % 1); twinkle(g.px - (g.facing || 1) * (30 + k * 46) + Math.sin(i * 2.3) * 8, g.py + 10 + Math.cos(i * 1.7) * 14 + k * 12, 8 * (1 - k), 1 - k, i % 2 ? '#fff6a8' : '#ffd8f2'); }
+    ctx.save(); ctx.translate(g.px, feet); ctx.scale(flip, 1);
+    const beat = Math.sin(g.flap || 0);
+    ctx.save(); ctx.translate(-w / 2 + p[0] * s, -h + p[1] * s); ctx.scale(0.78, 0.78);
+    if (p[2]) for (const d of [-1, 1]) { ctx.save(); ctx.scale(d, 1); nbWing(0.12 + beat * 0.3, 0.86 + beat * 0.26, 0.95, false); ctx.restore(); }
+    else { ctx.scale(-nat, 1); nbWing(-0.62 + beat * 0.42, 0.9, 0.8, true); nbWing(-0.18 + beat * 0.62, 1, 0.96, false); }
+    ctx.restore();
+    ctx.drawImage(im, -w / 2, -h, w, h);
+    ctx.restore();
+    if (g.carry) { const [hx, hy] = nbHand(g); nbCarried(g.carry, hx, hy, Math.sin(S.t * 5) * 0.15); }
+  }
+  // Ruby the robin, Aubrey's coach, perched on the branch beside the nest with a speech bubble
+  const NB_RB = [652, 143];
+  function nbCoach(g) {
+    const ch = g.cheer > 0, hop = ch ? Math.abs(Math.sin(g.cheer * 11)) * 12 : Math.max(0, Math.sin(S.t * 1.3)) ** 8 * 6;
+    drawRobin(NB_RB[0], NB_RB[1] - hop, 0.9, g.px < NB_RB[0] ? -1 : 1, ch ? S.t : S.t * 0.12 + 0.3, g.layer < 3 ? NB_LAYERS[g.layer][0] : null);
+    if (g.tip && g.tip.t > 0) {
+      ctx.font = `700 18px ${FONT}`;
+      const tw = ctx.measureText(g.tip.text).width + 26, bx = NB_RB[0] + 24, by = NB_RB[1] + 30, a = clamp(g.tip.t * 4, 0, 1);
+      ctx.globalAlpha = a;
+      ink(P2(`M${bx + 8},${by + 2} L${bx - 6},${by - 16} L${bx + 26},${by + 2} Z`), '#ffffff', 1.25);
+      rrect(bx, by, tw, 34, 14, '#ffffff', OL, 2.5);
+      ctx.fillStyle = '#ffffff'; tri(bx + 9, by + 3, bx + 25, by + 3, bx - 3, by - 12);
+      text(g.tip.text, bx + tw / 2, by + 18, 18, '#7a3a5a', 'center', 700);
+      ctx.globalAlpha = 1;
+    }
+  }
+  const nbTip = (g, text, t = 2.4) => { g.tip = { text, t }; };
   MG.nestbuild = {
     kind: 'action', title: () => 'Build the Nest', icon: () => '🪺',
-    how: () => 'Fly Ruby with the mouse or the arrow keys. Bring twigs, then mud, then feathers to the nest. Bump the squirrel to shoo it away!',
+    how: () => 'Aubrey has fairy wings! Fly her with the mouse or the arrow keys. Bring twigs, then mud, then feathers to the nest. Bump the squirrel to shoo it away!',
     init(g) {
       const t = g.tier - 1, per = [4, 5, 6][t];
       Object.assign(g, {
@@ -2441,21 +2594,29 @@
         twigs: [], feathers: [], spawnT: 0, fspawnT: 0,
         sq: null, sqT: [12, 9, 7][t], sqSpeed: [0.09, 0.11, 0.14][t], shoos: 0, steals: 0,
         gust: 0, gustT: t ? 7 : 1e9, gustDir: 1,
-        say: NB_LAYERS[0][2],
+        say: NB_LAYERS[0][2], frame: 'jump', flap: 0, walk: 0, cheer: 0, twirlT: 0, tip: null, place: null,
       });
       for (let i = 0; i < 3; i++) this.addTwig(g);
     },
-    start(g) { speak('The wind blew my nest away! ' + g.say); },
+    start(g) { speak('Flap your wings, Aubrey! You build the nest, and I will help. ' + g.say); nbTip(g, 'Twigs first!', 4); },
     addTwig(g) { g.twigs.push({ x: rand(250, 640), y: rand(452, 500), a: rand(-0.5, 0.5), bob: rand(0, 6) }); },
     need: g => NB_LAYERS[Math.min(g.layer, 2)][0],
     update(g, dt) {
       g.timeLeft -= dt; g.nag = Math.max(0, g.nag - dt);
-      steer(g, dt, 360, 40, W - 40, 90, 490);
+      if (g.layer < 3) steer(g, dt, 360, 40, W - 40, 112, 490);
+      else { g.px = lerp(g.px, NB_X - 150, Math.min(1, dt * 3)); g.py = lerp(g.py, 196, Math.min(1, dt * 3)); g.vx = g.vy = 0; g.facing = 1; } // she flutters aside to watch the eggs hatch
       // wind gusts push Ruby and the feathers sideways
       if ((g.gustT -= dt) <= 0) { g.gust = 2.2; g.gustDir = Math.random() < 0.5 ? -1 : 1; g.gustT = rand(7, 10); SFX.whoosh?.(); }
       g.gust = Math.max(0, g.gust - dt);
       const push = g.gust > 0 ? g.gustDir * Math.sin(g.gust / 2.2 * Math.PI) * 140 : 0;
       g.px = clamp(g.px + push * dt, 40, W - 40);
+      // Aubrey's wings beat faster as she climbs, slower as she glides down; on the lawn she walks
+      g.flap += dt * (g.vy < -30 ? 30 : g.vy > 60 ? 8 : 15) * (g.py > 468 ? 0.4 : 1);
+      g.cheer = Math.max(0, g.cheer - dt); g.twirlT = Math.max(0, g.twirlT - dt);
+      if (g.tip) g.tip.t -= dt;
+      if (g.place && (g.place.t += dt) > 0.45) g.place = null;
+      g.walk += Math.abs(g.vx || 0) * dt / 26;
+      g.frame = g.twirlT > 0 || g.layer >= 3 ? 'twirl' : g.py > 468 ? (Math.abs(g.vx || 0) > 40 ? 'run' + (1 + Math.floor(g.walk) % 5) : 'idle_front') : 'jump';
       // things to pick up: twigs in the grass, mud from the puddle, feathers floating down
       while (g.twigs.length < 3) this.addTwig(g);
       if ((g.fspawnT -= dt) <= 0 && g.feathers.length < 3) { g.feathers.push({ x: rand(200, 880), y: 70, a: 0, sw: rand(0, 6), col: pick(['#ffffff', '#ffd8e8', '#e8dcff']) }); g.fspawnT = rand(1.2, 2.2); }
@@ -2471,20 +2632,23 @@
         else if (fe) { if (need === 'feather') { got = 'feather'; g.feathers.splice(g.feathers.indexOf(fe), 1); } else wrong = 'feather'; }
         else if (mud) { if (need === 'mud') got = 'mud'; else wrong = 'mud'; }
         if (got) { g.carry = got; SFX.pick(); if (got === 'mud') burst(NB_PUD[0], NB_PUD[1], 8, { colors: ['#8a5a30', '#6a4628'] }); }
-        else if (wrong && g.nag <= 0) { g.nag = 1.6; floatText(g.px, g.py - 50, `We need ${NB_LAYERS[g.layer][1].toLowerCase()} now!`, '#ffffff', false, 20); }
+        else if (wrong && g.nag <= 0) { g.nag = 1.6; floatText(g.px, g.py - 50, `We need ${NB_LAYERS[g.layer][1].toLowerCase()} now!`, '#ffffff', false, 20); nbTip(g, `Not ${wrong}! ${NB_LAYERS[g.layer][1][0] + NB_LAYERS[g.layer][1].slice(1).toLowerCase()}!`, 1.8); }
       }
       // drop it in the nest
       if (g.carry && Math.hypot(g.px - NB_X, g.py - (NB_Y - 10)) < 70) {
-        g.carry = null; g.built++; SFX.hit();
+        const [hx, hy] = nbHand(g);
+        g.place = { kind: g.carry, x: hx, y: hy, t: 0, tx: NB_X + rand(-60, 60), ty: NB_Y - 10 };
+        g.carry = null; g.built++; SFX.hit(); g.twirlT = 0.6; g.cheer = 0.8;
+        nbTip(g, pick(['Tweet! Lovely!', 'Perfect spot!', 'So cozy!', 'Great weaving!']), 1.4);
         burst(NB_X, NB_Y - 10, 12, { kind: 'star', colors: ['#ffd23f', '#fff6a8'] });
         if (g.built >= (g.layer + 1) * g.per) {
           g.layer++;
-          if (g.layer < 3) { g.say = NB_LAYERS[g.layer][2]; speak(g.say); floatText(NB_X, NB_Y - 70, 'Layer done!', '#fff6a8', false, 28); SFX.sparkle(); }
-          else { speak('The nest is ready! Look, eggs!'); SFX.sparkle(); burst(NB_X, NB_Y - 20, 30, { kind: 'heart', colors: ['#ff8fc8', '#8ad8ff'] }); }
+          if (g.layer < 3) { g.say = NB_LAYERS[g.layer][2]; speak(g.say); nbTip(g, ['', 'Now mud!', 'Feathers last!'][g.layer], 3); floatText(NB_X, NB_Y - 70, 'Layer done!', '#fff6a8', false, 28); SFX.sparkle(); }
+          else { speak('The nest is ready! Look, eggs!'); nbTip(g, 'You did it!', 4); SFX.sparkle(); burst(NB_X, NB_Y - 20, 30, { kind: 'heart', colors: ['#ff8fc8', '#8ad8ff'] }); }
         }
       }
       // the cheeky squirrel comes for a twig; bump it to shoo it away
-      if (!g.sq && g.layer < 3 && (g.sqT -= dt) <= 0) { g.sq = { u: 0, dir: 1, carry: false, fall: 0, vy: 0, x: NB_PATH[0][0], y: NB_PATH[0][1] }; speak('Uh oh, a squirrel! Shoo it away!'); }
+      if (!g.sq && g.layer < 3 && (g.sqT -= dt) <= 0) { g.sq = { u: 0, dir: 1, carry: false, fall: 0, vy: 0, x: NB_PATH[0][0], y: NB_PATH[0][1] }; speak('Uh oh, a squirrel! Shoo it away!'); nbTip(g, 'Squirrel! Shoo him!', 2.5); }
       const q = g.sq;
       if (q) {
         if (q.fall > 0) {
@@ -2508,14 +2672,17 @@
       if (g.timeLeft <= 0 || g.end > 3.2) g.done = true;
     },
     draw(g) {
-      // the sign: what we need now
-      if (g.layer < 3) {
-        panel(W / 2 + 10, 64, 340, 64, 18);
-        const ix = W / 2 + 52, iy = 96;
+      // the sign: what we need now (drawn last; it turns see-through while Aubrey flies behind it)
+      const sign = () => {
+        if (g.layer >= 3) return;
+        ctx.globalAlpha = g.px > 200 && g.px < 592 && g.py < 190 ? 0.45 : 1;
+        panel(226, 64, 340, 64, 18);
+        const ix = 268, iy = 96;
         if (g.layer === 0) nbTwig(ix, iy, -0.3, 44); else if (g.layer === 1) nbMud(ix, iy, 15); else nbFeather(ix, iy, -0.3, 1.2);
         outlined(`Bring ${NB_LAYERS[g.layer][1]}`, ix + 30, iy + 2, 28, ['#c8884a', '#a06a3a', '#ff9ac8'][g.layer], 'left');
-        for (let i = 0; i < 3; i++) inkCircle(W / 2 + 328, 78 + i * 18, 6, i < g.layer ? '#5adc7a' : i === g.layer ? '#ffd23f' : '#e2d4ef', 1.2);
-      }
+        for (let i = 0; i < 3; i++) inkCircle(544, 78 + i * 18, 6, i < g.layer ? '#5adc7a' : i === g.layer ? '#ffd23f' : '#e2d4ef', 1.2);
+        ctx.globalAlpha = 1;
+      };
       // the mud puddle
       inkEllipse(NB_PUD[0], NB_PUD[1], 62, 18, 0, '#7a5030', 2);
       ctx.fillStyle = '#8a6040'; ellipse(NB_PUD[0] - 8, NB_PUD[1] - 3, 44, 9);
@@ -2525,7 +2692,7 @@
       for (const o of g.twigs) { if (need === 'twig' && !g.carry) glow(o.x, o.y, 30); nbTwig(o.x, o.y + Math.sin(S.t * 2 + o.bob) * 1.5, o.a); }
       for (const f of g.feathers) { if (need === 'feather' && !g.carry) glow(f.x, f.y, 28); nbFeather(f.x, f.y, f.a, 1, f.col); }
       // the nest grows layer by layer
-      const b = g.built, per = g.per, k1 = Math.min(b, per) / per, k2 = clamp((b - per) / per, 0, 1), k3 = clamp((b - 2 * per) / per, 0, 1);
+      const b = Math.max(0, g.built - (g.place ? 1 : 0)), per = g.per, k1 = Math.min(b, per) / per, k2 = clamp((b - per) / per, 0, 1), k3 = clamp((b - 2 * per) / per, 0, 1);
       if (b === 0 && g.layer === 0) { ctx.setLineDash([8, 8]); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(NB_X, NB_Y - 6, NB_W / 2, 26, 0, 0, Math.PI); ctx.stroke(); ctx.setLineDash([]); }
       if (k2 > 0 || b >= per) { ctx.fillStyle = mix('#a0703a', '#5a3a1e', k2); ctx.beginPath(); ctx.ellipse(NB_X, NB_Y - 8, NB_W / 2 - 8, 22 + 14 * k2, 0, 0, Math.PI); ctx.fill(); }
       const sticks = Math.round(k1 * 14);
@@ -2545,7 +2712,11 @@
       // gust streaks
       if (g.gust > 0) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 3; ctx.lineCap = 'round'; for (let i = 0; i < 7; i++) { const y = 120 + i * 50, x = ((S.t * 700 * g.gustDir + i * 173) % (W + 200) + W + 200) % (W + 200) - 100; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 70 * g.gustDir, y + 4); ctx.stroke(); } }
       if (g.sq) drawSquirrel(g.sq.x, g.sq.y, 1.1, g.sq.dir, S.t, g.sq.carry, g.sq.fall ? g.sq.fall * 10 : (nbAlong(g.sq.u)[2] ? -Math.PI / 2 * g.sq.dir : 0));
-      drawRobin(g.px, g.py, 1.25, g.facing || 1, S.t, g.carry);
+      nbCoach(g);
+      // the bit Aubrey just let go of, swooping into its place in the nest
+      if (g.place) { const k = clamp(g.place.t / 0.4, 0, 1), e = 1 - (1 - k) ** 2; nbCarried(g.place.kind, lerp(g.place.x, g.place.tx, e), lerp(g.place.y, g.place.ty, e) - Math.sin(k * Math.PI) * 30, k * 6); }
+      nbAubrey(g);
+      sign();
     },
   };
 
@@ -2673,7 +2844,7 @@
   restage('robin', {
     bg: 'robin_bg',
     games: [['nestbuild', 'feather', {}], ['birdsong', 'berry', {}]],
-    intro: ['N:Tweet! Oh no, the wind blew my nest right out of the oak, and my eggs are coming soon!', 'N:Fly with me! Twigs first, then mud, then soft feathers. And watch out for that cheeky squirrel!', 'A:determined:Let\'s build the coziest nest ever!'],
+    intro: ['N:Tweet! Oh no, the wind blew my nest right out of the oak, and my eggs are coming soon!', 'N:Here, put on these fairy wings and fly up to my branch! Twigs first, then mud, then soft feathers. And watch out for that cheeky squirrel!', 'A:determined:I can fly! Let\'s build the coziest nest ever!'],
     mid: ["N:Tweet tweet! My babies hatched in the coziest nest! Now it's song time!", 'N:Listen to my friends sing a tune, then sing it back the same way.', 'A:excited:I love singing!'],
     outro: ['N:Soft feathers for you, and some berries too. Feathers make wonderful wings!', 'A:happy:Bye-bye, baby birds! Sing loud!'],
   });
