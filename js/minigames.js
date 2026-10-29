@@ -2379,11 +2379,29 @@ const ofOnHead = c => c.layer === 1 && !c.pair && c.box[3] <= 24;
 // cut-outs of her photo, cached: the sprite without its skirt puff (with tights-coloured thighs instead), and the
 // locks of hair that fall over her shoulders (they go back on top of collars)
 // (and, for a mermaid tail or space suit that replaces her legs, the sprite with nothing below the waist but her hands)
-let ofBaseCv = null, ofHairCv = null, ofNoLegsCv = null;
+let ofBaseCv = null, ofHairCv = null, ofNoLegsCv = null, ofFullCv = null;
+// Aubrey smiles while she dresses up: her smiling portrait is scaled so the eyes line up with the body
+// photo's, then blended over its face inside a soft-edged oval (hair and outline stay from the body photo)
+const OF_SMILE = { sx: 0.4, sy: 0.46, fx: 48, fy: 60, bx: 49.5, by: 25, cx: 49.5, cy: 34, rx: 11.5, ry: 14.5, edge: 0.55 };
+function ofSmile(dst) {
+  const f = IMG.face_happy, o = OF_SMILE;
+  if (!f) return;
+  const t = document.createElement('canvas'); t.width = 97; t.height = 80;
+  const tx = t.getContext('2d');
+  tx.setTransform(o.sx, 0, 0, o.sy, o.bx - o.fx * o.sx, o.by - o.fy * o.sy); tx.drawImage(f, 0, 0);
+  tx.setTransform(1, 0, 0, 1, 0, 0); tx.globalCompositeOperation = 'destination-in';
+  tx.translate(o.cx, o.cy); tx.scale(o.rx, o.ry);
+  const g = tx.createRadialGradient(0, 0, 0, 0, 0, 1); g.addColorStop(0, '#000'); g.addColorStop(o.edge, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  tx.fillStyle = g; tx.fillRect(-1, -1, 2, 2);
+  dst.drawImage(t, 0, 0);
+}
 function ofCutouts() {
   if (ofBaseCv) return;
   const im = IMG.idle_front, mk = () => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; return c; };
   const src = mk(), sx = src.getContext('2d'); sx.drawImage(im, 0, 0);
+  ofSmile(sx);
+  // the whole smiling photo (skirt puff and all), for when nothing covers her dress
+  ofFullCv = mk(); ofFullCv.getContext('2d').drawImage(src, 0, 0);
   const d = sx.getImageData(0, 0, im.width, im.height), p = d.data;
   const hair = sx.createImageData(im.width, im.height), hp = hair.data;
   for (let y = 0; y < im.height; y++) for (let i = 0; i < im.width; i++) {
@@ -2498,7 +2516,7 @@ function ofDressed(x, gy, h, worn, lift = 0, ghosts = [], snaps = {}) {
   }) : sized(id, c, () => c.draw(lw)));
   // the backs of hats (brims and crowns behind her head) go behind her
   for (const [id, c] of on(c => c.back)) sized(id, c, () => c.back(lw));
-  ctx.drawImage(on(c => ofLow(c) && c.legs).length ? ofNoLegsCv : on(ofLow).length ? ofBaseCv : im, 0, 0);
+  ctx.drawImage(on(c => ofLow(c) && c.legs).length ? ofNoLegsCv : on(ofLow).length ? ofBaseCv : ofFullCv, 0, 0);
   if (ghosts.length) {
     // dashed 'ghost' outlines of the pieces still to find (cached; drawn in sprite space)
     const gi = ofGhostImage(ghosts);
