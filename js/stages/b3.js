@@ -498,7 +498,7 @@
   }
   MG.millclock = {
     kind: 'learn', title: () => 'Mill Clock', icon: () => '🕰️',
-    how: g => `Millie needs the giant mill clock set! Move Aubrey with the arrow keys or your finger. Run onto the round handle at the end of a hand to grab it, run round to move it, then let go with Space or a tap. The short blue hand shows the hour${g.tier > 1 ? ', the long red hand shows the minutes' : ''}. Ring the bell when it's right!`,
+    how: g => `Millie needs the giant mill clock set! Move Aubrey with the arrow keys or your finger. Stand on the round handle at the end of a hand and press SPACE (or tap) to grab it, run round to move it, then press SPACE again to let go. The short blue hand shows the hour${g.tier > 1 ? ', the long red hand shows the minutes' : ''}. Ring the bell when it's right!`,
     init(g) {
       const rounds = [4, 5, 5][g.tier - 1], times = [];
       while (times.length < rounds) {
@@ -571,17 +571,21 @@
       if (Math.abs(g.vx) > 25) g.face = Math.sign(g.vx);
       g.run = moving ? g.run + dt : 0;
       g.still = moving ? 0 : g.still + dt;
+      // Space (or a tap) grabs the handle she's standing on, and Space (or a tap) lets go again
+      const toggle = (pressed[' '] || (pointer.clicked && !onBell)) && g.grabT <= 0;
       if (g.held) {
         // the hand follows her round the clock
         if (dr > 26) { const a = mcAng(g.ax, g.ay); if (g.held === 'm') g.ma = a; else g.ha = a; }
-        const letGo = pressed[' '] || (pointer.clicked && !onBell) || g.still > 0.9;
-        if (letGo && g.grabT <= 0) { this.snap(g, g.held); g.held = null; g.grabT = 0.6; }
-      } else if (g.grabT <= 0) {
-        // grab whichever handle she runs onto (the hour handle sits nearer the middle)
+        if (toggle) { this.snap(g, g.held); g.held = null; g.grabT = 0.25; }
+      } else {
+        // which handle is she on? (the hour handle sits nearer the middle)
+        g.near = null;
         for (const [w, a, len] of [['m', g.ma, MC.mLen], ['h', g.ha, MC.hLen]]) {
           const [tx, ty] = mcTip(a, len);
-          if (Math.hypot(g.ax - tx, g.ay - ty) < 28) { g.held = w; g.grabT = 0.4; SFX.pick(); speak(w === 'm' ? 'The long minute hand!' : 'The short hour hand!'); break; }
+          if (Math.hypot(g.ax - tx, g.ay - ty) < 30) { g.near = w; break; }
         }
+        if (toggle && g.near) { g.held = g.near; g.grabT = 0.25; SFX.pick(); speak(g.held === 'm' ? 'Got the long minute hand!' : 'Got the short hour hand!'); }
+        else if (toggle) { SFX.blip(); if (!g.saidGrab) { g.saidGrab = true; speak('Stand on a round handle at the end of a hand, then press Space to grab it!'); } }
       }
       g.progress = `Clock ${g.round + 1} of ${g.rounds}`;
       g.score = g.total / g.rounds;
@@ -612,7 +616,8 @@
       outlined(timeName(g.h, g.m), 16 + tw / 2, 122, 28, '#ff6fb5', 'center', '#fff');
       text(`${g.h}:${String(g.m).padStart(2, '0')}`, 16 + tw / 2, 148, 15, '#5a2a6e', 'center', 800);
       drawCritter('Millie Mouse', 92, GY + 40, 0.6, 1);
-      if (g.held) text(g.held === 'm' ? 'Holding the minute hand: let go with Space or a tap' : 'Holding the hour hand: let go with Space or a tap', MC.x, 524, 15, '#5a2a6e', 'center', 700);
+      if (g.held) text(g.held === 'm' ? 'Holding the minute hand: press Space (or tap) to let go' : 'Holding the hour hand: press Space (or tap) to let go', MC.x, 524, 15, '#5a2a6e', 'center', 700);
+      else if (g.near && g.state === 'set') { outlined('Space to grab!', g.ax, g.ay - MC.ah * 0.5 - 16, 18, '#fff6a8'); }
       if (g.state === 'yay') outlined(timeName(g.h, g.m) + '!', MC.x, 92, 34, '#fff6a8');
       // the bell to ring when the clock is set
       if (g.state === 'set') button('mcbell', W - 150, 448, 134, 74, 'Ring!', { icon: '🔔', color: '#ffb03a', size: 22, key: 'Enter' });
