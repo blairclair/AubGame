@@ -43,7 +43,8 @@
   };
   const ringmaster = (x, gy, s, frame = 'idle_front') => {
     drawAubrey(x, gy, frame, 1, 0, s);
-    if (frame === 'idle_front') topHat(x + 2 * s / 0.5, gy - 226 * s + 16 * s / 0.5, s / 0.5 * 0.62);
+    // brim perched on the crown of her hair, small enough that her face still shows
+    if (frame === 'idle_front') topHat(x + 2 * s / 0.5, gy - 226 * s + 5 * s / 0.5, s / 0.5 * 0.5);
   };
   const lights = (pts, t, r = 4) => pts.forEach(([x, y], i) => {
     const on = (Math.floor(t * 3) + i) % 3 !== 0;
