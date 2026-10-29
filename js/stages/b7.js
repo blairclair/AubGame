@@ -1971,11 +1971,28 @@
 
   // ---- Asteroid Dodge: fly Cosmo's rocket, zap or dodge asteroids, scoop up stardust -------------
   const rockPath = (r, seed) => { const p = new Path2D(); for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2, rr = r * (0.8 + hash(seed + k) * 0.3); p.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } p.closePath(); return p; };
+  // Aubrey rides on the rocket's nose, waving a star wand that fires the magic beams
+  const AD_WAND = [20, -134]; // wand tip, relative to the rocket's base
+  const adRider = g => {
+    const s = 0.36, im = IMG.idle_front, h = im.height * s, waist = -66, feet = waist + h * 0.5;
+    ctx.save(); ctx.beginPath(); ctx.rect(-60, feet - h - 6, 120, h * 0.5 + 8); ctx.clip();
+    drawAubrey(0, feet, 'idle_front', 1, 0, s);
+    ctx.restore();
+    // her right arm up, holding the wand; it flicks when a beam goes
+    const sx = 7, sy = waist - h * 0.3, kick = g.cast > 0 ? -5 : 0, hx = 15, hy = -114 + kick;
+    ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = OL; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(hx, hy + 4); ctx.lineTo(AD_WAND[0], AD_WAND[1] + kick + 6); ctx.stroke();
+    ctx.strokeStyle = '#c87ad8'; ctx.lineWidth = 2.2; ctx.stroke();
+    inkCircle(hx, hy, 3, '#f6cfb0', 1);
+    if (g.cast > 0) glow(AD_WAND[0], AD_WAND[1] + kick, 22, 'rgba(255,180,240,.9)');
+    star(AD_WAND[0], AD_WAND[1] + kick, 6.5, '#ffd23f', 5);
+  };
   MG.asteroiddodge = {
     kind: 'action', title: () => 'Asteroid Dodge', icon: () => '☄️',
-    how: () => 'Steer the rocket with the mouse or the arrow keys. It zaps asteroids by itself! Dodge the rocks and scoop up the sparkly stardust.',
+    how: () => 'Aubrey rides the rocket! Steer with the mouse or the arrow keys. Her magic wand zaps the asteroids by itself, and they burst into stars! Dodge the rocks and scoop up the sparkly stardust.',
     init(g) {
-      Object.assign(g, { x: W / 2, rocks: [], zaps: [], dust: [], spawnT: 1, dustT: 0.5, zapT: 0, timeLeft: [35, 40, 40][g.tier - 1], hits: 0, got: 0, made: 0, inv: 0, zapped: 0, facing: 0, stars: [] });
+      Object.assign(g, { x: W / 2, rocks: [], zaps: [], dust: [], spawnT: 1, dustT: 0.5, zapT: 0, timeLeft: [35, 40, 40][g.tier - 1], booms: [], hits: 0, got: 0, made: 0, inv: 0, zapped: 0, facing: 0, stars: [] });
       for (let i = 0; i < 50; i++) g.stars.push({ x: rand(0, W), y: rand(60, H), v: rand(30, 120) });
       g.say = 'Dodge the rocks and grab the stardust!';
     },
@@ -1989,7 +2006,9 @@
       g.x = clamp(g.x, 50, W - 50); g.facing = lerp(g.facing, clamp((g.x - before) / (dt * 600), -1, 1), Math.min(1, dt * 10));
       for (const s of g.stars) { s.y += s.v * dt; if (s.y > H) { s.y = 60; s.x = rand(0, W); } }
       // auto zapper
-      if ((g.zapT -= dt) <= 0) { g.zapT = 0.34; g.zaps.push({ x: g.x, y: 400 }); tone(1200, 0.06, 'square', 0.02, 0, 600); }
+      // beams fly from Aubrey's wand
+      if ((g.zapT -= dt) <= 0) { g.zapT = 0.34; g.cast = 0.15; g.zaps.push({ x: g.x + AD_WAND[0] + Math.sin(g.facing * 0.25) * 130, y: 486 + AD_WAND[1] }); tone(1568, 0.08, 'sine', 0.03, 0, 2093); }
+      g.cast = Math.max(0, (g.cast || 0) - dt);
       for (const z of g.zaps) z.y -= 640 * dt;
       g.zaps = g.zaps.filter(z => z.y > 50 && !z.gone);
       // asteroids tumble down; big ones split when zapped
@@ -2002,7 +2021,11 @@
         r.x += r.vx * dt; r.y += r.vy * dt; r.rot += r.spin * dt;
         for (const z of g.zaps) if (!z.gone && Math.abs(z.x - r.x) < r.r && Math.abs(z.y - r.y) < r.r) {
           z.gone = true; r.hp--; SFX.pop();
-          if (r.hp <= 0) { r.gone = true; g.zapped++; burst(r.x, r.y, 12, { colors: ['#b8a8c8', '#8a7a9a', '#fff6a8'] }); if (Math.random() < 0.6) this.addDust(g, r.x, r.y); }
+          if (r.hp <= 0) {
+            // the asteroid bursts into a shower of stars
+            r.gone = true; g.zapped++; g.booms.push({ x: r.x, y: r.y, r: r.r, t: 0, spin: rand(0, 6) });
+            burst(r.x, r.y, 22, { kind: 'star', colors: ['#fff6a8', '#ffd23f', '#ffffff', '#ffb3e0'] });
+            [1319, 1568, 2093].forEach((f, i) => tone(f, 0.16, 'sine', 0.04, i * 0.05)); if (Math.random() < 0.6) this.addDust(g, r.x, r.y); }
           else { r.r *= 0.75; r.flash = 0.15; }
         }
         r.flash = Math.max(0, (r.flash || 0) - dt);
@@ -2012,6 +2035,8 @@
         }
       }
       g.rocks = g.rocks.filter(r => !r.gone && r.y < H + 50);
+      for (const bm of g.booms) bm.t += dt;
+      g.booms = g.booms.filter(bm => bm.t < 0.7);
       for (const d of g.dust) {
         d.y += d.vy * dt;
         if (!d.got && Math.hypot(d.x - g.x, d.y - 440) < 44) { d.got = true; g.got++; SFX.sparkle(); floatText(d.x, d.y - 20, '+1', '#fff6a8', false, 22); }
@@ -2032,9 +2057,24 @@
         ctx.fillStyle = 'rgba(255,255,255,.25)'; circle(-r.r * 0.35, -r.r * 0.45, r.r * 0.12);
         ctx.restore();
       }
-      for (const z of g.zaps) { glow(z.x, z.y, 16, 'rgba(120,255,220,.8)'); ctx.strokeStyle = '#bfffe8'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(z.x, z.y); ctx.lineTo(z.x, z.y + 18); ctx.stroke(); }
+      // star explosions: a bright flash, then a ring of spinning stars flying out and fading
+      for (const bm of g.booms) {
+        const k = bm.t / 0.7, rad = bm.r * 0.6 + k * 70;
+        if (k < 0.35) glow(bm.x, bm.y, bm.r * (1.6 + k * 4), 'rgba(255,245,180,.95)');
+        ctx.globalAlpha = 1 - k;
+        for (let i = 0; i < 8; i++) { const a = bm.spin + i * Math.PI / 4 + k * 1.5; star(bm.x + Math.cos(a) * rad, bm.y + Math.sin(a) * rad, 9 * (1 - k * 0.5), i % 2 ? '#fff6a8' : '#ffd23f', 5); }
+        star(bm.x, bm.y, bm.r * 0.8 * (1 - k), '#ffffff', 5);
+        ctx.globalAlpha = 1;
+      }
+      // magic beams from Aubrey's wand: a glowing streak with a twinkling star at the front
+      for (const z of g.zaps) {
+        glow(z.x, z.y, 18, 'rgba(255,150,230,.8)');
+        ctx.strokeStyle = '#ffb3f0'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(z.x, z.y); ctx.lineTo(z.x, z.y + 22); ctx.stroke();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+        star(z.x, z.y, 7 + Math.sin(S.t * 30 + z.y) * 1.5, '#fff6a8', 5);
+      }
       ctx.save(); ctx.translate(g.x, 486); ctx.rotate(g.facing * 0.25);
-      if (!(g.inv > 0 && Math.floor(S.t * 12) % 2)) drawFoxRocket(0, 0, 0.42, 0.9);
+      if (!(g.inv > 0 && Math.floor(S.t * 12) % 2)) { drawFoxRocket(0, 0, 0.42, 0.9); adRider(g); }
       if (g.inv > 0) { ctx.strokeStyle = `rgba(150,230,255,${g.inv / 1.3})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, -40, 50, 0, Math.PI * 2); ctx.stroke(); }
       ctx.restore();
     },
