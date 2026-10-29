@@ -1291,11 +1291,12 @@
   const DIRS = { r: [1, 0], l: [-1, 0], u: [0, -1], d: [0, 1] };
   MG.glowworm = {
     kind: 'action', title: () => 'Glow Worm', icon: () => '🐛',
-    how: () => 'Steer the glow worm with the arrow keys, or hold your finger where you want him to go. Eat the light orbs to grow, but don\'t bite your own tail!',
+    how: () => 'Aubrey is taking the glow worm for a walk! Lead him on his leash with the arrow keys, or hold your finger where you want to go. Walk him to the light orbs so he can eat and grow, but don\'t let him bite his own tail!',
     init(g) {
       Object.assign(g, { body: [[6, 5], [5, 5], [4, 5]], prev: null, dir: 'r', want: 'r', stepT: 0, step: [0.26, 0.21, 0.17][g.tier - 1], target: [8, 10, 12][g.tier - 1], eaten: 0, bites: 0, orbs: [], grow: 0, timeLeft: 70, endT: 0 });
       this.spawn(g); this.spawn(g);
-      g.say = 'Eat the light orbs! Don\'t bite your tail.';
+      g.say = 'Walk the glow worm to the light orbs! Don\'t let him bite his tail.';
+      g.lead = null; g.face = 1;
     },
     start(g) { speak(g.say); },
     spawn(g) {
@@ -1307,7 +1308,7 @@
       }
     },
     update(g, dt) {
-      g.timeLeft -= dt;
+      g.timeLeft -= dt; g.lastDt = dt;
       const rev = { r: 'l', l: 'r', u: 'd', d: 'u' };
       const ask = d => { if (d !== rev[g.dir]) g.want = d; };
       if (pressed.arrowleft || pressed.a) ask('l');
@@ -1384,6 +1385,36 @@
         const ex = hx + dc * 6 + (dr ? s * 7 : 0), ey = hy + dr * 6 + (dc ? s * 7 : 0);
         ctx.fillStyle = '#fff'; circle(ex, ey, 5); ctx.fillStyle = '#2a1a3a'; circle(ex + dc * 1.5, ey + dr * 1.5, 2.6);
       }
+      this.drawWalker(g, hx, hy, dc, dr);
+    },
+    // Aubrey walks a step ahead of the worm, holding his leash, which clips to a little collar behind his head
+    drawWalker(g, hx, hy, dc, dr) {
+      const tx = hx + dc * GW.cell * 1.75, ty = hy + dr * GW.cell * 1.75;
+      // ease her round corners, but jump straight across when the worm wraps to the other side
+      if (!g.lead || Math.hypot(g.lead[0] - tx, g.lead[1] - ty) > GW.cell * 3) g.lead = [tx, ty];
+      else { const k = Math.min(1, (g.lastDt || 0.016) * 10); g.lead = [lerp(g.lead[0], tx, k), lerp(g.lead[1], ty, k)]; }
+      if (dc) g.face = dc;
+      const [ax, ay] = g.lead, h = 86, feet = ay + 30, done = g.eaten >= g.target;
+      const fr = done ? 'twirl' : `run${1 + (Math.floor(S.t * 9) % 5)}`;
+      const handX = ax - g.face * 8, handY = feet - h * 0.5;
+      // the collar, then the leash sagging between her hand and the worm (drawn under her when she's in front)
+      // a pink band round his neck, just behind his face, with a gold ring for the leash
+      const cx = hx - dc * 19, cy = hy - dr * 19;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.atan2(dr, dc));
+      inkRect(-4, -19, 8, 38, '#ff6fb5', 1.6, 4); ctx.fillStyle = '#ffd0e4'; ctx.fillRect(-2, -16, 2, 32);
+      ctx.restore();
+      const rx = cx + (dr ? 0 : 0) - dr * 0 + (dc ? 0 : 0), ry = cy - (dc ? 18 : 0), rxx = cx + (dr ? 18 * (g.face || 1) : 0);
+      inkCircle(dc ? rx : rxx, dc ? ry : cy, 4.5, '#ffd84a', 1.2);
+      const leash = () => {
+        const lx = dc ? rx : rxx, ly = dc ? ry : cy, mx = (lx + handX) / 2, my = Math.max(ly, handY) + 14;
+        for (const [c, w] of [[OL, 5], ['#ff9ac0', 2.6]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo(mx, my, handX, handY); ctx.stroke(); }
+      };
+      const drawHer = () => {
+        ctx.fillStyle = 'rgba(10,10,40,.3)'; ellipse(ax, feet, 15, 4);
+        drawAubrey(ax, feet, fr, g.face, done ? Math.abs(Math.sin(g.endT * 8)) * 10 : 0, h / IMG.idle_front.height);
+      };
+      // depth: walking up the field she's behind the worm's head; otherwise she's in front of it
+      if (dr < 0) { drawHer(); leash(); } else { leash(); drawHer(); }
     },
   };
 
