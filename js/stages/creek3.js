@@ -77,35 +77,103 @@
     }
     ctx.restore();
   }
-  // floating rubbish: bottle, can, crisp packet, bag
-  function litter(kind, x, y, s, rot) {
+  // floating rubbish, drawn used-up and grubby so it reads as TRASH at a glance: crushed, torn,
+  // stained and dented. 0 bottle, 1 can, 2 crisp packet, 3 bag, 4 six-pack rings, 5 old boot,
+  // 6 banana peel, 7 takeaway cup, 8 juice box, 9 tin can
+  const LITTER_KINDS = 10;
+  const grime = (x, y, rx, ry) => { ctx.fillStyle = 'rgba(110,90,40,.35)'; ellipse(x, y, rx, ry); };
+  function litter(kind, x, y, s, rot, t = 0) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(rot);
-    if (kind === 0) {        // plastic bottle on its side
-      const p = P2('M-30,-8 C-30,-18 -22,-20 -14,-20 L10,-20 C18,-20 20,-14 26,-12 L32,-12 L32,-2 L26,-2 C20,0 18,6 10,6 L-14,6 C-22,6 -30,4 -30,-8 Z');
-      ink(p, 'rgba(150,215,255,.95)', 2.2);
-      ctx.fillStyle = '#3a8ae0'; ctx.fillRect(-16, -16, 18, 18);
-      ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(-12, -13, 10, 4);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (kind === 0) {        // squashed plastic bottle, crinkled in the middle, torn label
+      const p = P2('M-30,-8 C-30,-18 -22,-20 -14,-20 L-4,-17 L2,-21 L10,-20 C18,-20 20,-14 26,-12 L32,-12 L32,-2 L26,-2 C20,0 18,6 10,6 L2,3 L-4,7 L-14,6 C-22,6 -30,4 -30,-8 Z');
+      ink(p, 'rgba(170,220,250,.95)', 2.2);
+      ink(P2('M-18,-17 L0,-18 L-3,-10 L1,-4 L-2,4 L-18,4 Z'), '#3a8ae0', 1.2);
+      ctx.strokeStyle = 'rgba(60,90,130,.55)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(4, -19); ctx.lineTo(7, -8); ctx.lineTo(3, 4); ctx.moveTo(12, -18); ctx.lineTo(14, -6); ctx.stroke();
       inkRect(31, -14, 7, 14, '#ff5a6a', 1.6, 2);
-      ctx.fillStyle = 'rgba(255,255,255,.75)'; ellipse(-20, -14, 6, 2.5);
-    } else if (kind === 1) { // fizzy drink can
-      const p = P2('M-22,-20 L18,-20 C24,-20 24,4 18,4 L-22,4 C-28,4 -28,-20 -22,-20 Z');
-      ink(p, vgrad(-20, 4, '#ff6a6a', '#c42a3a'), 2.2);
-      inkEllipse(20, -8, 6, 12, 0, '#d8dce6', 1.6);
-      ctx.fillStyle = '#fff'; ellipse(-4, -8, 9, 5);
-      ctx.fillStyle = '#ff6a6a'; ellipse(-4, -8, 4, 2.5);
-      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(-20, -17, 32, 3);
-    } else if (kind === 2) { // crisp packet with crinkly ends
-      const p = P2('M-26,-22 L-20,-18 L-26,-14 L-20,-10 L-26,-6 L-20,-2 L-26,2 L22,2 L16,-2 L22,-6 L16,-10 L22,-14 L16,-18 L22,-22 Z');
-      ink(p, vgrad(-22, 2, '#ffe25a', '#ffaa2a'), 2);
-      ctx.fillStyle = '#ff5a8a'; circle(-2, -10, 7);
-      ctx.fillStyle = '#fff'; circle(-4, -12, 2.4);
-    } else {                 // floppy plastic bag
-      const p = P2('M-24,2 C-30,-10 -22,-24 -12,-22 L-14,-32 L-6,-30 L-4,-22 L6,-22 L8,-30 L16,-32 L14,-22 C26,-22 30,-8 22,2 Z');
-      ink(p, 'rgba(250,250,255,.92)', 2);
-      ctx.strokeStyle = 'rgba(160,170,200,.7)'; ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.moveTo(-14, -12); ctx.quadraticCurveTo(-6, -6, -10, 0); ctx.moveTo(8, -14); ctx.quadraticCurveTo(14, -6, 10, 0); ctx.stroke();
+      grime(-22, -2, 7, 4); grime(18, -4, 5, 3);
+    } else if (kind === 1) { // crushed fizzy drink can with the ring-pull open
+      const p = P2('M-22,-20 L-4,-20 L0,-14 L6,-20 L18,-20 C24,-20 24,4 18,4 L6,4 L1,-2 L-4,4 L-22,4 C-28,4 -28,-20 -22,-20 Z');
+      ink(p, vgrad(-20, 4, '#ff6a6a', '#b0283a'), 2.2);
+      inkEllipse(20, -8, 6, 12, 0, '#d8dce6', 1.6); ctx.fillStyle = '#5a5a66'; ellipse(20, -12, 2.4, 3.6);
+      ctx.strokeStyle = 'rgba(90,10,20,.6)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-4, -20); ctx.lineTo(1, -8); ctx.lineTo(-4, 4); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.fillRect(-18, -12, 12, 4);
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(-20, -18, 14, 2.5);
+      grime(-14, 0, 8, 3); grime(10, -16, 5, 2.5);
+    } else if (kind === 2) { // empty crisp packet, crumpled and ripped open, crumbs spilling
+      const p = P2('M-26,-22 L-20,-18 L-26,-14 L-20,-10 L-26,-6 L-20,-2 L-26,2 L-4,4 L4,-2 L12,5 L22,2 L18,-6 L24,-12 L14,-16 L20,-24 L4,-20 Z');
+      ink(p, vgrad(-22, 2, '#ffe25a', '#e8902a'), 2);
+      ctx.fillStyle = '#ff5a8a'; ctx.fillRect(-20, -14, 26, 6);
+      ctx.strokeStyle = 'rgba(120,70,10,.6)'; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(-14, -20); ctx.lineTo(-8, -6); ctx.moveTo(4, -18); ctx.lineTo(0, -4); ctx.moveTo(10, -14); ctx.lineTo(16, -2); ctx.stroke();
+      ctx.fillStyle = '#e8b04a'; for (const [cx, cy] of [[26, 6], [30, 2], [27, -2]]) circle(cx, cy, 1.8);
+      grime(-12, -2, 7, 3);
+    } else if (kind === 3) { // torn, grubby plastic bag with a hole
+      const p = P2('M-24,2 C-30,-10 -22,-24 -12,-22 L-14,-32 L-6,-30 L-4,-22 L6,-22 L8,-30 L16,-32 L14,-22 C26,-22 30,-8 22,2 L14,-2 L8,4 L0,-1 L-8,4 L-14,-1 Z');
+      ink(p, 'rgba(236,236,226,.94)', 2);
+      ctx.strokeStyle = 'rgba(140,140,120,.7)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-14, -12); ctx.quadraticCurveTo(-6, -6, -10, -2); ctx.moveTo(8, -14); ctx.quadraticCurveTo(14, -6, 10, -2); ctx.stroke();
+      inkEllipse(4, -12, 4, 3, 0.3, 'rgba(90,150,190,.9)', 1.2);
+      grime(-16, -6, 6, 4); grime(14, -18, 4, 3);
+    } else if (kind === 4) { // plastic six-pack rings
+      for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
+        const cx = -18 + c * 18, cy = -16 + r * 14;
+        ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.beginPath(); ctx.ellipse(cx, cy, 9, 7, 0, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = 'rgba(235,240,245,.95)'; ctx.lineWidth = 3.5; ctx.stroke();
+      }
+      grime(-6, -4, 8, 3);
+    } else if (kind === 5) { // old boot with a hole in the toe and a trailing lace
+      const p = P2('M-20,-30 L-2,-30 L-2,-12 C10,-12 26,-10 28,0 L28,4 L-22,4 Z');
+      ink(p, '#7a4a2a', 2.4);
+      inkRect(-24, 2, 54, 6, '#3a2a22', 1.6, 2);
+      inkEllipse(20, -3, 5, 3.5, 0, '#2a1a12', 1);
+      ctx.strokeStyle = '#e8dcc0'; ctx.lineWidth = 1.6;
+      for (const ly of [-24, -18]) { ctx.beginPath(); ctx.moveTo(-18, ly); ctx.lineTo(-4, ly + 3); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(-4, -15); ctx.quadraticCurveTo(-14, -6, -26, -10); ctx.stroke();
+      ctx.fillStyle = 'rgba(80,140,60,.55)'; ellipse(-12, -2, 6, 3); ellipse(6, -6, 4, 2);
+    } else if (kind === 6) { // banana peel: stem on top, three floppy flaps hanging down, going brown
+      ink(P2('M-3,-20 C-14,-18 -26,-8 -30,4 C-24,2 -16,-6 -6,-10 Z'), '#e8c03a', 1.8);
+      ink(P2('M3,-20 C14,-18 26,-8 30,4 C24,2 16,-6 6,-10 Z'), '#e0b432', 1.8);
+      ink(P2('M-6,-20 C-8,-8 -6,2 0,8 C6,2 8,-8 6,-20 Z'), '#f2cf4e', 1.8);
+      ctx.fillStyle = '#fff4c0'; ellipse(-1, -10, 2.5, 8);
+      inkRect(-4, -30, 8, 11, '#8a6a2a', 1.4, 2);
+      ctx.fillStyle = '#6a4a1a'; for (const [dx, dy, r] of [[-22, -2, 2.2], [24, -1, 2], [-12, -10, 1.8], [3, 2, 2], [14, -9, 1.6], [-28, 3, 2.6], [28, 3, 2.6]]) circle(dx, dy, r);
+    } else if (kind === 7) { // takeaway cup on its side, lid half off, bent straw
+      const p = P2('M-24,-16 L16,-20 L16,4 L-24,0 Z');
+      ink(p, '#ffffff', 2.2);
+      ctx.fillStyle = '#8a5a3a'; ctx.fillRect(-14, -14, 20, 12);
+      inkRect(16, -24, 7, 32, '#e04a6a', 1.6, 3);
+      ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(20, -8); ctx.lineTo(36, -10); ctx.lineTo(42, -22); ctx.stroke();
+      ctx.strokeStyle = '#5fd0ff'; ctx.lineWidth = 3; ctx.stroke();
+      grime(-16, -2, 7, 3); grime(4, -18, 5, 2);
+    } else if (kind === 8) { // squashed juice box with its straw
+      const p = P2('M-18,-24 L14,-26 L16,-10 L12,-2 L16,4 L-20,6 L-16,-8 Z');
+      ink(p, '#7ad06a', 2.2);
+      ink(P2('M-12,-18 L8,-19 L8,-6 L-12,-5 Z'), '#ffa23a', 1.2);
+      ctx.fillStyle = '#fff'; circle(-2, -12, 3);
+      ctx.strokeStyle = 'rgba(30,80,30,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(14, -10); ctx.lineTo(-4, -2); ctx.stroke();
+      ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(8, -24); ctx.lineTo(16, -36); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.2; ctx.stroke();
+      grime(-10, 2, 7, 3);
+    } else {                 // opened tin can, jagged lid sticking up, label peeling off
+      inkRect(-18, -22, 30, 26, '#c8ccd6', 2.2, 3);
+      ink(P2('M-16,-18 L8,-18 L8,0 L-2,-4 L-6,2 L-16,0 Z'), '#ff8a3a', 1.2);
+      ctx.fillStyle = '#ffe0a0'; ctx.fillRect(-12, -14, 14, 4);
+      ctx.save(); ctx.translate(12, -22); ctx.rotate(-0.7); ink(P2('M0,0 L4,-4 L8,0 L12,-4 L16,0 L16,2 L0,2 Z'), '#d8dce6', 1.4); ctx.restore();
+      ctx.strokeStyle = 'rgba(80,80,90,.5)'; ctx.lineWidth = 1.2; for (const ly of [-16, -8]) { ctx.beginPath(); ctx.moveTo(8, ly); ctx.lineTo(12, ly); ctx.stroke(); }
+      ctx.fillStyle = '#b06a3a'; ellipse(-12, 0, 4, 2); ellipse(10, -14, 2.5, 1.6);
     }
     ctx.restore();
+  }
+  // a little fly buzzing over smelly rubbish
+  function litterFly(x, y, t, ph) {
+    const fx = x + Math.sin(t * 7 + ph) * 14, fy = y - 34 + Math.cos(t * 9 + ph * 2) * 6;
+    ctx.strokeStyle = 'rgba(60,50,40,.35)'; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.arc(x, y - 34, 12, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; const fl = Math.sin(t * 60) * 1.5;
+    ellipse(fx - 3, fy - 3 - fl, 3.5, 2); ellipse(fx + 3, fy - 3 + fl, 3.5, 2);
+    ctx.fillStyle = '#2a2a30'; circle(fx, fy, 2.6);
   }
   // a fluffy duckling paddling
   function duckling(x, y, s, flip) {
@@ -319,10 +387,10 @@
     for (let i = 0; i < seq.length && x < L - 500; i++) {
       let p = seq[i];
       if (p !== 'litter' && p === last) p = 'litter';
-      if (p === 'litter') { lastY = lastY > (Y0 + Y1) / 2 ? rand(Y0 + 8, lastY - 90) : rand(lastY + 90, Y1 - 8); add({ k: 'litter', x, y: lastY, kind: randInt(0, 3) }); }
+      if (p === 'litter') { lastY = lastY > (Y0 + Y1) / 2 ? rand(Y0 + 8, lastY - 90) : rand(lastY + 90, Y1 - 8); add({ k: 'litter', x, y: lastY, kind: randInt(0, LITTER_KINDS - 1) }); }
       else if (p === 'pair') {
         const a = ry(), b = clamp(a + (Math.random() < 0.5 ? -1 : 1) * rand(80, 130), Y0 + 8, Y1 - 8);
-        add({ k: 'litter', x, y: a, kind: randInt(0, 3) }); add({ k: 'litter', x: x + 170, y: b, kind: randInt(0, 3) }); x += 90; lastY = b;
+        add({ k: 'litter', x, y: a, kind: randInt(0, LITTER_KINDS - 1) }); add({ k: 'litter', x: x + 170, y: b, kind: randInt(0, LITTER_KINDS - 1) }); x += 90; lastY = b;
       } else if (p === 'rock') add({ k: 'rock', x, y: ry(), r: rand(30, 40), seed: i });
       else if (p === 'gap' || p === 'rock2') {
         // two rocks with a channel between them; a gap has a piece of rubbish waiting in the channel
@@ -330,7 +398,7 @@
         add({ k: 'rock', x, y: gc - half - 6, r: 34, seed: i });
         add({ k: 'rock', x: x + 20, y: gc + half + 6, r: 36, seed: i + 1 });
         if (gc - half - 100 > Y0 && Math.random() < 0.5) add({ k: 'rock', x: x + 10, y: Y0 + 4, r: 26, seed: i + 2 });
-        if (p === 'gap') { add({ k: 'litter', x: x + 10, y: gc, kind: randInt(0, 3) }); lastY = gc; }
+        if (p === 'gap') { add({ k: 'litter', x: x + 10, y: gc, kind: randInt(0, LITTER_KINDS - 1) }); lastY = gc; }
       } else if (p === 'ducks') add({ k: 'ducks', x, y: ry(), vy: t === 1 ? (Math.random() < 0.5 ? 0 : 22) : 38, dir: Math.random() < 0.5 ? 1 : -1 });
       else if (p === 'log') add({ k: 'log', x, y: ry(), vy: 45 + t * 8, dir: Math.random() < 0.5 ? 1 : -1 });
       else if (p === 'whirl') add({ k: 'whirl', x, y: rand(Y0 + 50, Y1 - 50) });
@@ -348,6 +416,12 @@
   const FACTS = {
     start: 'Downstream means the way the water flows. Off we go!',
     first: 'Great scoop! Plastic floats, so it can drift all the way to the sea.',
+    // the first time each of these is scooped
+    k4: 'Plastic rings can get stuck round a duck\'s neck. Good catch!',
+    k5: 'An old boot! Somebody dropped it in the creek.',
+    k6: 'Even a banana peel doesn\'t belong in the creek. It goes in the compost!',
+    k7: 'Cups and straws are plastic too. They never rot away.',
+    k9: 'A tin can! Metal cans can be recycled into new ones.',
     third: 'Rubbish can hurt fish and ducks. You are saving them!',
     rock: 'Bonk! Steer around the rocks.',
     duck: 'Oops! Go around the ducks. This creek is their home.',
@@ -455,6 +529,7 @@
             burst(sx, o.y - 10, 10, { colors: ['#fff6a8', '#b8ffcf', '#ffffff'] });
             floatText(sx, o.y - 40, '+1', '#fff6a8', false, 26);
             if (g.got === 1) coach(g, 'first'); else if (g.got === 3) coach(g, 'third');
+            else if (FACTS['k' + o.kind]) coach(g, 'k' + o.kind);
           } else if (sx < g.rx - 90 && !o.missed) {
             o.missed = true; g.missed++;
             if (g.missed === 1) coach(g, 'miss');
@@ -508,8 +583,12 @@
           const gr = ctx.createRadialGradient(sx, o.y - 8, 4, sx, o.y - 8, 44 * s);
           gr.addColorStop(0, 'rgba(255,250,170,.55)'); gr.addColorStop(1, 'rgba(255,250,170,0)');
           ctx.fillStyle = gr; ctx.fillRect(sx - 50, o.y - 58, 100, 100);
+          // a grubby scum ring on the water around it
+          ctx.fillStyle = 'rgba(130,110,50,.22)'; ellipse(sx, o.y + 4, 40 * s, 7);
           litter(o.kind, sx, o.y + bob * 0.5, s * 1.05, Math.sin(S.t * 1.8 + o.ph) * 0.18);
-          ctx.fillStyle = 'rgba(255,255,255,.6)'; ellipse(sx, o.y + 4, 30 * s, 4);
+          ctx.fillStyle = 'rgba(255,255,255,.5)'; ellipse(sx, o.y + 5, 30 * s, 3.5);
+          // the smelliest things have a fly buzzing round them
+          if ([1, 5, 6, 9].includes(o.kind)) litterFly(sx, o.y, S.t, o.ph * 3);
         } else if (o.k === 'rock') boulder(sx, o.y, o.r * s, o.seed);
         else if (o.k === 'log') floatLog(sx, o.y + Math.sin(S.t * 2 + o.ph) * 2, s);
         else if (o.k === 'ducks') {
