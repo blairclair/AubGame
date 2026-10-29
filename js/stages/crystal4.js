@@ -579,14 +579,15 @@
       // head position in this frame (side-on frames face right natively)
       const HEAD = { idle_front: 1.5, idle_back: 0, run1: 12.5, run2: 28.5, run3: 24, run4: 23, run5: 28.5, jump: -30, crouch: -7, twirl: 2 };
       const side = /run|jump|crouch/.test(frame);
-      const hx = x + (HEAD[frame] || 0) * s * (side ? (frame === 'jump' || frame === 'crouch' ? -f : f) : 1), hy = feet - lift - im.height * s + 6;
+      const hx = x + (HEAD[frame] || 0) * s * (side ? (frame === 'jump' || frame === 'crouch' ? -f : f) : 1), hy = feet - lift - im.height * s + 4;
       // pickaxe in her hand (behind the helmet), swinging when she chips
       const ph = g.swing, sd = g.swingDir;
       const base = sd === 'down' ? 1.9 : sd === 'up' ? -0.3 : 1.1;
       const ang = frame === 'idle_back' ? -0.4 : (ph > 0 ? lerp(-0.9, base, 1 - ph) : 0.35) * (sd === 'up' || sd === 'down' ? f : f);
       if (frame !== 'twirl') pickaxe(x + f * 9, feet - lift - im.height * s * 0.5, ang, f);
       // miner's helmet with a headlamp
-      ctx.save(); ctx.translate(hx, hy);
+      // her head is only ~14px across at this scale, so the helmet is drawn small and perched on her hair, leaving her face showing
+      ctx.save(); ctx.translate(hx, hy); ctx.scale(0.62, 0.62);
       ink(P2('M-10,2 C-10,-10 10,-10 10,2 Z'), '#ffcf2e', 1.1, '#2a1446');
       ink(P2('M-13,1 L13,1 L13,4 L-13,4 Z'), '#f0a820', 0.9, '#2a1446');
       ctx.fillStyle = 'rgba(255,255,255,.55)'; ellipse(-4, -4, 3, 1.8, -0.5);
