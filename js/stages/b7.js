@@ -638,9 +638,36 @@
     if (sym === 'leaf') ellipse(x, y, s * 0.55, s, 0.6);
     if (sym === 'moon') { ctx.beginPath(); ctx.arc(x, y, s * 0.85, 0.6, Math.PI * 2 - 0.6); ctx.arc(x + s * 0.5, y, s * 0.6, Math.PI * 2 - 1.1, 1.1, true); ctx.fill(); }
   }
+  // Aubrey as an octopus: her own head and top, with wiggly tentacles where her skirt and legs would be.
+  // One tentacle curls up to hold the bubble; it flicks toward the aim when she shoots.
+  const tentacle = (pts, w0, w1, col, sucker) => {
+    // sample a quadratic curve as a row of shrinking circles: outline them all first, then fill, so it reads as one limb
+    const [[ax, ay], [cx, cy], [bx, by]] = pts, N = 34, dots = [];
+    for (let i = 0; i <= N; i++) { const k = i / N, u = 1 - k; dots.push([u * u * ax + 2 * u * k * cx + k * k * bx, u * u * ay + 2 * u * k * cy + k * k * by, lerp(w0, w1, k)]); }
+    ctx.fillStyle = OL; for (const [x, y, r] of dots) circle(x, y, r + 1.6);
+    ctx.fillStyle = col; for (const [x, y, r] of dots) circle(x, y, r);
+    ctx.fillStyle = sucker; for (let i = 5; i < N - 2; i += 5) { const [x, y, r] = dots[i]; circle(x, y + r * 0.35, r * 0.38); }
+  };
+  const aubOctopus = (x, waist, aimX, aimY, t) => {
+    const s = 0.56, im = IMG.idle_front, h = im.height * s, feet = waist + h * 0.5, col = '#d27ae0', suck = '#ffd0f4';
+    // seven tentacles curl out along the sea floor
+    for (const off of [-2.5, -1.5, -0.5, 0.5, 1.5]) {
+      const wig = Math.sin(t * 3 + off * 2) * 6;
+      tentacle([[x + off * 6, waist], [x + off * 22, waist + 46], [x + off * 34 + wig, waist + 26 - Math.abs(off) * 6 + wig * 0.5]], 9, 2.5, col, suck);
+    }
+    // her top half, cut off at the waist
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 80, feet - h - 10, 160, h * 0.5 + 12); ctx.clip();
+    drawAubrey(x, feet, 'idle_front', 1, 0, s);
+    ctx.restore();
+    // a frilly octopus collar where the tentacles join her
+    ctx.fillStyle = OL; for (let k = -2; k <= 2; k++) circle(x + k * 9, waist + 2, 8.6);
+    ctx.fillStyle = col; for (let k = -2; k <= 2; k++) circle(x + k * 9, waist + 2, 7);
+    // the holding tentacle reaches up to the bubble
+    tentacle([[x + 16, waist], [aimX + 6, waist + 4], [aimX, aimY]], 8, 4, col, suck);
+  };
   MG.bubbleshot = {
     kind: 'action', title: () => 'Bubble Pop Shooter', icon: () => '🫧',
-    how: () => 'Aim with the mouse or the arrow keys, then click or press space to shoot. Touch 3 or more bubbles of the same colour to pop them. Clear them all!',
+    how: () => 'Aubrey is an octopus! Aim with the mouse or the arrow keys, then click or press space and she flicks a bubble with her tentacle. Touch 3 or more bubbles of the same colour to pop them. Clear them all!',
     init(g) {
       const rows = [3, 4, 4][g.tier - 1], ncol = [3, 3, 4][g.tier - 1];
       g.grid = {};
@@ -756,8 +783,10 @@
           carry = (20 - ((len - carry) % 20)) % 20;
         }
       } else drawBubble(g.shot.x, g.shot.y, g.shot.ci);
-      // Olive holds the next bubble up to shoot
-      drawCritter('Olive the Octopus', BUB.SX + 4, H + 40, 0.62, 1);
+      // Olive cheers from the side; Aubrey the octopus holds the next bubble up to shoot
+      drawCritter('Olive the Octopus', 110, H + 20, 0.5, 1);
+      const tip = g.shot ? [BUB.SX + Math.cos(g.ang) * 30, BUB.SY + Math.sin(g.ang) * 30] : [BUB.SX, BUB.SY + BUB.R - 2];
+      aubOctopus(BUB.SX - 64, 482, tip[0], tip[1], S.t);
       if (!g.shot) drawBubble(BUB.SX, BUB.SY, g.cur);
       darkPanel(BUB.X0 + BUB.COLS * BUB.D + 24, 440, 110, 80, 18);
       text('Next', BUB.X0 + BUB.COLS * BUB.D + 79, 458, 15, '#fff', 'center', 700);
