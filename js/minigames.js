@@ -1793,91 +1793,214 @@ function ofInkAll(list, lw) {
   for (const [p, f] of list) { ctx.fillStyle = f; ctx.fill(p); }
 }
 function ofOutlinedStar(x, y, r, col, pts = 5) { star(x, y, r + 1.8, OL, pts); star(x, y, r, col, pts); }
-const OF_COAT = P2('M30,52 C40,58 58,58 68,52 L76,58 C90,96 101,128 101,176 C70,184 28,184 -3,176 C-3,128 8,96 22,58 Z');
-const OF_ROBE = P2('M30,52 C40,58 58,58 68,52 L76,58 C92,100 104,150 106,212 C70,220 28,220 -8,212 C-6,150 6,100 22,58 Z');
-const OF_TORSO = P2('M30,52 C40,58 58,58 68,52 L76,58 C82,72 80,84 76,94 L22,94 C18,84 16,72 22,58 Z');
-const OF_SKIRT = P2('M26,88 L72,88 C84,108 98,130 101,152 C70,160 28,160 -3,152 C0,130 14,108 26,88 Z');
-const OF_SLV = [P2('M25,57 C15,64 12,90 13,128 L28,128 C29,102 30,82 32,66 Z'), P2('M73,57 C83,64 86,90 85,128 L70,128 C69,102 68,82 66,66 Z')];
-const OF_BELL = [P2('M25,57 C14,66 8,96 2,132 C10,136 22,136 30,130 C30,104 31,84 32,66 Z'), P2('M73,57 C84,66 90,96 96,132 C88,136 76,136 68,130 C68,104 67,84 66,66 Z')];
+// body-fitted shapes, traced from her photo: neckline (49,58), shoulders (26,58) (72,58), armpits y 72, waist y 90,
+// hips x 22..77 at y 112, knees y 175; left arm runs from (23,62) down to the hand (15,135), right arm (75,62) to (81,134)
+const OF_TORSO = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,66 71,78 70,86 L71,96 L27,96 L28,86 C27,78 24,66 27,57 Z');
+const OF_COAT = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,68 71,80 71,92 C78,112 86,140 90,170 C66,177 32,177 8,170 C12,140 20,112 27,92 C27,80 24,68 27,57 Z');
+const OF_ROBE = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,68 71,80 71,92 C80,124 90,172 96,212 C66,219 32,219 2,212 C8,172 18,124 27,92 C27,80 24,68 27,57 Z');
+const OF_SKIRT = P2('M27,90 L71,90 C78,108 86,128 89,148 C66,155 32,155 9,148 C12,128 20,108 27,90 Z');
+// sleeves that wrap her arms down to the wrist (hands stay out), short ones, and wide wizard ones
+const OF_SLV = [P2('M31,56 C24,56 18,59 16,66 C13,80 10,104 8,125 C13,127 19,127 24,125 C24,108 26,92 30,74 Z'),
+  P2('M67,56 C74,56 80,59 82,66 C85,80 87,104 89,124 C84,126 79,126 74,124 C74,108 72,92 68,74 Z')];
+const OF_SHORT = [P2('M31,56 C24,56 18,59 16,66 C14,74 13,80 12,86 C17,89 24,89 29,87 C29,82 29,78 30,74 Z'),
+  P2('M67,56 C74,56 80,59 82,66 C84,74 85,80 86,86 C81,89 74,89 69,87 C69,82 69,78 68,74 Z')];
+const OF_BELL = [P2('M31,56 C24,56 18,59 16,66 C12,84 6,106 0,128 C8,133 18,133 25,128 C25,108 27,90 30,74 Z'),
+  P2('M67,56 C74,56 80,59 82,66 C86,84 92,106 98,128 C90,133 80,133 73,128 C73,108 71,90 68,74 Z')];
 const ofSleeves = (lw, col, list = OF_SLV) => { for (const s of list) ink(s, ofLG(56, 134, col), lw); };
+// cuffs: a band round each wrist
+const ofCuffs = (lw, col, y = 121, h = 6) => { rrect(7, y, 18, h, 2.5, col, OL, lw * 1.1); rrect(73, y, 17, h, 2.5, col, OL, lw * 1.1); };
+// a hat band that wraps round her head (lower in the middle, as seen from the front)
+const OF_BAND = P2('M26,7 C40,2 60,2 74,7 L75,16 C62,21 38,21 25,16 Z');
+// a brim seen from the front: the back half is behind her head, the front lip crosses her forehead
+const ofBrimBack = (lw, rx, ry, cy, col) => inkEllipse(50, cy, rx, ry, 0, ofLG(cy - ry, cy + ry, col), lw);
+const ofBrimFront = (rx, ry, cy, lip) => P2(`M${50 - rx},${cy} C${50 - rx + 4},${cy + ry * 0.8} ${50 - rx * 0.5},${cy + ry} 50,${cy + ry} C${50 + rx * 0.5},${cy + ry} ${50 + rx - 4},${cy + ry * 0.8} ${50 + rx},${cy} C${50 + rx * 0.6},${cy + lip} ${50 - rx * 0.6},${cy + lip} ${50 - rx},${cy} Z`);
 // a white coat (lab coat and doctor's coat share it: they are the look-alike pair)
 function ofWhiteCoat(lw, shirt) {
-  ink(OF_COAT, ofLG(50, 184, '#f4f8ff'), lw);
-  ofClip(OF_COAT, () => { ctx.fillStyle = 'rgba(80,100,150,.12)'; ctx.fillRect(78, 40, 40, 160); ctx.fillRect(-10, 40, 16, 160); });
+  ink(OF_COAT, ofLG(50, 178, '#f4f8ff'), lw);
   ink(P2('M39,55 C44,58 54,58 59,55 L49,78 Z'), shirt, lw * 0.8);
-  ink(P2('M37,54 L49,79 L43,84 L30,59 Z'), '#e4ecf8', lw * 0.8); ink(P2('M61,54 L49,79 L55,84 L68,59 Z'), '#e4ecf8', lw * 0.8);
-  ofLine([[49, 80], [49, 180]], '#b8c4d8', 1.4);
+  ink(P2('M37,54 L49,79 L43,84 L29,60 Z'), '#e4ecf8', lw * 0.8); ink(P2('M61,54 L49,79 L55,84 L69,60 Z'), '#e4ecf8', lw * 0.8);
+  ofLine([[49, 80], [49, 174]], '#b8c4d8', 1.4);
   for (const y of [96, 118, 140]) inkCircle(53, y, 1.8, '#dfe6f2', lw * 0.4);
-  rrect(12, 130, 20, 15, 3, '#eef3fb', OL, lw * 1.2); rrect(66, 130, 20, 15, 3, '#eef3fb', OL, lw * 1.2);
+  rrect(22, 132, 16, 14, 3, '#eef3fb', OL, lw * 1.1); rrect(60, 132, 16, 14, 3, '#eef3fb', OL, lw * 1.1);
 }
 // boots: a tall shaft and a toe that points out
 function ofBoot(x, y, lw, col, top = 18) {
   ink(P2(`M${x - 8},${y + 7} L${x - 8},${y - top} L${x + 7},${y - top} L${x + 7},${y - 4} C${x + 13},${y - 2} ${x + 13},${y + 7} ${x + 8},${y + 7} Z`), ofLG(y - top, y + 7, col), lw);
   ofShine(x - 4.5, y - top / 2, 1.4, top / 3, 0, 0.35);
 }
+// a sleeve's puffy cuff
+const ofFluffCuffs = (lw, r = 2.6) => { fluff(8, 24, 126, r, lw); fluff(74, 89, 125, r, lw); };
 
 const OF_WEAR = {
-  // ---- Pirate: red and white stripes, brown vest, gold sash
-  pirShirt: { layer: 0, sleeves: true, name: 'striped pirate shirt', box: [-4, 48, 102, 166], draw(lw) {
-    const p = P2('M30,52 C40,58 58,58 68,52 L76,58 C88,96 100,124 101,156 L91,151 L83,163 L73,153 L62,164 L50,155 L38,164 L27,153 L17,163 L8,151 L-3,156 C-2,124 10,96 22,58 Z');
-    ink(p, '#fffaf0', lw);
-    ofStripes(p, '#e63946', 60, 170, 12, 6);
-    ofClip(p, () => { ctx.fillStyle = 'rgba(42,16,80,.13)'; ctx.fillRect(76, 40, 40, 130); ctx.fillRect(-10, 40, 16, 130); });
-    ink(P2('M24,58 L38,58 C40,80 40,100 38,122 L12,124 C12,100 16,76 24,58 Z'), ofLG(56, 124, '#7a4a2c'), lw);
-    ink(P2('M74,58 L60,58 C58,80 58,100 60,122 L86,124 C86,100 82,76 74,58 Z'), ofLG(56, 124, '#7a4a2c'), lw);
-    ink(P2('M70,100 L82,128 L73,131 L65,104 Z'), '#ffb627', lw);
-    ink(P2('M16,92 C38,98 60,98 82,92 L83,104 C60,110 38,110 15,104 Z'), ofLG(92, 108, '#ffb627'), lw);
-    inkCircle(68, 101, 4.5, '#ffb627', lw * 0.8);
-    dots([[31, 70], [31, 84], [67, 70], [67, 84]], 1.6, '#ffd23f');
-  }, over(lw) {
-    for (const s of OF_SLV) { ink(s, '#fffaf0', lw); ofStripes(s, '#e63946', 62, 130, 12, 6); }
-    fluff(13, 28, 129, 2.6, lw); fluff(70, 85, 129, 2.6, lw);
+  // ---- the everyday looks, refitted to her body (the CLOTHES versions in art.js stay for other scenes)
+  tee: { layer: 0, name: 'T-shirt', box: [10, 50, 88, 110], draw(lw) {
+    ink(P2('M37,54 C42,60 56,60 61,54 L71,57 C74,66 71,80 71,92 L72,106 C58,110 40,110 26,106 L27,92 C27,80 24,66 27,57 Z'), ofLG(54, 108, '#ffd23f'), lw);
+    ctx.strokeStyle = '#e8a800'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(38, 56); ctx.quadraticCurveTo(49, 66, 60, 56); ctx.stroke();
+    heart(49, 76, 13, '#ff5fa2');
+  }, over(lw) { for (const s of OF_SHORT) ink(s, ofLG(56, 90, '#ffd23f'), lw); ofLine([[13, 84], [29, 85]], '#e8a800', 1.4); ofLine([[69, 85], [85, 84]], '#e8a800', 1.4); } },
+  skirt: { layer: 0, name: 'jean skirt', box: [8, 86, 90, 156], draw(lw) {
+    ink(OF_SKIRT, ofLG(90, 154, '#4f7fc8'), lw);
+    rrect(26, 87, 46, 8, 3, '#3a64a8', OL, lw * 0.8); inkCircle(49, 91, 2, '#ffd23f', lw * 0.4);
+    ctx.strokeStyle = '#ffd23f'; ctx.setLineDash([2, 2]); ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.moveTo(12, 145); ctx.quadraticCurveTo(49, 153, 86, 145); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = '#3a64a8'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(33, 104, 6, 0.2, Math.PI - 0.2); ctx.moveTo(71, 104); ctx.arc(65, 104, 6, 0.2, Math.PI - 0.2); ctx.stroke();
   } },
-  pirHat: { layer: 1, name: 'pirate hat', box: [12, -24, 88, 18], draw(lw) {
-    ink(P2('M14,8 C20,-6 32,-4 38,-14 C44,-24 56,-24 62,-14 C68,-4 80,-6 86,8 C72,18 28,18 14,8 Z'), ofLG(-24, 16, '#3a2d52'), lw);
-    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(17, 9); ctx.quadraticCurveTo(50, 20, 83, 9); ctx.stroke();
+  cap: { layer: 1, name: 'cap', box: [26, -8, 74, 24], draw(lw) {
+    ink(P2('M29,13 C26,-10 74,-10 71,13 C62,16 38,16 29,13 Z'), ofLG(-8, 14, '#ff5fa2'), lw);
+    for (const x of [40, 60]) ofLine([[50, -6], [x, 13]], 'rgba(160,20,90,.35)', 1);
+    ink(P2('M30,12 C40,16 60,16 70,12 C73,17 63,22 50,22 C37,22 27,17 30,12 Z'), ofLG(12, 22, '#e0408a'), lw);
+    inkCircle(50, -6, 2.2, '#ffd23f', lw * 0.4); ofShine(38, 1, 4, 2, -0.4, 0.45);
+  } },
+  gown: { layer: 0, name: 'ball gown', box: [-8, 50, 106, 214], draw(lw) {
+    const sk = P2('M28,88 C14,112 -4,160 -8,204 C20,213 78,213 106,204 C102,160 84,112 70,88 Z');
+    ink(sk, ofLG(88, 212, '#9b5de5'), lw);
+    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-6, 199); ctx.quadraticCurveTo(49, 214, 104, 199); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.5;
+    for (const x of [20, 49, 78]) { ctx.beginPath(); ctx.moveTo(49 + (x - 49) * 0.3, 92); ctx.quadraticCurveTo(x, 150, 49 + (x - 49) * 1.9, 204); ctx.stroke(); }
+    for (const [x, y] of [[20, 150], [62, 120], [80, 170], [36, 180], [50, 140], [12, 186], [88, 138]]) star(x, y, 3, '#fff6a8');
+    ink(P2('M33,58 C40,62 44,63 49,59 C54,63 58,62 65,58 L71,64 C73,74 70,82 70,90 L28,90 C28,82 25,74 27,64 Z'), ofLG(58, 90, '#8a4bd8'), lw);
+    rrect(27, 85, 44, 6, 3, '#ffd23f', OL, lw);
+  }, over(lw) { inkEllipse(24, 63, 8, 7, 0.3, ofLG(56, 70, '#b98af0'), lw); inkEllipse(74, 63, 8, 7, -0.3, ofLG(56, 70, '#b98af0'), lw); } },
+  tiara: { layer: 1, name: 'tiara', box: [32, -8, 66, 10], draw(lw) {
+    ink(P2('M33,6 L36,-2 L41,3 L45,-6 L49,1 L53,-6 L57,3 L62,-2 L65,6 C56,10 42,10 33,6 Z'), ofLG(-6, 9, '#ffd23f'), lw);
+    inkCircle(49, -1, 2.2, '#ff5fa2', lw * 0.5); inkCircle(40, 4, 1.5, '#5fb8f0', lw * 0.4); inkCircle(58, 4, 1.5, '#5fb8f0', lw * 0.4);
+  } },
+  nightgown: { layer: 0, name: 'nightgown', box: [0, 50, 98, 212], draw(lw) {
+    const p = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,68 71,80 71,92 C80,124 90,166 94,204 C66,211 32,211 4,204 C8,166 18,124 27,92 C27,80 24,68 27,57 Z');
+    ink(p, ofLG(54, 208, '#9fd3ff'), lw);
+    fluff(4, 94, 205, 3, lw);
+    for (const [x, y] of [[40, 80], [60, 100], [30, 130], [70, 150], [48, 175], [22, 185], [78, 185], [52, 125]]) star(x, y, 3.5, '#fff6a8', 5);
+    ctx.fillStyle = '#fff6a8'; ctx.beginPath(); ctx.arc(44, 155, 5, 0.6, 5.7); ctx.arc(46.5, 155, 4, 5.4, 0.9, true); ctx.fill();
+    ink(P2('M37,55 C40,64 47,65 49,60 C51,65 58,64 61,55 C56,59 42,59 37,55 Z'), '#ffffff', lw * 0.7);
+  }, over(lw) { ofSleeves(lw, '#9fd3ff'); ofFluffCuffs(lw); } },
+  nightcap: { layer: 1, name: 'night cap', box: [24, -16, 98, 26], draw(lw) {
+    ink(P2('M28,9 C26,-8 44,-16 60,-13 C76,-10 88,2 92,20 C84,10 76,6 72,9 Z'), ofLG(-14, 20, '#5b7fe0', 28, 92), lw);
+    star(52, -4, 3, '#fff6a8', 5); star(72, -1, 2.5, '#fff6a8', 5); star(84, 9, 2, '#fff6a8', 5);
+    ink(OF_BAND, '#ffffff', lw * 0.8); ofLine([[28, 12], [49, 16], [72, 12]], 'rgba(150,170,220,.5)', 1);
+    inkCircle(92, 21, 5, '#ffffff', lw * 0.6);
+  } },
+  swimsuit: { layer: 0, low: true, name: 'swimsuit', box: [20, 48, 80, 136], draw(lw) {
+    ctx.strokeStyle = OL; ctx.lineWidth = 4.4; ctx.beginPath(); ctx.moveTo(34, 52); ctx.lineTo(34, 62); ctx.moveTo(64, 52); ctx.lineTo(64, 62); ctx.stroke();
+    ctx.strokeStyle = '#1ea89b'; ctx.lineWidth = 2.6; ctx.stroke();
+    const p = P2('M31,57 C40,61 58,61 67,57 L70,64 C71,76 69,86 71,96 C74,104 77,108 77,114 C68,118 58,124 54,132 L44,132 C40,124 30,118 22,114 C22,108 25,104 27,96 C29,86 27,76 28,64 Z');
+    ink(p, ofLG(60, 132, '#2ec4b6'), lw);
+    ofClip(p, () => dots([[40, 72], [58, 70], [49, 82], [36, 100], [62, 102], [30, 112], [49, 112], [68, 112], [49, 124]], 2.4, '#ffffff'));
+    ink(P2('M27,96 C40,101 58,101 71,96 L73,104 C58,110 40,110 25,104 Z'), '#ff7a59', lw * 0.8);
+  } },
+  // the swim ring goes round her waist: the far side is behind her
+  ring: { layer: 1, name: 'swim ring', box: [6, 90, 92, 124], back(lw) {
+    ctx.save(); ctx.lineCap = 'butt';
+    ctx.strokeStyle = OL; ctx.lineWidth = 14; ctx.beginPath(); ctx.ellipse(49, 106, 40, 11, 0, Math.PI, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = i % 2 ? '#e8e8f0' : '#e0623f'; ctx.lineWidth = 11;
+      ctx.beginPath(); ctx.ellipse(49, 106, 40, 11, 0, Math.PI + i * Math.PI / 6, Math.PI + (i + 1) * Math.PI / 6); ctx.stroke();
+    }
+    ctx.restore();
+  }, draw(lw) {
+    ctx.save(); ctx.lineCap = 'butt';
+    ctx.strokeStyle = OL; ctx.lineWidth = 14; ctx.beginPath(); ctx.ellipse(49, 106, 40, 11, 0, -0.02, Math.PI + 0.02); ctx.stroke();
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = i % 2 ? '#ffffff' : '#ff7a59'; ctx.lineWidth = 11;
+      ctx.beginPath(); ctx.ellipse(49, 106, 40, 11, 0, i * Math.PI / 6, (i + 1) * Math.PI / 6); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(49, 108, 40, 11, 0, 0.6, 1.3); ctx.stroke();
+    ctx.restore();
+  } },
+  sunglasses: { layer: 1, name: 'sunglasses', box: [30, 20, 68, 36], draw(lw) {
+    ofLine([[33, 26], [29, 25]], OL, 2.4); ofLine([[66, 26], [70, 25]], OL, 2.4);
+    ctx.strokeStyle = '#ff7a59'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(47.5, 27); ctx.lineTo(51.5, 27); ctx.stroke();
+    inkEllipse(42, 28, 6.4, 5, 0, '#2a1d40', lw * 0.7, '#ff7a59'); inkEllipse(57, 28, 6.4, 5, 0, '#2a1d40', lw * 0.7, '#ff7a59');
+    dots([[40, 26.5], [55, 26.5]], 1.4, 'rgba(255,255,255,.85)');
+  } },
+  coat: { layer: 0, name: 'puffy coat', box: [4, 46, 94, 178], draw(lw) {
+    ink(OF_COAT, ofLG(52, 176, '#e63946'), lw);
+    ctx.strokeStyle = '#c42536'; ctx.lineWidth = 1.3;
+    ofClip(OF_COAT, () => { for (const y of [80, 104, 128, 152]) { ctx.beginPath(); ctx.moveTo(0, y - 4); ctx.quadraticCurveTo(49, y + 5, 98, y - 4); ctx.stroke(); } });
+    ctx.beginPath(); ctx.moveTo(49, 60); ctx.lineTo(49, 172); ctx.stroke();
+    for (const y of [72, 96, 120, 144]) inkCircle(53, y, 1.8, '#ffd23f', lw * 0.4);
+    fluff(9, 89, 171, 4, lw); fluff(33, 65, 56, 4, lw);
+  }, over(lw) { ofSleeves(lw, '#e63946'); ofFluffCuffs(lw, 3.4); } },
+  beanie: { layer: 1, name: 'woolly hat', box: [24, -18, 76, 22], draw(lw) {
+    ink(P2('M27,12 C24,-12 76,-12 73,12 Z'), ofLG(-10, 12, '#e63946'), lw);
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(30, 0); ctx.quadraticCurveTo(50, -6, 70, 0); ctx.stroke();
+    ink(OF_BAND, ofLG(2, 20, '#ffffff'), lw * 0.8);
+    for (let x = 30; x <= 70; x += 5) ofLine([[x, 5 + Math.abs(x - 50) * -0.06], [x, 17 - Math.abs(x - 50) * 0.08]], 'rgba(200,190,220,.7)', 1);
+    inkCircle(50, -12, 6.5, '#ffffff', lw * 0.6);
+  } },
+  scarf: { layer: 1, name: 'scarf', box: [30, 46, 70, 102], draw(lw) {
+    ink(P2('M57,56 L67,98 L56,100 L50,60 Z'), '#ffffff', lw);
+    ink(P2('M33,50 C42,58 56,58 65,50 L67,59 C57,66 41,66 31,59 Z'), '#ffffff', lw);
+    ctx.fillStyle = '#e63946'; for (const y of [66, 76, 86]) { ctx.beginPath(); ctx.moveTo(52 + (y - 58) * 0.18, y); ctx.lineTo(61 + (y - 58) * 0.2, y - 1); ctx.lineTo(62 + (y - 58) * 0.2, y + 4); ctx.lineTo(53 + (y - 58) * 0.18, y + 5); ctx.fill(); }
+    ctx.fillRect(39, 53, 4, 10); ctx.fillRect(55, 53, 4, 10);
+  } },
+  teddy: { layer: 1, hand: 'L', name: 'teddy bear', box: [2, 118, 28, 156], draw(lw) {
+    inkCircle(8, 128, 3, '#c9874a', lw * 0.5); inkCircle(20, 128, 3, '#c9874a', lw * 0.5);
+    inkEllipse(14, 146, 8, 10, 0, ofLG(136, 156, '#c9874a'), lw); inkCircle(14, 133, 7, ofLG(126, 140, '#c9874a'), lw);
+    inkEllipse(14, 136, 3.5, 2.6, 0, '#f2d0a4', lw * 0.4); dots([[11, 131], [17, 131]], 1, OL); dots([[14, 135]], 1, OL);
+  } },
+  // ---- Pirate: red and white stripes, brown vest, gold sash
+  pirShirt: { layer: 0, sleeves: true, name: 'striped pirate shirt', box: [8, 48, 90, 160], draw(lw) {
+    const p = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,68 71,80 71,92 C77,110 84,130 88,150 L80,146 L73,156 L65,148 L57,157 L49,149 L41,157 L33,148 L25,156 L18,146 L10,150 C14,130 21,110 27,92 C27,80 24,68 27,57 Z');
+    ink(p, '#fffaf0', lw);
+    ofStripes(p, '#e63946', 62, 170, 12, 6);
+    ink(P2('M27,57 L39,58 C41,80 41,100 39,124 L19,126 C22,104 26,84 27,57 Z'), ofLG(56, 126, '#7a4a2c'), lw);
+    ink(P2('M71,57 L59,58 C57,80 57,100 59,124 L79,126 C76,104 72,84 71,57 Z'), ofLG(56, 126, '#7a4a2c'), lw);
+    ink(P2('M66,98 L76,124 L68,127 L62,102 Z'), '#ffb627', lw);
+    ink(P2('M26,90 C40,96 58,96 72,90 L73,101 C58,107 40,107 25,101 Z'), ofLG(90, 106, '#ffb627'), lw);
+    inkCircle(66, 99, 4.5, '#ffb627', lw * 0.8);
+    dots([[33, 70], [33, 84], [65, 70], [65, 84]], 1.6, '#ffd23f');
+  }, over(lw) {
+    for (const s of OF_SLV) { ink(s, '#fffaf0', lw); ofStripes(s, '#e63946', 64, 130, 12, 6); }
+    ofFluffCuffs(lw);
+  } },
+  // a tricorn: its back flaps show either side of her head
+  pirHat: { layer: 1, name: 'pirate hat', box: [4, -24, 96, 18], back(lw) {
+    ink(P2('M4,6 C14,-6 30,-12 50,-12 C70,-12 86,-6 96,6 C86,12 14,12 4,6 Z'), ofLG(-12, 10, '#2a2040'), lw);
+  }, draw(lw) {
+    ink(P2('M12,10 C20,-2 32,-2 38,-12 C44,-22 56,-22 62,-12 C68,-2 80,-2 88,10 C72,19 28,19 12,10 Z'), ofLG(-24, 17, '#3a2d52'), lw);
+    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(15, 11); ctx.quadraticCurveTo(50, 22, 85, 11); ctx.stroke();
     ofRope([[42, 0], [58, 10]], '#ffffff', 2.4); ofRope([[58, 0], [42, 10]], '#ffffff', 2.4);
     rrect(46.5, 0, 7, 5, 1.5, '#ffffff', OL, lw * 1.1); inkCircle(50, -4, 5.6, '#ffffff', lw * 0.6);
     dots([[47.8, -4.5], [52.2, -4.5]], 1.6, OL);
-    ofShine(30, -2, 6, 2, -0.5, 0.25);
+    ofShine(28, -1, 6, 2, -0.5, 0.25);
   } },
   pirBoots: { layer: 1, pair: true, name: 'pirate boots', box: [-4, -28, 34, 9], one(x, y, lw) {
     ofBoot(x, y, lw, '#3a2d52', 16);
     ink(P2(`M${x - 11},${y - 27} L${x + 10},${y - 27} L${x + 8},${y - 15} L${x - 9},${y - 15} Z`), ofLG(y - 27, y - 15, '#5a4a72'), lw);
     rrect(x - 4, y - 11, 8, 6, 1.5, '#ffd23f', OL, lw * 1.1);
   } },
-  pirPatch: { layer: 1, name: 'eye patch', box: [28, 14, 72, 38], draw(lw) {
-    ofRope([[30, 16], [44, 25], [70, 22]], '#1b1525', 1.4);
+  pirPatch: { layer: 1, name: 'eye patch', box: [28, 14, 74, 38], draw(lw) {
+    ofRope([[29, 18], [37, 24]], '#1b1525', 1.4); ofRope([[49, 25], [60, 21], [72, 19]], '#1b1525', 1.4);
     ink(P2('M35,24 C35,19 50,19 50,25 C50,32 45,36 42,36 C38,35 35,30 35,24 Z'), '#1b1525', lw);
     ofShine(39, 24, 2.4, 1.4, 0, 0.45); star(43, 29, 2.2, '#ffd23f', 5);
   } },
-  pirHook: { layer: 1, name: 'pirate hook', box: [68, 124, 100, 166], draw(lw) {
+  pirHook: { layer: 1, name: 'pirate hook', box: [68, 118, 100, 160], draw(lw) {
     ctx.save(); ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(81, 144); ctx.lineTo(81, 154); ctx.arc(87, 154, 6, Math.PI, 0, true); ctx.lineTo(93, 149);
+    ctx.beginPath(); ctx.moveTo(81, 138); ctx.lineTo(81, 148); ctx.arc(87, 148, 6, Math.PI, 0, true); ctx.lineTo(93, 143);
     ctx.strokeStyle = OL; ctx.lineWidth = 6.4; ctx.stroke(); ctx.strokeStyle = '#d8dee8'; ctx.lineWidth = 3.6; ctx.stroke();
     ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
-    ink(P2('M71,128 L91,128 L89,145 L73,145 Z'), ofLG(128, 145, '#8a5a3c', 71, 91), lw);
-    rrect(70, 126, 22, 5, 2, '#ffd23f', OL, lw * 1.1);
+    ink(P2('M71,123 L91,123 L89,140 L73,140 Z'), ofLG(123, 140, '#8a5a3c', 71, 91), lw);
+    rrect(70, 121, 22, 5, 2, '#ffd23f', OL, lw * 1.1);
   } },
   // ---- Space Knight: hooded brown robe and a glowing star sword
-  skRobe: { layer: 0, sleeves: true, name: 'knight robe', box: [-10, 48, 108, 222], draw(lw) {
-    ink(OF_ROBE, ofLG(50, 220, '#9a6a44'), lw);
-    ofClip(OF_ROBE, () => { ctx.strokeStyle = 'rgba(60,30,10,.3)'; ctx.lineWidth = 2; for (const x of [8, 20, 78, 90]) { ctx.beginPath(); ctx.moveTo(x + (x < 49 ? 10 : -10), 100); ctx.lineTo(x, 216); ctx.stroke(); } });
-    ink(P2('M36,56 C42,60 56,60 62,56 L68,214 C56,218 42,218 30,214 Z'), ofLG(56, 216, '#f1e0bd'), lw);
-    ofLine([[37, 58], [57, 88]], 'rgba(120,80,40,.55)', 1.6); ofLine([[61, 58], [43, 88]], 'rgba(120,80,40,.55)', 1.6);
-    rrect(22, 86, 54, 10, 3, '#4a2e1c', OL, lw * 1.1);
-    rrect(27, 92, 9, 11, 2, '#7a4a2c', OL, lw * 1.1); rrect(62, 92, 9, 11, 2, '#7a4a2c', OL, lw * 1.1);
+  skRobe: { layer: 0, sleeves: true, name: 'knight robe', box: [0, 48, 98, 218], draw(lw) {
+    ink(OF_ROBE, ofLG(50, 218, '#9a6a44'), lw);
+    ofClip(OF_ROBE, () => { ctx.strokeStyle = 'rgba(60,30,10,.3)'; ctx.lineWidth = 2; for (const x of [12, 24, 74, 86]) { ctx.beginPath(); ctx.moveTo(x + (x < 49 ? 10 : -10), 100); ctx.lineTo(x, 216); ctx.stroke(); } });
+    ink(P2('M38,56 C43,60 55,60 60,56 L66,212 C55,216 43,216 32,212 Z'), ofLG(56, 214, '#f1e0bd'), lw);
+    ofLine([[38, 58], [57, 88]], 'rgba(120,80,40,.55)', 1.6); ofLine([[60, 58], [43, 88]], 'rgba(120,80,40,.55)', 1.6);
+    rrect(26, 86, 46, 10, 3, '#4a2e1c', OL, lw * 1.1);
+    rrect(30, 92, 9, 11, 2, '#7a4a2c', OL, lw * 1.1); rrect(59, 92, 9, 11, 2, '#7a4a2c', OL, lw * 1.1);
     rrect(44, 84, 11, 14, 2, '#d8dee8', OL, lw * 1.1); ofShine(47, 88, 1.2, 3, 0, 0.8);
   }, over(lw) { ofSleeves(lw, '#9a6a44', OF_BELL); } },
-  skSaber: { layer: 1, name: 'glowing star sword', box: [68, 28, 104, 152], draw(lw) {
+  skSaber: { layer: 1, hand: 'R', name: 'glowing star sword', box: [68, 28, 104, 152], draw(lw) {
     const f = 0.8 + 0.2 * Math.sin(S.t * 27);
     ctx.save(); ctx.lineCap = 'round';
     ctx.shadowColor = '#4dfcff'; ctx.shadowBlur = 16;
-    ofLine([[82, 126], [95, 34]], `rgba(77,232,255,${0.5 * f})`, 10);
-    ofLine([[82, 126], [95, 34]], '#7ff4ff', 6);
-    ctx.shadowBlur = 0; ofLine([[82, 126], [95, 34]], '#ffffff', 2.6);
+    ofLine([[82, 124], [95, 32]], `rgba(77,232,255,${0.5 * f})`, 10);
+    ofLine([[82, 124], [95, 32]], '#7ff4ff', 6);
+    ctx.shadowBlur = 0; ofLine([[82, 124], [95, 32]], '#ffffff', 2.6);
     ctx.restore();
-    ctx.save(); ctx.translate(81, 138); ctx.rotate(0.14);
+    ctx.save(); ctx.translate(81, 136); ctx.rotate(0.14);
     ink(P2('M-4,-13 L4,-13 L4,13 L-4,13 Z'), ofLG(0, 0, '#c9d2e0', -4, 4), lw);
     for (const y of [-2, 3, 8]) rrect(-4, y, 8, 2.4, 1, '#3a2d52', null);
     rrect(-5, -14, 10, 4, 1.5, '#8a96aa', OL, lw * 1.1); inkCircle(0, -7, 1.6, '#ff4f6b', lw * 0.4);
@@ -1887,27 +2010,32 @@ const OF_WEAR = {
     ofBoot(x, y, lw, '#5a3a24', 22);
     rrect(x - 9, y - 24, 17, 5, 2, '#7a4a2c', OL, lw * 1.1);
   } },
-  skHood: { layer: 1, name: 'knight hood', box: [16, -12, 84, 62], draw(lw) {
-    ink(P2('M18,62 C8,30 20,-11 50,-11 C80,-11 92,30 82,62 L71,58 C76,32 70,5 50,4 C30,5 24,32 29,58 Z'), ofLG(-10, 62, '#9a6a44', 18, 82), lw);
-    ctx.strokeStyle = 'rgba(40,20,10,.35)'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(31, 56); ctx.bezierCurveTo(26, 32, 31, 8, 50, 7); ctx.bezierCurveTo(69, 8, 74, 32, 69, 56); ctx.stroke();
-    ofShine(26, 16, 2.6, 10, 0.4, 0.3);
+  // the hood: dark inside behind her head, the rim framing her face and resting on her shoulders
+  skHood: { layer: 1, name: 'knight hood', box: [14, -10, 86, 66], back(lw) {
+    ink(P2('M16,64 C6,26 20,-10 50,-10 C80,-10 94,26 84,64 Z'), '#4a2e1c', lw);
+  }, draw(lw) {
+    ink(P2('M17,66 C7,30 21,-8 50,-8 C79,-8 93,30 83,66 C79,61 76,59 72,58 C76,32 70,3 50,2 C30,3 24,32 28,58 C24,59 21,61 17,66 Z'), ofLG(-8, 66, '#9a6a44', 17, 83), lw);
+    ctx.strokeStyle = 'rgba(40,20,10,.35)'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(30, 56); ctx.bezierCurveTo(26, 32, 31, 7, 50, 6); ctx.bezierCurveTo(69, 7, 74, 32, 70, 56); ctx.stroke();
+    ofShine(24, 16, 2.6, 10, 0.4, 0.3);
   } },
   // ---- Scientist: lab coat with pens, goggles, a bubbling flask
-  sciCoat: { layer: 0, sleeves: true, name: 'lab coat', box: [-4, 48, 102, 186], draw(lw) {
+  sciCoat: { layer: 0, sleeves: true, name: 'lab coat', box: [4, 48, 94, 178], draw(lw) {
     ofWhiteCoat(lw, '#2ec4b6');
-    for (const [x, c] of [[59, '#3a86ff'], [63, '#e63946'], [67, '#2ec46b']]) rrect(x - 1.5, 61, 3, 12, 1, c, OL, lw * 0.8);
-    rrect(55, 68, 15, 13, 2, '#e4ecf8', OL, lw * 1.1);
-    rrect(28, 68, 13, 8, 1.5, '#ffd23f', OL, lw * 0.8); ofLine([[30, 72], [39, 72]], '#a07800', 1);
-    ctx.fillStyle = 'rgba(125,255,106,.75)'; ellipse(22, 160, 5, 3.5, 0.4); ellipse(28, 166, 2.5, 2);
-    ctx.fillStyle = 'rgba(199,125,255,.75)'; ellipse(78, 112, 4, 3, -0.3); ellipse(84, 106, 2, 2);
-  }, over(lw) { ofSleeves(lw, '#f4f8ff'); ofLine([[13, 122], [28, 122]], '#b8c4d8', 1.4); ofLine([[70, 122], [85, 122]], '#b8c4d8', 1.4); } },
+    for (const [x, c] of [[59, '#3a86ff'], [63, '#e63946'], [67, '#2ec46b']]) rrect(x - 1.5, 63, 3, 12, 1, c, OL, lw * 0.8);
+    rrect(55, 70, 15, 13, 2, '#e4ecf8', OL, lw * 1.1);
+    rrect(30, 70, 13, 8, 1.5, '#ffd23f', OL, lw * 0.8); ofLine([[32, 74], [41, 74]], '#a07800', 1);
+    ctx.fillStyle = 'rgba(125,255,106,.75)'; ellipse(28, 158, 5, 3.5, 0.4); ellipse(34, 164, 2.5, 2);
+    ctx.fillStyle = 'rgba(199,125,255,.75)'; ellipse(70, 112, 4, 3, -0.3); ellipse(66, 106, 2, 2);
+  }, over(lw) { ofSleeves(lw, '#f4f8ff'); ofLine([[9, 119], [24, 119]], '#b8c4d8', 1.4); ofLine([[74, 119], [88, 119]], '#b8c4d8', 1.4); } },
   sciGoggles: { layer: 1, name: 'safety goggles', box: [26, 16, 74, 40], draw(lw) {
-    rrect(26, 24, 48, 6, 3, '#ff8c42', OL, lw * 1.1);
+    ink(P2('M27,22 C40,20 60,20 73,22 L73,29 C60,27 40,27 27,29 Z'), '#ff8c42', lw * 0.9);
     for (const x of [41.5, 57.5]) inkCircle(x, 27, 8.5, '#3ddc84', lw);
     rrect(47, 25, 6, 4, 1.5, '#3ddc84', null);
-    for (const x of [41.5, 57.5]) { ctx.fillStyle = 'rgba(180,235,255,.85)'; circle(x, 27, 6); ofShine(x - 2.5, 24.5, 2, 1.3, -0.5, 0.9); }
+    for (const x of [41.5, 57.5]) { ctx.fillStyle = 'rgba(180,235,255,.6)'; circle(x, 27, 6); ofShine(x - 2.5, 24.5, 2, 1.3, -0.5, 0.9); }
   } },
-  sciBeaker: { layer: 1, name: 'bubbling flask', box: [0, 76, 34, 152], draw(lw) {
+  // held in her left hand by the neck
+  sciBeaker: { layer: 1, hand: 'L', name: 'bubbling flask', box: [-2, 96, 32, 172], draw(lw) {
+    ctx.save(); ctx.translate(-2, 18);
     const p = P2('M13,104 L21,104 L21,118 L32,146 C33,150 31,152 28,152 L6,152 C3,152 1,150 2,146 L13,118 Z');
     ink(p, 'rgba(225,244,255,.92)', lw);
     ofClip(p, () => {
@@ -1917,9 +2045,10 @@ const OF_WEAR = {
     ofShine(9, 138, 1.4, 6, 0.4, 0.6);
     rrect(11, 101, 12, 4, 1.5, '#e8f4ff', OL, lw * 1.1);
     for (let i = 0; i < 4; i++) { const k = (S.t * 0.7 + i / 4) % 1; inkCircle(17 + Math.sin(k * 6 + i) * 3, 99 - k * 20, 1.8 + k * 1.6, 'rgba(190,255,170,.95)', lw * 0.4); }
+    ctx.restore();
   } },
-  sciTube: { layer: 1, name: 'test tube', box: [70, 98, 100, 150], draw(lw) {
-    ctx.save(); ctx.translate(84, 124); ctx.rotate(0.3);
+  sciTube: { layer: 1, hand: 'R', name: 'test tube', box: [68, 104, 98, 158], draw(lw) {
+    ctx.save(); ctx.translate(82, 132); ctx.rotate(0.3);
     const p = P2('M-4.5,-22 L4.5,-22 L4.5,13 C4.5,20 -4.5,20 -4.5,13 Z');
     ink(p, 'rgba(225,244,255,.92)', lw);
     ofClip(p, () => { ctx.fillStyle = '#ff5fa2'; ctx.fillRect(-6, -2, 12, 24); });
@@ -1928,71 +2057,71 @@ const OF_WEAR = {
     ctx.restore();
   } },
   // ---- Doctor: white coat with stethoscope, red cross bag
-  docCoat: { layer: 0, sleeves: true, name: "doctor's coat", box: [-4, 48, 102, 186], draw(lw) {
+  docCoat: { layer: 0, sleeves: true, name: "doctor's coat", box: [4, 48, 94, 178], draw(lw) {
     ofWhiteCoat(lw, '#5fb8f0');
     inkCircle(37, 76, 7, '#ffffff', lw * 0.7); ctx.fillStyle = '#e63946'; ctx.fillRect(35.2, 71, 3.6, 10); ctx.fillRect(32, 74.2, 10, 3.6);
     ctx.save(); ctx.lineCap = 'round';
     const tube = new Path2D();
-    tube.moveTo(40, 55); tube.bezierCurveTo(36, 72, 42, 96, 53, 100); tube.moveTo(59, 55); tube.bezierCurveTo(64, 72, 63, 92, 53, 100);
+    tube.moveTo(41, 57); tube.bezierCurveTo(37, 72, 42, 96, 53, 100); tube.moveTo(58, 57); tube.bezierCurveTo(63, 72, 62, 92, 53, 100);
     tube.moveTo(53, 100); tube.bezierCurveTo(53, 110, 63, 112, 63, 119);
     ctx.strokeStyle = OL; ctx.lineWidth = 4.6; ctx.stroke(tube); ctx.strokeStyle = '#3a86ff'; ctx.lineWidth = 2.6; ctx.stroke(tube);
     ctx.restore();
     inkCircle(63, 123, 5.2, '#c9d2e0', lw * 0.8); inkCircle(63, 123, 2.6, '#f4f8ff', lw * 0.4);
-    dots([[40, 55], [59, 55]], 2, '#c9d2e0');
+    dots([[41, 57], [58, 57]], 2, '#c9d2e0');
   }, over(lw) { ofSleeves(lw, '#f4f8ff'); } },
-  docBag: { layer: 1, name: 'doctor bag', box: [64, 118, 106, 160], draw(lw) {
-    ctx.save(); ctx.lineCap = 'round';
+  docBag: { layer: 1, hand: 'R', name: 'doctor bag', box: [60, 124, 102, 170], draw(lw) {
+    ctx.save(); ctx.translate(-4, 9); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.arc(85, 133, 8, Math.PI, 0); ctx.strokeStyle = OL; ctx.lineWidth = 5.2; ctx.stroke(); ctx.strokeStyle = '#6b3f2a'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.restore();
     ink(P2('M68,132 L102,132 L105,158 L65,158 Z'), ofLG(132, 158, '#ffffff'), lw);
     rrect(66, 131, 38, 5, 2, '#e63946', OL, lw * 1.1);
     ctx.fillStyle = '#e63946'; ctx.fillRect(82.5, 139, 5, 15); ctx.fillRect(77.5, 144, 15, 5);
     ofShine(72, 146, 1.4, 7, 0, 0.6);
+    ctx.restore();
   } },
   docClogs: { layer: 1, pair: true, name: 'doctor clogs', box: [-4, -8, 34, 9], one(x, y, lw) {
     ink(P2(`M${x - 10},${y + 7} C${x - 11},${y - 2} ${x - 6},${y - 8} ${x},${y - 8} C${x + 6},${y - 8} ${x + 11},${y - 2} ${x + 10},${y + 7} Z`), ofLG(y - 8, y + 7, '#2ec4b6'), lw);
     dots([[x - 4, y - 3], [x, y - 5], [x + 4, y - 3], [x - 2, y], [x + 2, y]], 1.1, '#e8fffb');
     rrect(x - 10, y + 4, 20, 3.5, 1.5, '#1e8f84', null);
   } },
-  docCap: { layer: 1, name: 'scrub cap', box: [22, -12, 84, 18], draw(lw) {
-    ofRope([[72, 8], [80, 14]], '#2ec4b6', 2); ofRope([[72, 8], [83, 9]], '#2ec4b6', 2);
-    ink(P2('M24,12 C20,-12 78,-12 74,12 C62,16 36,16 24,12 Z'), ofLG(-10, 14, '#2ec4b6'), lw);
-    heart(36, -3, 8, '#ffffff'); heart(50, -6, 8, '#ff8fc8'); heart(63, -2, 7, '#ffffff'); heart(43, 4, 6, '#ff8fc8'); heart(58, 5, 6, '#ffffff');
+  docCap: { layer: 1, name: 'scrub cap', box: [22, -14, 84, 20], draw(lw) {
+    ofRope([[71, 10], [80, 17]], '#2ec4b6', 2); ofRope([[71, 10], [83, 11]], '#2ec4b6', 2);
+    const p = P2('M26,14 C22,-14 78,-14 74,14 C62,19 38,19 26,14 Z');
+    ink(p, ofLG(-12, 16, '#2ec4b6'), lw);
+    ofClip(p, () => { heart(36, -4, 8, '#ffffff'); heart(50, -7, 8, '#ff8fc8'); heart(64, -3, 7, '#ffffff'); heart(43, 4, 6, '#ff8fc8'); heart(58, 5, 6, '#ffffff'); heart(30, 7, 6, '#ff8fc8'); heart(70, 7, 6, '#ff8fc8'); });
+    ofLine([[27, 11], [50, 16], [73, 11]], 'rgba(20,110,100,.5)', 1.2);
   } },
-  docMirror: { layer: 1, name: 'doctor head mirror', box: [24, -16, 76, 22], draw(lw) {
-    ofRope([[27, 16], [36, 9], [49, 7], [62, 9], [71, 16]], '#3a2d52', 3);
-    inkCircle(49, -3, 9.5, '#c9d2e0', lw); inkCircle(49, -3, 6.5, '#f4fbff', lw * 0.4);
-    dots([[49, -3]], 1.6, OL); ofShine(46, -6, 2, 1.2, -0.6, 0.95);
+  docMirror: { layer: 1, name: 'doctor head mirror', box: [24, -14, 76, 22], draw(lw) {
+    ofRope([[28, 16], [36, 11], [50, 9], [64, 11], [72, 16]], '#3a2d52', 3);
+    inkCircle(50, -1, 9.5, '#c9d2e0', lw); inkCircle(50, -1, 6.5, '#f4fbff', lw * 0.4);
+    dots([[50, -1]], 1.6, OL); ofShine(47, -4, 2, 1.2, -0.6, 0.95);
   } },
-  // ---- Astronaut: puffy space suit, bubble helmet, moon boots
-  asSuit: { layer: 0, sleeves: true, name: 'space suit', box: [-6, 48, 104, 216], draw(lw) {
-    const p = P2('M30,52 C40,58 58,58 68,52 L76,58 C90,96 102,128 101,158 C99,180 88,196 86,214 L58,214 C57,192 55,178 49,174 C43,178 41,192 40,214 L12,214 C10,196 -1,180 -3,158 C-4,128 8,96 22,58 Z');
-    ink(p, ofLG(50, 214, '#f4f6fb'), lw);
-    ofClip(p, () => { ctx.fillStyle = '#ff8c42'; ctx.fillRect(-10, 190, 120, 7); ctx.fillStyle = 'rgba(42,16,80,.10)'; ctx.fillRect(80, 40, 40, 200); ctx.fillRect(-10, 40, 14, 200); });
-    rrect(14, 98, 70, 8, 3, '#c9d2e0', OL, lw * 1.1);
-    inkEllipse(26, 168, 7, 5, 0, '#c9d2e0', lw * 0.6); inkEllipse(72, 168, 7, 5, 0, '#c9d2e0', lw * 0.6);
+  // ---- Astronaut: puffy space suit (its legs over hers), bubble helmet, moon boots
+  asSuit: { layer: 0, sleeves: true, legs: true, name: 'space suit', box: [14, 48, 96, 214], draw(lw) {
+    const p = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,68 72,80 72,92 C76,104 78,116 78,128 C80,150 86,180 91,210 L68,210 C64,186 58,160 50,142 C44,160 40,186 40,210 L19,210 C19,180 20,150 21,128 C21,116 23,104 26,92 C27,80 24,68 27,57 Z');
+    ink(p, ofLG(52, 210, '#f4f6fb'), lw);
+    ofClip(p, () => { ctx.fillStyle = '#ff8c42'; ctx.fillRect(-10, 186, 120, 7); });
+    ofLine([[50, 142], [50, 128]], 'rgba(120,130,160,.5)', 1.2);
+    rrect(25, 96, 48, 8, 3, '#c9d2e0', OL, lw * 1.1);
+    inkEllipse(30, 166, 6, 5, 0, '#c9d2e0', lw * 0.6); inkEllipse(68, 166, 6, 5, 0, '#c9d2e0', lw * 0.6);
     rrect(36, 64, 27, 22, 3, '#6b7a99', OL, lw * 1.1);
     inkCircle(42, 70, 2.4, '#ff4f6b', lw * 0.3); inkCircle(49.5, 70, 2.4, '#ffd23f', lw * 0.3); inkCircle(57, 70, 2.4, '#3ddc84', lw * 0.3);
     rrect(39, 76, 21, 6, 1.5, '#7fe3ff', OL, lw * 0.6);
-    rrect(23, 62, 10, 7, 1, '#3a86ff', OL, lw * 0.6); star(28, 65.5, 2.2, '#ffffff', 5);
-  }, over(lw) {
-    ofSleeves(lw, '#f4f6fb');
-    rrect(12, 119, 17, 6, 2, '#ff8c42', OL, lw * 1.1); rrect(69, 119, 17, 6, 2, '#ff8c42', OL, lw * 1.1);
-  } },
+    rrect(26, 62, 9, 7, 1, '#3a86ff', OL, lw * 0.6); star(30.5, 65.5, 2.2, '#ffffff', 5);
+  }, over(lw) { ofSleeves(lw, '#f4f6fb'); ofCuffs(lw, '#ff8c42', 118, 7); } },
   asHelmet: { layer: 1, name: 'space helmet', box: [14, -10, 86, 64], draw(lw) {
     ctx.beginPath(); ctx.arc(49, 24, 33, 0, Math.PI * 2);
     ctx.strokeStyle = OL; ctx.lineWidth = lw * 2; ctx.stroke(); ctx.fillStyle = 'rgba(190,230,255,.28)'; ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(49, 24, 27, Math.PI * 1.08, Math.PI * 1.45); ctx.stroke();
     ofShine(70, 8, 2.4, 2.4, 0, 0.9);
-    inkEllipse(49, 56, 25, 7, 0, ofLG(49, 63, '#c9d2e0'), lw);
-    dots([[36, 56], [62, 56]], 1.6, '#ff8c42');
+    inkEllipse(49, 57, 25, 7, 0, ofLG(50, 64, '#c9d2e0'), lw);
+    dots([[36, 57], [62, 57]], 1.6, '#ff8c42');
   } },
   asBoots: { layer: 1, pair: true, name: 'moon boots', box: [-6, -18, 36, 10], one(x, y, lw) {
     ink(P2(`M${x - 10},${y + 7} L${x - 9},${y - 16} L${x + 9},${y - 16} L${x + 10},${y - 2} C${x + 13},${y} ${x + 13},${y + 7} ${x + 10},${y + 7} Z`), ofLG(y - 16, y + 7, '#f4f6fb'), lw);
     rrect(x - 11, y + 4, 24, 5, 2, '#8a96aa', OL, lw * 1.1);
     rrect(x - 9, y - 9, 18, 4, 1.5, '#3a86ff', OL, lw * 0.8);
   } },
-  asFlag: { layer: 1, name: 'space flag', box: [72, 76, 108, 150], draw(lw) {
+  asFlag: { layer: 1, hand: 'R', name: 'space flag', box: [72, 76, 108, 150], draw(lw) {
     ofRope([[81, 148], [81, 80]], '#c9d2e0', 2.4);
     ink(P2('M82,80 L106,82 L104,100 L82,98 Z'), ofLG(80, 100, '#9b5de5'), lw);
     inkCircle(93, 90, 4.2, '#ffd23f', lw * 0.5);
@@ -2000,83 +2129,88 @@ const OF_WEAR = {
     star(86, 85, 1.6, '#fff', 4); star(101, 96, 1.6, '#fff', 4);
   } },
   // ---- Chef: white jacket with gingham apron, puffy hat, wooden spoon
-  chefJacket: { layer: 0, sleeves: true, name: 'chef jacket and apron', box: [-4, 46, 102, 186], draw(lw) {
-    ink(OF_COAT, ofLG(50, 184, '#ffffff'), lw);
-    const ap = P2('M28,96 L70,96 C80,120 90,150 92,176 C64,184 34,184 6,176 C8,150 18,120 28,96 Z');
-    ink(ap, ofLG(96, 182, '#ff6b8a'), lw);
-    ofClip(ap, () => { ctx.fillStyle = 'rgba(255,255,255,.45)'; for (let x = 0; x < 100; x += 8) ctx.fillRect(x, 96, 4, 90); for (let y = 96; y < 186; y += 8) ctx.fillRect(0, y, 100, 4); });
-    rrect(36, 122, 26, 18, 4, '#ffffff', OL, lw * 1.1); heart(49, 127, 10, '#ff5fa2');
-    for (const y of [64, 76, 88]) { inkCircle(40, y, 2.2, '#e63946', lw * 0.4); inkCircle(58, y, 2.2, '#e63946', lw * 0.4); }
-    ink(P2('M33,50 C42,56 56,56 65,50 L63,58 C56,62 42,62 35,58 Z'), '#e63946', lw * 0.8);
-    ink(P2('M49,58 L44,70 L54,70 Z'), '#e63946', lw * 0.8);
-  }, over(lw) { ofSleeves(lw, '#ffffff'); ofLine([[13, 120], [28, 120]], '#e4ecf8', 3); ofLine([[70, 120], [85, 120]], '#e4ecf8', 3); } },
-  chefHat: { layer: 1, name: 'chef hat', box: [20, -44, 78, 14], draw(lw) {
-    const puffs = [[33, -14, 10], [65, -14, 10], [40, -28, 10], [58, -28, 10], [49, -22, 13]];
+  chefJacket: { layer: 0, sleeves: true, name: 'chef jacket and apron', box: [4, 46, 94, 178], draw(lw) {
+    ink(OF_COAT, ofLG(52, 178, '#ffffff'), lw);
+    const ap = P2('M30,94 L68,94 C74,118 82,146 84,168 C62,174 36,174 14,168 C16,146 24,118 30,94 Z');
+    ink(ap, ofLG(94, 174, '#ff6b8a'), lw);
+    ofClip(ap, () => { ctx.fillStyle = 'rgba(255,255,255,.45)'; for (let x = 0; x < 100; x += 8) ctx.fillRect(x, 94, 4, 90); for (let y = 94; y < 186; y += 8) ctx.fillRect(0, y, 100, 4); });
+    rrect(28, 91, 42, 6, 2.5, '#ff6b8a', OL, lw * 0.9);
+    rrect(37, 120, 24, 17, 4, '#ffffff', OL, lw * 1.1); heart(49, 125, 10, '#ff5fa2');
+    for (const y of [66, 76, 86]) { inkCircle(41, y, 2.2, '#e63946', lw * 0.4); inkCircle(57, y, 2.2, '#e63946', lw * 0.4); }
+    ink(P2('M35,52 C42,58 56,58 63,52 L63,60 C56,64 42,64 35,60 Z'), '#e63946', lw * 0.8);
+    ink(P2('M49,60 L44,71 L54,71 Z'), '#e63946', lw * 0.8);
+  }, over(lw) { ofSleeves(lw, '#ffffff'); ofCuffs(lw, '#f4f6fb', 116, 8); } },
+  chefHat: { layer: 1, name: 'chef hat', box: [20, -46, 80, 22], draw(lw) {
+    const puffs = [[34, -14, 10], [66, -14, 10], [41, -28, 10], [59, -28, 10], [50, -22, 13]];
     ctx.strokeStyle = OL; ctx.lineWidth = lw * 2;
     for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); }
     for (const [x, y, r] of puffs) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
-    ctx.fillStyle = 'rgba(160,170,210,.25)'; ellipse(63, -10, 6, 4); ellipse(49, -14, 9, 3);
-    rrect(29, -6, 40, 16, 4, '#ffffff', OL, lw * 1.6);
-    for (const x of [37, 45, 53, 61]) ofLine([[x, -3], [x, 7]], '#dde2f0', 1.4);
-    ofShine(42, -32, 3, 2, -0.5, 0.9);
+    ctx.fillStyle = 'rgba(160,170,210,.25)'; ellipse(64, -10, 6, 4); ellipse(50, -14, 9, 3);
+    ink(P2('M27,-6 C40,-9 60,-9 73,-6 L74,15 C62,20 38,20 26,15 Z'), ofLG(-8, 18, '#ffffff'), lw * 0.8);
+    for (const x of [35, 43, 50, 57, 65]) ofLine([[x, -4], [x, 15 - Math.abs(x - 50) * 0.08]], '#dde2f0', 1.4);
+    ofShine(43, -32, 3, 2, -0.5, 0.9);
   } },
-  chefSpoon: { layer: 1, name: 'wooden spoon', box: [0, 78, 28, 150], draw(lw) {
+  chefSpoon: { layer: 1, hand: 'L', name: 'wooden spoon', box: [0, 78, 28, 150], draw(lw) {
     ofRope([[18, 146], [12, 100]], '#d9a066', 3.2);
     inkEllipse(11, 92, 6.5, 9, -0.1, ofLG(84, 100, '#d9a066'), lw);
     inkCircle(11, 85, 4.4, '#ff8fc8', lw * 0.5); inkCircle(11, 81, 2.6, '#ff8fc8', lw * 0.4); dots([[13, 84]], 0.9, '#ffffff');
   } },
-  chefMitt: { layer: 1, name: 'oven mitt', box: [62, 122, 96, 158], draw(lw) {
-    const body = P2('M73,128 L90,128 L92,146 C92,155 73,155 72,146 Z'), thumb = P2('M74,134 C64,132 63,143 70,147 Z');
+  // the mitt goes over her right hand
+  chefMitt: { layer: 1, name: 'oven mitt', box: [62, 116, 96, 152], draw(lw) {
+    const body = P2('M73,124 L90,124 L92,140 C92,149 73,149 72,140 Z'), thumb = P2('M74,129 C64,127 63,138 70,142 Z');
     ofInkAll([[thumb, '#e63946'], [body, '#e63946']], lw);
-    ofClip(body, () => { ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let x = 70; x < 96; x += 6) ctx.fillRect(x, 124, 3, 34); for (let y = 128; y < 158; y += 6) ctx.fillRect(66, y, 30, 3); });
-    rrect(71, 124, 21, 7, 3, '#ffffff', OL, lw * 1.1);
+    ofClip(body, () => { ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let x = 70; x < 96; x += 6) ctx.fillRect(x, 120, 3, 34); for (let y = 124; y < 152; y += 6) ctx.fillRect(66, y, 30, 3); });
+    rrect(71, 119, 21, 7, 3, '#ffffff', OL, lw * 1.1);
   } },
   // ---- Firefighter: yellow coat with shiny stripes, red helmet
-  ffCoat: { layer: 0, sleeves: true, name: 'firefighter coat', box: [-4, 46, 102, 186], draw(lw) {
-    ink(OF_COAT, ofLG(50, 184, '#f2b33d'), lw);
-    ofClip(OF_COAT, () => { for (const y of [112, 158]) { ctx.fillStyle = '#d9ff4f'; ctx.fillRect(-10, y, 120, 9); ctx.fillStyle = '#eef2fa'; ctx.fillRect(-10, y + 2.5, 120, 4); } });
-    ofLine([[49, 62], [49, 180]], '#b07a10', 1.6);
-    for (const y of [70, 88, 132, 146]) rrect(45, y, 9, 4, 1.5, '#2b2240', null);
-    ink(P2('M29,51 C40,60 58,60 69,51 L71,61 C58,67 40,67 27,61 Z'), '#5a3a24', lw * 0.8);
+  ffCoat: { layer: 0, sleeves: true, name: 'firefighter coat', box: [4, 46, 94, 178], draw(lw) {
+    ink(OF_COAT, ofLG(52, 178, '#f2b33d'), lw);
+    ofClip(OF_COAT, () => { for (const y of [112, 154]) { ctx.fillStyle = '#d9ff4f'; ctx.fillRect(-10, y, 120, 9); ctx.fillStyle = '#eef2fa'; ctx.fillRect(-10, y + 2.5, 120, 4); } });
+    ofLine([[49, 62], [49, 174]], '#b07a10', 1.6);
+    for (const y of [72, 90, 132, 144]) rrect(45, y, 9, 4, 1.5, '#2b2240', null);
+    ink(P2('M33,51 C42,60 56,60 65,51 L69,60 C58,67 40,67 29,60 Z'), '#5a3a24', lw * 0.8);
   }, over(lw) {
     ofSleeves(lw, '#f2b33d');
-    for (const s of OF_SLV) ofClip(s, () => { ctx.fillStyle = '#d9ff4f'; ctx.fillRect(0, 108, 100, 7); ctx.fillStyle = '#eef2fa'; ctx.fillRect(0, 110, 100, 3); });
+    for (const s of OF_SLV) ofClip(s, () => { ctx.fillStyle = '#d9ff4f'; ctx.fillRect(0, 106, 100, 7); ctx.fillStyle = '#eef2fa'; ctx.fillRect(0, 108, 100, 3); });
   } },
-  ffHelmet: { layer: 1, name: 'fire helmet', box: [10, -20, 88, 20], draw(lw) {
-    const dome = P2('M24,9 C22,-18 76,-18 74,9 Z'), brim = P2('M10,11 C26,3 72,3 88,11 C90,19 76,19 70,14 L28,14 C22,19 8,19 10,11 Z');
-    ofInkAll([[brim, '#c42536'], [dome, ofLG(-18, 9, '#ef3b4b')]], lw);
-    rrect(46, -17, 6, 24, 3, '#ffd23f', OL, lw * 1.1);
-    ink(P2('M40,-4 L58,-4 L58,4 C58,10 49,13 49,13 C49,13 40,10 40,4 Z'), ofLG(-4, 13, '#ffd23f'), lw);
-    text('1', 49, 3, 10, '#c42536', 'center', 800);
-    ofShine(32, -6, 2.5, 6, 0.5, 0.45);
+  // a fire helmet: its long back brim sticks out behind her head
+  ffHelmet: { layer: 1, name: 'fire helmet', box: [4, -20, 96, 24], back(lw) {
+    ink(P2('M4,10 C18,-2 82,-2 96,10 C98,17 88,21 76,15 L24,15 C12,21 2,17 4,10 Z'), ofLG(0, 20, '#a81e2c'), lw);
+  }, draw(lw) {
+    ink(P2('M25,12 C21,-19 79,-19 75,12 Z'), ofLG(-18, 12, '#ef3b4b'), lw);
+    ink(P2('M21,9 C36,15 64,15 79,9 C80,16 66,21 50,21 C34,21 20,16 21,9 Z'), ofLG(9, 21, '#c42536'), lw);
+    rrect(47, -17, 6, 24, 3, '#ffd23f', OL, lw * 1.1);
+    ink(P2('M41,-4 L59,-4 L59,4 C59,10 50,13 50,13 C50,13 41,10 41,4 Z'), ofLG(-4, 13, '#ffd23f'), lw);
+    text('1', 50, 3, 10, '#c42536', 'center', 800);
+    ofShine(33, -6, 2.5, 6, 0.5, 0.45);
   } },
   ffBoots: { layer: 1, pair: true, name: 'fire boots', box: [-4, -22, 34, 9], one(x, y, lw) {
     ofBoot(x, y, lw, '#2b2240', 20);
     rrect(x - 8, y - 12, 15, 4, 1, '#ffd23f', OL, lw * 0.8); rrect(x - 10, y + 4, 22, 3.5, 1.5, '#c42536', null);
   } },
-  ffHose: { layer: 1, name: 'fire hose', box: [62, 92, 112, 164], draw(lw) {
+  ffHose: { layer: 1, hand: 'R', name: 'fire hose', box: [62, 92, 112, 164], draw(lw) {
     ctx.save(); ctx.lineCap = 'round';
-    const h = new Path2D(); h.moveTo(66, 162); h.bezierCurveTo(60, 146, 74, 140, 81, 138); h.bezierCurveTo(88, 134, 88, 122, 90, 116);
+    const h = new Path2D(); h.moveTo(66, 162); h.bezierCurveTo(60, 146, 74, 140, 81, 136); h.bezierCurveTo(88, 132, 88, 122, 90, 116);
     ctx.strokeStyle = OL; ctx.lineWidth = 8; ctx.stroke(h); ctx.strokeStyle = '#e63946'; ctx.lineWidth = 5.2; ctx.stroke(h);
     ctx.restore();
     ctx.save(); ctx.translate(91, 112); ctx.rotate(0.35); ink(P2('M-4,6 L4,6 L3,-8 L-3,-8 Z'), ofLG(0, 0, '#ffb627', -4, 4), lw); ctx.restore();
     for (let i = 0; i < 5; i++) { const k = (S.t * 1.4 + i / 5) % 1; inkCircle(94 + k * 12, 102 - k * 10 + k * k * 14, 2.4 - k, '#7fd6ff', lw * 0.4); }
   } },
-  // ---- Ballerina: leotard and fluffy tutu, ribbon shoes, flower crown
-  balTutu: { layer: 0, name: 'tutu', box: [-12, 48, 110, 158], draw(lw) {
-    ink(P2('M32,52 C40,58 58,58 66,52 L72,92 L26,92 Z'), ofLG(52, 92, '#ff8fc8'), lw);
-    dots([[40, 66], [49, 72], [58, 66], [44, 80], [54, 80]], 1.3, '#fff6a8');
-    const layers = [[49, 138, 57, 19], [49, 122, 61, 22]];
+  // ---- Ballerina: leotard and fluffy tutu round her hips, ribbon shoes, flower crown
+  balTutu: { layer: 0, low: true, name: 'tutu', box: [-8, 50, 106, 146], draw(lw) {
+    ink(P2('M33,56 C40,61 58,61 65,56 L70,62 C71,74 69,86 71,96 L73,114 L25,114 L27,96 C29,86 27,74 28,62 Z'), ofLG(56, 112, '#ff8fc8'), lw);
+    dots([[40, 68], [49, 74], [58, 68], [44, 82], [54, 82]], 1.3, '#fff6a8');
+    const layers = [[49, 128, 54, 15], [49, 116, 58, 18]];
     ctx.strokeStyle = OL; ctx.lineWidth = lw * 2;
     for (const [x, y, rx, ry] of layers) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.stroke(); }
     layers.forEach(([x, y, rx, ry], i) => {
       ctx.fillStyle = ofLG(y - ry, y + ry, ['#ffb0d6', '#ffd0e8'][i]); ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
     });
-    ctx.strokeStyle = 'rgba(91,63,115,.35)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(49, 122, 61, 22, 0, 0.15, Math.PI - 0.15); ctx.stroke();
+    ctx.strokeStyle = 'rgba(91,63,115,.35)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(49, 116, 58, 18, 0, 0.15, Math.PI - 0.15); ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1;
-    for (let x = -6; x <= 104; x += 8) { ctx.beginPath(); ctx.moveTo(49 + (x - 49) * 0.35, 104); ctx.lineTo(x, 140); ctx.stroke(); }
-    for (const [x, y] of [[12, 124], [30, 134], [70, 132], [88, 122], [49, 140], [20, 146], [80, 146]]) star(x, y, 2.6, '#ffffff', 4);
-    rrect(26, 88, 46, 7, 3, '#ff5fa2', OL, lw * 1.1);
+    for (let x = -4; x <= 102; x += 8) { ctx.beginPath(); ctx.moveTo(49 + (x - 49) * 0.35, 100); ctx.lineTo(x, 132); ctx.stroke(); }
+    for (const [x, y] of [[12, 118], [30, 128], [70, 126], [88, 116], [49, 134], [20, 138], [80, 138]]) star(x, y, 2.6, '#ffffff', 4);
+    rrect(26, 96, 46, 7, 3, '#ff5fa2', OL, lw * 1.1);
   } },
   balShoes: { layer: 1, pair: true, name: 'ballet shoes', box: [-4, -30, 34, 10], one(x, y, lw) {
     ofRope([[x - 6, y - 2], [x + 6, y - 14], [x - 6, y - 26]], '#ff8fc8', 1.6);
@@ -2084,13 +2218,8 @@ const OF_WEAR = {
     inkEllipse(x + 1, y + 3, 9, 5, 0, ofLG(y - 2, y + 8, '#ffb0d6'), lw);
     ofShine(x - 2, y + 1, 3, 1.4, 0, 0.7);
   } },
-  balCrown: { layer: 1, name: 'flower crown', box: [24, -10, 76, 14], draw(lw) {
-    const fl = []; for (let i = 0; i < 7; i++) fl.push([30 + i * 6.5, 5 - Math.sin(i / 6 * Math.PI) * 7, ['#ff8fc8', '#ffffff', '#ffd23f', '#c77dff'][i % 4]]);
-    const petals = []; for (const [x, y, c] of fl) for (let k = 0; k < 5; k++) { const a = k * 1.2566; petals.push([x + Math.cos(a) * 2.8, y + Math.sin(a) * 2.8, c]); }
-    ctx.strokeStyle = OL; ctx.lineWidth = lw * 1.6; for (const [x, y] of petals) { ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.stroke(); }
-    for (const [x, y, c] of petals) { ctx.fillStyle = c; circle(x, y, 2.6); }
-    for (const [x, y, c] of fl) { ctx.fillStyle = c === '#ffd23f' ? '#ff8c42' : '#ffd23f'; circle(x, y, 1.6); }
-  } },
+  // a ring of flowers: the far ones peep over the top of her head, the near ones dip across her forehead
+  balCrown: { layer: 1, name: 'flower crown', box: [24, -10, 76, 16], back(lw) { ofFlowers(lw, 1); }, draw(lw) { ofFlowers(lw, 0); } },
   balBow: { layer: 1, name: 'satin hair bow', box: [50, -14, 88, 22], draw(lw) {
     const l = P2('M68,4 C58,-10 50,-4 52,6 C54,14 62,10 68,4 Z'), r = P2('M68,4 C78,-10 88,-4 86,6 C84,14 74,10 68,4 Z');
     const t = P2('M66,6 L60,20 L64,19 L67,8 Z M70,6 L76,20 L72,19 L69,8 Z');
@@ -2098,24 +2227,24 @@ const OF_WEAR = {
     inkCircle(68, 4, 3.4, '#ff8fc8', lw * 0.6); ofShine(57, 0, 2, 3, 0.5, 0.6); ofShine(80, 0, 2, 3, -0.5, 0.6);
   } },
   // ---- Wizard: starry robe, pointy hat, glowing wand, silly beard
-  wizRobe: { layer: 0, sleeves: true, name: 'wizard robe', box: [-10, 48, 108, 222], draw(lw) {
-    ink(OF_ROBE, ofLG(50, 220, '#3d4ec8'), lw);
-    ofClip(OF_ROBE, () => { ctx.fillStyle = '#ffd23f'; ctx.fillRect(-10, 205, 120, 6); ctx.fillRect(47, 56, 4, 160); });
-    for (const [x, y, r] of [[22, 112, 4], [74, 96, 3.5], [30, 168, 4.5], [70, 150, 4], [14, 196, 3], [88, 190, 3.5], [40, 132, 2.6], [60, 186, 3]]) star(x, y, r, '#ffe36b', 5);
-    ctx.fillStyle = '#fff6c2'; ctx.beginPath(); ctx.arc(80, 128, 6, 0.6, 5.7); ctx.arc(82.5, 128, 5, 5.4, 0.9, true); ctx.fill();
-    ctx.beginPath(); ctx.arc(20, 146, 5, 0.6, 5.7); ctx.arc(22, 146, 4, 5.4, 0.9, true); ctx.fill();
-    ofRope([[22, 92], [49, 96], [76, 92]], '#ffd23f', 2.6); ofRope([[60, 95], [62, 116]], '#ffd23f', 2); inkCircle(62, 118, 2.6, '#ffd23f', lw * 0.5);
-  }, over(lw) { ofSleeves(lw, '#3d4ec8', OF_BELL); ofRope([[3, 131], [29, 129]], '#ffd23f', 2); ofRope([[95, 131], [69, 129]], '#ffd23f', 2); } },
-  wizHat: { layer: 1, name: 'wizard hat', box: [8, -62, 92, 16], draw(lw) {
-    const brim = P2('M8,8 C20,0 78,0 90,8 C80,16 18,16 8,8 Z');
-    const cone = P2('M24,8 C34,-8 40,-30 50,-48 C54,-56 64,-60 74,-52 C66,-52 60,-44 60,-34 C62,-14 70,-2 74,8 Z');
-    ofInkAll([[brim, ofLG(2, 14, '#3d4ec8')], [cone, ofLG(-58, 8, '#4a5ad8', 24, 74)]], lw);
-    rrect(26, 0, 48, 6, 2, '#ffd23f', OL, lw * 1.1);
+  wizRobe: { layer: 0, sleeves: true, name: 'wizard robe', box: [0, 48, 98, 218], draw(lw) {
+    ink(OF_ROBE, ofLG(50, 218, '#3d4ec8'), lw);
+    ofClip(OF_ROBE, () => { ctx.fillStyle = '#ffd23f'; ctx.fillRect(-10, 205, 120, 6); ctx.fillRect(47, 58, 4, 160); });
+    for (const [x, y, r] of [[30, 112, 4], [68, 100, 3.5], [30, 168, 4.5], [70, 150, 4], [16, 196, 3], [84, 190, 3.5], [40, 132, 2.6], [60, 186, 3]]) star(x, y, r, '#ffe36b', 5);
+    ctx.fillStyle = '#fff6c2'; ctx.beginPath(); ctx.arc(76, 128, 6, 0.6, 5.7); ctx.arc(78.5, 128, 5, 5.4, 0.9, true); ctx.fill();
+    ctx.beginPath(); ctx.arc(22, 146, 5, 0.6, 5.7); ctx.arc(24, 146, 4, 5.4, 0.9, true); ctx.fill();
+    ofRope([[27, 92], [49, 97], [71, 92]], '#ffd23f', 2.6); ofRope([[60, 95], [62, 116]], '#ffd23f', 2); inkCircle(62, 118, 2.6, '#ffd23f', lw * 0.5);
+  }, over(lw) { ofSleeves(lw, '#3d4ec8', OF_BELL); ofRope([[1, 127], [25, 127]], '#ffd23f', 2); ofRope([[97, 127], [73, 127]], '#ffd23f', 2); } },
+  wizHat: { layer: 1, name: 'wizard hat', box: [6, -62, 94, 20], back(lw) { ofBrimBack(lw, 44, 8, 9, '#2c3aa0'); }, draw(lw) {
+    const cone = P2('M25,10 C34,-8 40,-30 50,-48 C54,-56 64,-60 74,-52 C66,-52 60,-44 60,-34 C62,-14 70,-2 75,10 C62,14 38,14 25,10 Z');
+    ink(cone, ofLG(-58, 10, '#4a5ad8', 24, 74), lw);
+    ink(P2('M26,2 C40,-1 60,-1 74,2 L75,9 C62,12 38,12 25,9 Z'), '#ffd23f', lw * 0.9);
+    ink(ofBrimFront(44, 8, 9, 2), ofLG(9, 17, '#3d4ec8'), lw);
     star(44, -14, 4.2, '#ffe36b', 5); star(55, -30, 3.2, '#ffe36b', 5); star(36, -4, 2.4, '#ffe36b', 5);
     ofOutlinedStar(74, -52, 4 + Math.sin(S.t * 5), '#fff6a8');
     ofShine(40, -20, 2, 9, 0.5, 0.25);
   } },
-  wizWand: { layer: 1, name: 'magic wand', box: [70, 68, 112, 150], draw(lw) {
+  wizWand: { layer: 1, hand: 'R', name: 'magic wand', box: [70, 68, 112, 150], draw(lw) {
     ofRope([[81, 144], [94, 92]], '#6b3f2a', 3.2);
     ctx.save(); ctx.shadowColor = '#ffe36b'; ctx.shadowBlur = 14;
     ofOutlinedStar(96, 84, 9 + Math.sin(S.t * 6) * 1.2, '#ffe36b'); ctx.restore();
@@ -2130,19 +2259,23 @@ const OF_WEAR = {
     inkEllipse(43, 39, 7, 3.4, 0.2, '#ffffff', lw * 0.8); inkEllipse(55, 39, 7, 3.4, -0.2, '#ffffff', lw * 0.8);
   } },
   // ---- Superhero: blue suit, red cape, lightning emblem
-  shSuit: { layer: 0, sleeves: true, name: 'super suit', box: [-4, 48, 102, 162], draw(lw) {
-    ofInkAll([[OF_SKIRT, ofLG(88, 160, '#e63946')], [OF_TORSO, ofLG(52, 94, '#3a6cf0')]], lw);
-    for (const [x, y] of [[14, 140], [36, 146], [62, 146], [84, 140], [49, 120], [28, 118], [70, 118]]) star(x, y, 3, '#ffd23f', 5);
-    rrect(22, 86, 54, 8, 3, '#ffd23f', OL, lw * 1.1);
-    ink(P2('M37,61 L61,61 L61,69 C61,77 49,84 49,84 C49,84 37,77 37,69 Z'), ofLG(61, 84, '#ffd23f'), lw);
-    ink(P2('M52,63 L43,74 L49,74 L45,82 L56,69 L50,69 L54,63 Z'), '#e63946', lw * 0.6);
-  }, over(lw) { ofSleeves(lw, '#3a6cf0'); rrect(12, 120, 17, 7, 2, '#ffd23f', OL, lw * 1.1); rrect(69, 120, 17, 7, 2, '#ffd23f', OL, lw * 1.1); } },
-  shCape: { layer: 0, name: 'super cape', box: [-18, 50, 116, 206], draw(lw) {
+  shSuit: { layer: 0, low: true, sleeves: true, name: 'super suit', box: [20, 48, 80, 136], draw(lw) {
+    const torso = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,66 71,80 71,92 C74,102 76,108 77,114 L22,114 C23,108 25,102 27,92 C27,80 24,66 27,57 Z');
+    const briefs = P2('M22,106 C40,110 58,110 77,106 C78,114 76,118 74,121 C64,123 57,127 54,134 L44,134 C41,127 34,123 25,121 C23,118 21,114 22,106 Z');
+    ofInkAll([[briefs, ofLG(104, 134, '#e63946')], [torso, ofLG(54, 110, '#3a6cf0')]], lw);
+    rrect(25, 98, 48, 8, 3, '#ffd23f', OL, lw * 1.1); rrect(45, 97, 9, 10, 2, '#ffe36b', OL, lw * 0.9);
+    ink(P2('M37,62 L61,62 L61,70 C61,78 49,85 49,85 C49,85 37,78 37,70 Z'), ofLG(62, 85, '#ffd23f'), lw);
+    ink(P2('M52,64 L43,75 L49,75 L45,83 L56,70 L50,70 L54,64 Z'), '#e63946', lw * 0.6);
+  }, over(lw) { ofSleeves(lw, '#3a6cf0'); ofCuffs(lw, '#ffd23f', 118, 7); } },
+  // the cape hangs behind her from her shoulders and flutters; only its gold clasps show in front
+  shCape: { layer: 0, cape: true, name: 'super cape', box: [-10, 50, 108, 210], back(lw) {
     const w = Math.sin(S.t * 4) * 3;
-    const l = P2(`M26,55 C12,80 -4,140 -14,${196 + w} C-6,${200 - w} 2,${194 + w} 10,${200 + w} C12,150 18,100 30,60 Z`);
-    const r = P2(`M72,55 C86,80 102,140 112,${196 - w} C104,${200 + w} 96,${194 - w} 88,${200 - w} C86,150 80,100 68,60 Z`);
-    ofInkAll([[l, ofLG(0, 0, '#e63946', -14, 30)], [r, ofLG(0, 0, '#e63946', 112, 68)]], lw);
-    inkCircle(30, 58, 4, '#ffd23f', lw * 0.6); inkCircle(68, 58, 4, '#ffd23f', lw * 0.6);
+    const p = P2(`M30,54 C16,80 2,140 -8,${200 + w} C10,${207 - w} 30,${201 + w} 49,${207 - w} C68,${201 + w} 88,${207 - w} 106,${200 - w} C96,140 82,80 68,54 C58,50 40,50 30,54 Z`);
+    ink(p, ofLG(0, 0, '#e63946', -8, 106), lw);
+    ofClip(p, () => { ctx.fillStyle = 'rgba(120,10,30,.3)'; ctx.fillRect(26, 50, 46, 160); });
+  }, draw(lw) {
+    ink(P2('M27,56 C22,58 18,62 17,66 L27,63 Z'), '#e63946', lw * 0.8); ink(P2('M71,56 C76,58 80,62 81,66 L71,63 Z'), '#e63946', lw * 0.8);
+    inkCircle(31, 59, 4, '#ffd23f', lw * 0.6); inkCircle(67, 59, 4, '#ffd23f', lw * 0.6);
   } },
   shBoots: { layer: 1, pair: true, name: 'super boots', box: [-4, -24, 34, 9], one(x, y, lw) {
     ofBoot(x, y, lw, '#e63946', 18);
@@ -2156,26 +2289,26 @@ const OF_WEAR = {
     ofShine(36, 23, 3, 1.2, -0.3, 0.5);
   } },
   // ---- Cowgirl: plaid shirt, fringe vest and skirt, big hat
-  cbVest: { layer: 0, sleeves: true, name: 'fringe vest', box: [-6, 48, 104, 168], draw(lw) {
-    ofInkAll([[OF_SKIRT, ofLG(88, 160, '#d9a066')], [OF_TORSO, '#e63946']], lw);
+  cbVest: { layer: 0, sleeves: true, name: 'fringe vest', box: [6, 48, 92, 162], draw(lw) {
+    ofInkAll([[OF_SKIRT, ofLG(90, 154, '#d9a066')], [OF_TORSO, '#e63946']], lw);
     ofClip(OF_TORSO, () => { ctx.fillStyle = 'rgba(110,10,30,.35)'; for (let x = 18; x < 82; x += 9) ctx.fillRect(x, 50, 4, 50); for (let y = 58; y < 96; y += 9) ctx.fillRect(10, y, 80, 4); });
     ctx.save(); ctx.lineCap = 'round';
-    for (let x = 0; x <= 98; x += 4.5) { const y = 152 + Math.sin(x / 98 * Math.PI) * 6; ofRope([[x, y], [x + 0.5, y + 10]], '#c98a4b', 1.6); }
+    for (let x = 11; x <= 87; x += 4.2) { const y = 146 + Math.sin((x - 9) / 80 * Math.PI) * 6; ofRope([[x, y], [x + 0.3, y + 9]], '#c98a4b', 1.6); }
     ctx.restore();
-    ink(P2('M24,58 L38,58 C40,74 40,86 38,96 L16,98 C14,84 18,70 24,58 Z'), ofLG(56, 98, '#8a5a3c'), lw);
-    ink(P2('M74,58 L60,58 C58,74 58,86 60,96 L82,98 C84,84 80,70 74,58 Z'), ofLG(56, 98, '#8a5a3c'), lw);
-    ofOutlinedStar(29, 74, 5, '#e8eef8', 5);
-    ctx.strokeStyle = '#8a5a3c'; ctx.setLineDash([2, 2]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(14, 112); ctx.quadraticCurveTo(49, 120, 84, 112); ctx.stroke(); ctx.setLineDash([]);
+    ink(P2('M27,57 L39,58 C41,74 41,86 39,98 L25,99 C25,84 25,70 27,57 Z'), ofLG(56, 98, '#8a5a3c'), lw);
+    ink(P2('M71,57 L59,58 C57,74 57,86 59,98 L73,99 C73,84 73,70 71,57 Z'), ofLG(56, 98, '#8a5a3c'), lw);
+    ofOutlinedStar(32, 74, 4.6, '#e8eef8', 5);
+    ctx.strokeStyle = '#8a5a3c'; ctx.setLineDash([2, 2]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(18, 112); ctx.quadraticCurveTo(49, 120, 80, 112); ctx.stroke(); ctx.setLineDash([]);
   }, over(lw) {
-    for (const s of OF_SLV) { ink(s, '#e63946', lw); ofClip(s, () => { ctx.fillStyle = 'rgba(110,10,30,.35)'; for (let y = 60; y < 130; y += 9) ctx.fillRect(0, y, 100, 4); }); }
+    for (const s of OF_SLV) { ink(s, '#e63946', lw); ofClip(s, () => { ctx.fillStyle = 'rgba(110,10,30,.35)'; for (let y = 60; y < 130; y += 9) ctx.fillRect(0, y, 100, 4); for (let x = 2; x < 96; x += 9) ctx.fillRect(x, 56, 3, 76); }); }
   } },
-  cbHat: { layer: 1, name: 'cowgirl hat', box: [4, -28, 94, 16], draw(lw) {
-    const brim = P2('M4,4 C10,14 30,12 49,12 C68,12 88,14 94,4 C90,-2 82,4 72,4 L26,4 C16,4 8,-2 4,4 Z');
-    const crown = P2('M28,6 C26,-12 32,-26 41,-22 C45,-19 53,-19 57,-22 C66,-26 72,-12 70,6 Z');
-    ofInkAll([[brim, ofLG(-2, 14, '#c98a4b')], [crown, ofLG(-26, 6, '#d99a58')]], lw);
-    rrect(29, -5, 40, 7, 1, '#6b3f2a', null);
-    ofOutlinedStar(49, -1.5, 4.4, '#e8eef8', 5);
-    ofLine([[49, -19], [49, -9]], 'rgba(110,60,20,.45)', 1.4); ofShine(37, -12, 2.6, 6, 0.2, 0.35);
+  cbHat: { layer: 1, name: 'cowgirl hat', box: [2, -28, 98, 22], back(lw) { ofBrimBack(lw, 47, 8, 8, '#a8703a'); }, draw(lw) {
+    const crown = P2('M28,10 C26,-12 32,-26 41,-22 C45,-19 55,-19 59,-22 C68,-26 74,-12 72,10 C60,13 40,13 28,10 Z');
+    ink(crown, ofLG(-26, 10, '#d99a58'), lw);
+    ofClip(crown, () => ofFill('#6b3f2a', 20, -3, 60, 7));
+    ofOutlinedStar(50, 0.5, 4.4, '#e8eef8', 5);
+    ink(ofBrimFront(47, 8, 8, 1), ofLG(8, 16, '#c98a4b'), lw);
+    ofLine([[50, -19], [50, -8]], 'rgba(110,60,20,.45)', 1.4); ofShine(38, -12, 2.6, 6, 0.2, 0.35);
   } },
   cbBoots: { layer: 1, pair: true, name: 'cowgirl boots', box: [-4, -22, 40, 10], one(x, y, lw) {
     ink(P2(`M${x - 7},${y + 5} L${x - 8},${y - 20} L${x - 2},${y - 17} L${x + 6},${y - 20} L${x + 6},${y - 4} C${x + 12},${y - 2} ${x + 16},${y + 3} ${x + 16},${y + 5} Z`), ofLG(y - 20, y + 6, '#c98a4b'), lw);
@@ -2183,51 +2316,173 @@ const OF_WEAR = {
     star(x - 1, y - 10, 3.6, '#ffd23f', 5);
   } },
   cbBandana: { layer: 1, name: 'bandana', box: [26, 44, 72, 86], draw(lw) {
-    ink(P2('M30,49 C40,57 58,57 68,49 L67,57 C60,64 54,72 49,82 C44,72 38,64 31,57 Z'), ofLG(49, 82, '#e63946'), lw);
-    dots([[40, 60], [49, 64], [58, 60], [45, 72], [53, 72], [49, 78]], 1.3, '#ffffff');
-    inkCircle(68, 52, 3, '#e63946', lw * 0.6);
+    ink(P2('M32,50 C41,58 57,58 66,50 L67,58 C60,65 54,73 49,83 C44,73 38,65 31,58 Z'), ofLG(50, 83, '#e63946'), lw);
+    dots([[40, 61], [49, 65], [58, 61], [45, 73], [53, 73], [49, 79]], 1.3, '#ffffff');
+    inkCircle(66, 53, 3, '#e63946', lw * 0.6);
   } },
-  // ---- Mermaid: shimmering tail, shell top, sea crown
-  mmTail: { layer: 0, name: 'mermaid tail', box: [-8, 80, 106, 228], draw(lw) {
-    const p = P2('M28,84 L70,84 C86,108 101,130 101,150 C100,172 84,186 76,198 C88,204 100,212 106,226 C88,223 66,221 49,214 C32,221 10,223 -8,226 C-2,212 12,204 22,198 C14,186 -2,172 -3,150 C-3,130 12,108 28,84 Z');
-    const gr = ctx.createLinearGradient(0, 84, 0, 226); gr.addColorStop(0, '#5ff0d8'); gr.addColorStop(0.5, '#2ec4b6'); gr.addColorStop(1, '#9b5de5');
+  // ---- Mermaid: shimmering tail that swaps her legs for a fin, shell top, sea crown
+  mmTail: { layer: 0, legs: true, name: 'mermaid tail', box: [0, 86, 100, 228], draw(lw) {
+    const p = P2('M26,90 L72,90 C79,106 81,124 79,142 C77,160 70,178 64,196 C76,202 90,210 98,226 C82,226 64,222 49,214 C34,222 16,226 0,226 C8,210 22,202 34,196 C28,178 21,160 19,142 C17,124 19,106 26,90 Z');
+    const gr = ctx.createLinearGradient(0, 90, 0, 226); gr.addColorStop(0, '#5ff0d8'); gr.addColorStop(0.5, '#2ec4b6'); gr.addColorStop(1, '#9b5de5');
     ink(p, gr, lw);
     ofClip(p, () => {
       ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.2;
-      for (let y = 92, r = 0; y < 200; y += 8, r++) for (let x = -10 + (r % 2) * 5; x < 110; x += 10) { ctx.beginPath(); ctx.arc(x, y, 5, 0.2, Math.PI - 0.2); ctx.stroke(); }
-      ctx.fillStyle = 'rgba(42,16,80,.12)'; ctx.fillRect(80, 80, 40, 150);
+      for (let y = 98, r = 0; y < 200; y += 8, r++) for (let x = -10 + (r % 2) * 5; x < 110; x += 10) { ctx.beginPath(); ctx.arc(x, y, 5, 0.2, Math.PI - 0.2); ctx.stroke(); }
     });
-    for (const [a, b] of [[[49, 214], [14, 220]], [[49, 214], [84, 220]], [[49, 214], [30, 222]], [[49, 214], [68, 222]]]) ofLine([a, b], 'rgba(255,255,255,.5)', 1.2);
-    for (let i = 0; i < 4; i++) star(20 + i * 20, 110 + ((i * 37 + S.t * 20) % 80), 2.6 + Math.sin(S.t * 4 + i), '#ffffff', 4);
-    rrect(26, 82, 46, 6, 3, '#ffc2df', OL, lw * 1.1); dots([[33, 85], [41, 85], [49, 85], [57, 85], [65, 85]], 1.3, '#ffffff');
+    for (const [a, b] of [[[49, 214], [14, 222]], [[49, 214], [84, 222]], [[49, 214], [30, 224]], [[49, 214], [68, 224]]]) ofLine([a, b], 'rgba(255,255,255,.5)', 1.2);
+    for (let i = 0; i < 4; i++) star(28 + i * 14, 110 + ((i * 37 + S.t * 20) % 70), 2.6 + Math.sin(S.t * 4 + i), '#ffffff', 4);
+    rrect(25, 88, 48, 6, 3, '#ffc2df', OL, lw * 1.1); dots([[32, 91], [40, 91], [49, 91], [58, 91], [66, 91]], 1.3, '#ffffff');
   } },
   mmShells: { layer: 1, name: 'seashell top', box: [28, 50, 70, 80], draw(lw) {
-    ofLine([[34, 54], [41, 64]], OL, 2.6); ofLine([[64, 54], [57, 64]], OL, 2.6); ofLine([[34, 54], [41, 64]], '#ff8fc8', 1.2); ofLine([[64, 54], [57, 64]], '#ff8fc8', 1.2);
+    ofLine([[35, 55], [41, 64]], OL, 2.6); ofLine([[63, 55], [57, 64]], OL, 2.6); ofLine([[35, 55], [41, 64]], '#ff8fc8', 1.2); ofLine([[63, 55], [57, 64]], '#ff8fc8', 1.2);
     for (const x of [41, 57]) {
-      ink(P2(`M${x},${75} L${x - 9},${66} C${x - 7},${58} ${x + 7},${58} ${x + 9},${66} Z`), ofLG(58, 75, '#c77dff'), lw);
-      for (const d of [-5, 0, 5]) ofLine([[x, 74], [x + d, 62]], 'rgba(255,255,255,.6)', 1);
+      ink(P2(`M${x},${76} L${x - 9},${67} C${x - 7},${59} ${x + 7},${59} ${x + 9},${67} Z`), ofLG(59, 76, '#c77dff'), lw);
+      for (const d of [-5, 0, 5]) ofLine([[x, 75], [x + d, 63]], 'rgba(255,255,255,.6)', 1);
     }
-    inkCircle(49, 70, 2.4, '#ffffff', lw * 0.5);
+    inkCircle(49, 71, 2.4, '#ffffff', lw * 0.5);
   } },
-  mmCrown: { layer: 1, name: 'sea crown', box: [26, -14, 74, 12], draw(lw) {
-    for (let i = 0; i <= 8; i++) inkCircle(30 + i * 4.8, 6 - Math.sin(i / 8 * Math.PI) * 6, 1.8, '#fbf6ff', lw * 0.4);
-    ofOutlinedStar(38, -2, 7, '#ff8c42', 5); dots([[38, -2]], 1.2, '#ffd9a0');
-    ink(P2('M58,4 L50,-6 C52,-12 64,-12 66,-6 Z'), ofLG(-10, 4, '#ff8fc8'), lw);
-    for (const d of [-4, 0, 4]) ofLine([[58, 3], [58 + d, -8]], 'rgba(255,255,255,.6)', 1);
+  mmCrown: { layer: 1, name: 'sea crown', box: [26, -14, 74, 14], draw(lw) {
+    for (let i = 0; i <= 8; i++) { const k = i / 8; inkCircle(31 + k * 38, 6 + Math.sin(k * Math.PI) * 3, 1.8, '#fbf6ff', lw * 0.4); }
+    ofOutlinedStar(39, 0, 7, '#ff8c42', 5); dots([[39, 0]], 1.2, '#ffd9a0');
+    ink(P2('M59,6 L51,-4 C53,-10 65,-10 67,-4 Z'), ofLG(-8, 6, '#ff8fc8'), lw);
+    for (const d of [-4, 0, 4]) ofLine([[59, 5], [59 + d, -6]], 'rgba(255,255,255,.6)', 1);
   } },
-  mmTrident: { layer: 1, name: 'golden trident', box: [66, 50, 98, 154], draw(lw) {
+  mmTrident: { layer: 1, hand: 'R', name: 'golden trident', box: [66, 50, 98, 154], draw(lw) {
     ofRope([[81, 150], [81, 70]], '#ffd23f', 2.6);
     ink(P2('M71,72 L91,72 L91,60 L88,52 L86,68 L83,68 L81,50 L79,68 L76,68 L74,52 L71,60 Z'), ofLG(50, 72, '#ffd23f'), lw);
     inkCircle(81, 76, 2.6, '#5ff0d8', lw * 0.5);
   } },
 };
+// the flower crown's flowers, in a ring round her head: far side (behind) or near side (in front)
+function ofFlowers(lw, far) {
+  const fl = [];
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI * (i / 8), x = 50 - Math.cos(a) * 22, y = far ? 4 - Math.sin(a) * 6 : 6 + Math.sin(a) * 5;
+    if (far && (i === 0 || i === 8)) continue;
+    fl.push([x, y, ['#ff8fc8', '#ffffff', '#ffd23f', '#c77dff'][(i + far) % 4]]);
+  }
+  const r = far ? 2.2 : 2.7, petals = [];
+  for (const [x, y, c] of fl) for (let k = 0; k < 5; k++) { const a = k * 1.2566; petals.push([x + Math.cos(a) * r * 1.05, y + Math.sin(a) * r * 1.05, far ? mix(c, '#5a3a6a', 0.25) : c]); }
+  ctx.strokeStyle = OL; ctx.lineWidth = lw * 1.6; for (const [x, y] of petals) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); }
+  for (const [x, y, c] of petals) { ctx.fillStyle = c; circle(x, y, r); }
+  for (const [x, y, c] of fl) { ctx.fillStyle = c === '#ffd23f' ? '#ff8c42' : '#ffd23f'; circle(x, y, r * 0.6); }
+}
 const ofPiece = id => OF_WEAR[id] || CLOTHES[id];
 const ofName = id => OF_WEAR[id]?.name || OF_OLD_NAMES[id] || id;
+// ---- fitting the clothes onto her photo, so they look worn rather than stuck on
+// her feet splay out: each shoe sits on its own foot, toe pointing outwards, its shaft leaning with the leg
+const OF_FEET = [[29, 219, -1, -0.1], [84, 219, 1, 0.33]];
+// pieces that cover her from the waist down: her puffy dress skirt is cut away under them, so they can be shaped to her legs
+const ofLow = c => c.layer === 0 && !c.cape && (c.low ?? (c.box[1] < 100 && c.box[3] >= 150));
+// hats and other things that sit on her head cast a soft shadow onto her hair and face
+const ofOnHead = c => c.layer === 1 && !c.pair && c.box[3] <= 24;
+// cut-outs of her photo, cached: the sprite without its skirt puff (with tights-coloured thighs instead), and the
+// locks of hair that fall over her shoulders (they go back on top of collars)
+// (and, for a mermaid tail or space suit that replaces her legs, the sprite with nothing below the waist but her hands)
+let ofBaseCv = null, ofHairCv = null, ofNoLegsCv = null;
+function ofCutouts() {
+  if (ofBaseCv) return;
+  const im = IMG.idle_front, mk = () => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; return c; };
+  const src = mk(), sx = src.getContext('2d'); sx.drawImage(im, 0, 0);
+  const d = sx.getImageData(0, 0, im.width, im.height), p = d.data;
+  const hair = sx.createImageData(im.width, im.height), hp = hair.data;
+  for (let y = 0; y < im.height; y++) for (let i = 0; i < im.width; i++) {
+    const k = (y * im.width + i) * 4, skin = p[k] > p[k + 2] + 28 && p[k + 2] <= p[k + 1] + 4;
+    // hair over the shoulders: darker brown pixels beside her neck
+    const hairy = clamp((204 - p[k]) / 16, 0, 1) * clamp((p[k] - p[k + 2] - 44) / 14, 0, 1);
+    if (y > 40 && y < 70 && (i < 35 || i > 63) && hairy > 0) hp.set([p[k], p[k + 1], p[k + 2], p[k + 3] * hairy * clamp((70 - y) / 6, 0, 1)], k);
+    // the skirt puff goes (her arms and hands stay)
+    if (y >= 112 && y <= 185 && !(skin && (i < 25 || i > 68))) p[k + 3] = 0;
+  }
+  sx.putImageData(d, 0, 0);
+  ofNoLegsCv = mk(); const nl = ofNoLegsCv.getContext('2d'); nl.drawImage(src, 0, 0); nl.clearRect(0, 159, im.width, im.height);
+  ofHairCv = mk(); ofHairCv.getContext('2d').putImageData(hair, 0, 0);
+  ofBaseCv = mk();
+  // her legs in tights from the hips to below the knee (the photo's were hidden or shadowed by the skirt),
+  // in the photo's own shading, fading into the photo's lower legs so the join doesn't show
+  const thighs = mk(), t = thighs.getContext('2d');
+  for (const [path, x0, x1, cols] of [[new Path2D('M22,110 L50,110 L50,134 C49,150 44,168 41,186 L41,194 L27,194 L27,186 C26,160 22,130 22,110 Z'), 22, 50, ['#cfc4cd', '#d6ccd5', '#c4b5bf', '#ad989e']],
+    [new Path2D('M48,110 L77,110 C78,134 80,160 81,186 L81,194 L67,194 L66,186 C62,168 52,150 49,134 Z'), 48, 81, ['#bcaab3', '#cfc1cb', '#c6b8c1', '#ac9ea4']]]) {
+    const gr = t.createLinearGradient(x0, 0, x1, 0);
+    cols.forEach((c, j) => gr.addColorStop([0, 0.25, 0.65, 1][j], c));
+    t.fillStyle = gr; t.fill(path);
+  }
+  t.globalCompositeOperation = 'source-atop'; t.fillStyle = 'rgba(90,60,80,.12)'; t.fillRect(0, 110, im.width, 8);
+  const b = ofBaseCv.getContext('2d');
+  b.drawImage(thighs, 0, 0);
+  b.drawImage(src, 0, 0);
+  t.globalCompositeOperation = 'destination-in';
+  const fade = t.createLinearGradient(0, 184, 0, 196); fade.addColorStop(0, 'rgba(0,0,0,1)'); fade.addColorStop(1, 'rgba(0,0,0,0)');
+  t.fillStyle = fade; t.fillRect(0, 0, im.width, im.height);
+  b.globalCompositeOperation = 'source-atop'; b.drawImage(thighs, 0, 0); b.globalCompositeOperation = 'source-over';
+}
+// draw part of an outfit into a scratch canvas (in sprite space, at screen resolution), so it can be shaded
+// as one piece and given a shadow; returns the canvas, laid out over sprite x -50..150, y -90..250
+const OF_LX = 50, OFL_Y = 90, OF_LW = 200, OF_LH = 340, ofLayers = [];
+function ofLayer(n, fn) {
+  const T = ctx.getTransform(), r = Math.hypot(T.a, T.b) || 1;
+  const c = ofLayers[n] || (ofLayers[n] = document.createElement('canvas'));
+  const w = Math.ceil(OF_LW * r), h = Math.ceil(OF_LH * r);
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  const o = c.getContext('2d'), main = ctx;
+  o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, w, h);
+  o.setTransform(r, 0, 0, r, OF_LX * r, OFL_Y * r); o.lineJoin = 'round'; o.lineCap = 'round';
+  o.globalCompositeOperation = 'source-over'; o.globalAlpha = 1;
+  ctx = o;
+  try { fn(); } finally { ctx = main; }
+  return c;
+}
+const ofPut = (c, dx = 0, dy = 0) => ctx.drawImage(c, -OF_LX + dx, -OFL_Y + dy, OF_LW, OF_LH);
+// paint over what is already in a scratch layer only (so shading stays inside the clothes)
+function ofOnto(fn) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; fn(); ctx.restore(); }
+// a dark copy of a layer, for its shadow
+function ofShadowOf(c, n) {
+  const s = ofLayers[n] || (ofLayers[n] = document.createElement('canvas'));
+  if (s.width !== c.width || s.height !== c.height) { s.width = c.width; s.height = c.height; }
+  const o = s.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.globalCompositeOperation = 'source-over'; o.clearRect(0, 0, s.width, s.height);
+  o.drawImage(c, 0, 0); o.globalCompositeOperation = 'source-in'; o.fillStyle = '#2a1030'; o.fillRect(0, 0, s.width, s.height);
+  return s;
+}
+let ofArmShadow = null;
+// round shading for a body garment: darker down her sides and under her arms, the chin's shadow on the chest,
+// a little shade under the waist, and the shadows her arms throw onto it
+function ofShadeBody() {
+  ofOnto(() => {
+    const hg = (x0, x1, a) => { const gr = ctx.createLinearGradient(x0, 0, x1, 0);
+      gr.addColorStop(0, `rgba(42,16,80,${a})`); gr.addColorStop(0.22, `rgba(42,16,80,${a * 0.3})`); gr.addColorStop(0.42, 'rgba(255,255,255,.10)');
+      gr.addColorStop(0.55, 'rgba(255,255,255,0)'); gr.addColorStop(0.8, `rgba(42,16,80,${a * 0.35})`); gr.addColorStop(1, `rgba(42,16,80,${a * 1.1})`); return gr; };
+    // the torso's shading melts into the wider skirt's between the waist and the hips
+    const top = hg(22, 77, 0.32), low = hg(-8, 106, 0.3);
+    ctx.fillStyle = top; ctx.fillRect(-40, -40, 180, 124);
+    for (let y = 84; y < 108; y += 2) {
+      const k = (y - 84) / 24;
+      ctx.globalAlpha = 1 - k; ctx.fillStyle = top; ctx.fillRect(-40, y, 180, 2);
+      ctx.globalAlpha = k; ctx.fillStyle = low; ctx.fillRect(-40, y, 180, 2);
+    }
+    ctx.globalAlpha = 1; ctx.fillStyle = low; ctx.fillRect(-40, 108, 180, 200);
+    const fade = ctx.createLinearGradient(0, 86, 0, 104); fade.addColorStop(0, 'rgba(42,16,80,0)'); fade.addColorStop(0.5, 'rgba(42,16,80,.12)'); fade.addColorStop(1, 'rgba(42,16,80,0)');
+    ctx.fillStyle = fade; ctx.fillRect(-40, 86, 180, 18);
+    const chin = ctx.createRadialGradient(49, 52, 2, 49, 54, 17); chin.addColorStop(0, 'rgba(60,20,50,.34)'); chin.addColorStop(1, 'rgba(60,20,50,0)');
+    ctx.fillStyle = chin; ctx.fillRect(28, 40, 42, 34);
+    const arms = ofArmShadow || (ofArmShadow = ofShadowOf(aubArmsImage(), 9));
+    ctx.globalAlpha = 0.22; ctx.drawImage(arms, 2.5, 1.5); ctx.drawImage(arms, -2.5, 1.5);
+  });
+}
+// sleeves: round across each arm
+function ofShadeArms() {
+  ofOnto(() => {
+    const gr = ctx.createLinearGradient(6, 0, 92, 0), d = a => `rgba(42,16,80,${a})`;
+    for (const [k, c] of [[0, d(0.3)], [0.1, 'rgba(255,255,255,.12)'], [0.2, d(0.06)], [0.3, d(0.3)], [0.7, d(0.3)], [0.8, d(0.08)], [0.88, 'rgba(255,255,255,.1)'], [1, d(0.32)]]) gr.addColorStop(k, c);
+    ctx.fillStyle = gr; ctx.fillRect(-40, 40, 180, 110);
+  });
+}
 // Aubrey wearing a list of pieces (old CLOTHES or new OF_WEAR), same layering as drawDressedAubrey
 // ghosts: pieces still to find, drawn as soft white silhouettes; snaps: {id: scale} for a piece popping into place
 function ofDressed(x, gy, h, worn, lift = 0, ghosts = [], snaps = {}) {
   const im = IMG.idle_front, s = h / im.height, lw = 1.2 / s;
-  drawAubrey(x, gy, 'idle_front', 1, lift, s);
+  const items = worn.map(id => [id, ofPiece(id)]), on = f => items.filter(([, c]) => f(c));
+  ofCutouts();
+  ctx.fillStyle = 'rgba(40,20,60,.2)'; ellipse(x, gy - 2, 30 * s / AUB_SCALE * (1 - lift / 300), 6);
   ctx.save(); ctx.translate(x - im.width * s / 2, gy - lift - h); ctx.scale(s, s);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   // scale a piece about its own middle (or each foot) while it snaps on
@@ -2238,9 +2493,12 @@ function ofDressed(x, gy, h, worn, lift = 0, ghosts = [], snaps = {}) {
     const [cx, cy] = c.pair ? [0, 0] : [(c.box[0] + c.box[2]) / 2, (c.box[1] + c.box[3]) / 2];
     ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy); fn(); ctx.restore();
   };
-  const paint = (id, c) => (c.pair ? AUB_FEET.forEach(([fx, fy]) => {
-    const k = snaps[id] || 1; ctx.save(); ctx.translate(fx, fy); ctx.scale(k, k); c.one(0, 0, lw); ctx.restore();
+  const paint = (id, c) => (c.pair ? OF_FEET.forEach(([fx, fy, dir, lean]) => {
+    const k = snaps[id] || 1; ctx.save(); ctx.translate(fx, fy); ctx.transform(1, 0, lean, 1, 0, 0); ctx.scale(k * dir, k); c.one(0, 0, lw); ctx.restore();
   }) : sized(id, c, () => c.draw(lw)));
+  // the backs of hats (brims and crowns behind her head) go behind her
+  for (const [id, c] of on(c => c.back)) sized(id, c, () => c.back(lw));
+  ctx.drawImage(on(c => ofLow(c) && c.legs).length ? ofNoLegsCv : on(ofLow).length ? ofBaseCv : im, 0, 0);
   if (ghosts.length) {
     // dashed 'ghost' outlines of the pieces still to find (cached; drawn in sprite space)
     const gi = ofGhostImage(ghosts);
@@ -2248,11 +2506,33 @@ function ofDressed(x, gy, h, worn, lift = 0, ghosts = [], snaps = {}) {
     ctx.drawImage(gi, -OF_GPAD, -OF_GPAD, im.width + OF_GPAD * 2, im.height + OF_GPAD * 2);
     ctx.restore();
   }
-  const items = worn.map(id => [id, ofPiece(id)]);
-  for (const [id, c] of items) if (c.layer === 0) paint(id, c);
-  if (items.some(([, c]) => c.layer === 0)) ctx.drawImage(aubArmsImage(), 0, 0);
-  for (const [id, c] of items) if (c.over) sized(id, c, () => c.over(lw));
-  for (const [id, c] of items) if (c.layer === 1) paint(id, c);
+  const body = on(c => c.layer === 0), over = on(c => c.over), top = on(c => c.layer === 1 && !c.pair), feet = on(c => c.layer === 1 && c.pair);
+  if (body.length) {
+    ofPut(ofLayer(0, () => { for (const [id, c] of body) paint(id, c); ofShadeBody(); }));
+    ctx.drawImage(aubArmsImage(), 0, 0);
+  }
+  if (over.length) {
+    // sleeves throw a little shadow onto the body, then go on, rounded over her arms
+    const sl = ofLayer(1, () => { for (const [id, c] of over) sized(id, c, () => c.over(lw)); ofShadeArms(); });
+    ctx.save(); ctx.globalAlpha = 0.18; ofPut(ofShadowOf(sl, 2), 0, 1.5); ctx.restore();
+    ofPut(sl);
+  }
+  // her long hair falls over the shoulders of whatever she wears
+  if (body.length || over.length) ctx.drawImage(ofHairCv, 0, 0);
+  for (const [id, c] of feet) paint(id, c);
+  for (const [id, c] of top) {
+    if (!ofOnHead(c)) {
+      paint(id, c);
+      // things she holds: her fingers go back round the handle
+      if (c.hand) { ctx.save(); ctx.beginPath(); c.hand === 'L' ? ctx.rect(6, 127, 18, 17) : ctx.rect(72, 125, 18, 19); ctx.clip(); ctx.drawImage(aubArmsImage(), 0, 0); ctx.restore(); }
+      continue;
+    }
+    // head pieces: a soft shadow on her hair and forehead just under them
+    const L = ofLayer(3, () => paint(id, c));
+    ctx.save(); ctx.beginPath(); ctx.ellipse(50, 30, 30, 40, 0, 0, Math.PI * 2); ctx.clip();
+    ctx.globalAlpha = 0.26; ofPut(ofShadowOf(L, 4), 0.5, 3); ctx.restore();
+    ofPut(L);
+  }
   ctx.restore();
 }
 
@@ -2268,7 +2548,7 @@ function ofGhostImage(ids) {
   ctx = a.getContext('2d');
   try {
     ctx.scale(R, R); ctx.translate(OF_GPAD, OF_GPAD); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    for (const id of ids) { const c = ofPiece(id); if (c.pair) AUB_FEET.forEach(([fx, fy]) => c.one(fx, fy, lw)); else c.draw(lw); c.over?.(lw); }
+    for (const id of ids) { const c = ofPiece(id); if (c.pair) AUB_FEET.forEach(([fx, fy]) => c.one(fx, fy, lw)); else { c.back?.(lw); c.draw(lw); } c.over?.(lw); }
   } finally { ctx = main; }
   const ax = a.getContext('2d'); ax.globalCompositeOperation = 'source-in'; ax.fillStyle = '#ffffff'; ax.fillRect(0, 0, cw, ch);
   // rim = silhouette grown by a few pixels, minus the silhouette, kept only on diagonal stripes so it reads as dashes
@@ -2511,7 +2791,7 @@ function ofDrawPiece(id, x, y, size) {
   ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   const lw = 1.3 / k;
-  if (c.pair) { c.one(7, 0, lw); c.one(23, 0, lw); } else { c.draw(lw); c.over?.(lw); }
+  if (c.pair) { c.one(7, 0, lw); c.one(23, 0, lw); } else { c.back?.(lw); c.draw(lw); c.over?.(lw); }
   ctx.restore();
 }
 // pick the looks for a game: one everyday look plus silly dress-up ones; the top tier adds a look-alike pair
