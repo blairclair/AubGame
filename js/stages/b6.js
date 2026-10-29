@@ -278,7 +278,10 @@
         glow(x, y - 8, 44, m.col, 0.6);
         crystal(x - 7, y + 14, 36, 15, m.col, -0.22); crystal(x + 8, y + 14, 26, 12, mix(m.col, '#ffffff', 0.3), 0.3);
       }
-      glow(EB_X, g.by, 95, '#b8a0ff', 0.28);
+      // the longer she goes without squeaking, the darker it gets, until the cave is pitch black (she still shows on top)
+      const black = clamp((g.dark - 1.2) / 3.5, 0, 1);
+      if (black > 0) { ctx.fillStyle = `rgba(3,1,10,${black})`; ctx.fillRect(0, 0, W, H); }
+      glow(EB_X, g.by, 95, '#b8a0ff', 0.28 * (1 - black * 0.6));
       if (g.inv <= 0 || Math.floor(g.inv * 12) % 2 === 0) aubBat(EB_X, g.by, S.t, 0.12 + Math.sin(S.t * 3) * 0.05);
       // how far to the way out
       const k = clamp(g.dist / g.len, 0, 1);
