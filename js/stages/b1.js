@@ -122,183 +122,1125 @@
     }
   };
 
-  // --- life-cycle pictures (each fits a ~120px box centred on x, y) ----------------------
+  // --- little plant pieces (also used by the gnome village) ----------------------------
   function leafShape(x, y, rx, ry, rot, col = '#5ac85a') {
     inkEllipse(x, y, rx, ry, rot, col, 1.8);
     ctx.strokeStyle = mix(col, '#1a4a1a', 0.35); ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.moveTo(x - Math.cos(rot) * rx * 0.9, y - Math.sin(rot) * rx * 0.9); ctx.lineTo(x + Math.cos(rot) * rx * 0.9, y + Math.sin(rot) * rx * 0.9); ctx.stroke();
   }
-  function water(x, y, w, h) { rrect(x - w / 2, y - h / 2, w, h, 16, '#8adcf8'); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x - w / 2 + 14 + i * 30, y - h / 2 + 14 + i * 18); ctx.lineTo(x - w / 2 + 34 + i * 30, y - h / 2 + 14 + i * 18); ctx.stroke(); } }
-  function frogShape(x, y, s, tail) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    if (tail) ink(P2('M-20,8 C-40,6 -52,-4 -58,4 C-50,16 -36,16 -18,16 Z'), '#7fd65a', 1.6);
-    for (const d of [-1, 1]) inkEllipse(d * 22, 18, 14, 7, d * 0.3, '#5ab84a', 1.6);
-    inkEllipse(0, 4, 28, 20, 0, '#7fd65a', 1.8);
-    for (const d of [-1, 1]) { inkCircle(d * 13, -14, 9, '#7fd65a', 1.6); }
-    ctx.fillStyle = '#7fd65a'; ellipse(0, -2, 24, 12);
-    for (const d of [-1, 1]) { ctx.fillStyle = '#fff'; circle(d * 13, -15, 6); ctx.fillStyle = '#2a1a2a'; circle(d * 13 + 1, -15, 3.2); }
-    ctx.strokeStyle = '#2a5a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 10, 0.3, Math.PI - 0.3); ctx.stroke();
-    ctx.fillStyle = '#ff9ab0'; ellipse(-18, 4, 4, 2.5); ellipse(18, 4, 4, 2.5);
-    ctx.restore();
-  }
-  function soil(x, y) { inkEllipse(x, y, 46, 14, 0, '#9a6a44', 1.8); ctx.fillStyle = '#7a5034'; for (let i = 0; i < 6; i++) circle(x - 30 + i * 12, y + (i % 2) * 4, 2); }
   function stem(x, y0, y1, leaves) {
     ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
     ctx.strokeStyle = '#4fae4a'; ctx.lineWidth = 4; ctx.stroke();
     for (const [ly, d] of leaves) leafShape(x + d * 16, ly, 16, 7, d * -0.5, '#5ac85a');
   }
-  const LC_PICS = {
-    leafegg(x, y) { leafShape(x, y + 8, 52, 24, -0.15); for (const [dx, dy] of [[-12, 0], [0, -4], [12, 1]]) inkEllipse(x + dx, y + dy, 6, 8, 0, '#fff6d0', 1.2); },
-    caterpillar(x, y) {
-      leafShape(x, y + 26, 54, 14, 0.05);
-      for (let i = 4; i >= 0; i--) inkCircle(x - 36 + i * 17, y + 6 - Math.sin(i * 0.9) * 10, 12, i % 2 ? '#7ad84a' : '#9ae84a', 1.6);
-      for (let i = 0; i < 4; i++) { ctx.fillStyle = '#ffd23a'; circle(x - 36 + i * 17, y - 2 - Math.sin(i * 0.9) * 10, 3); }
-      const hx = x + 34, hy = y + 6 - Math.sin(4 * 0.9) * 10;
-      ctx.fillStyle = '#2a1a2a'; circle(hx + 3, hy - 3, 2.6); ctx.strokeStyle = '#2a1a2a'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(hx, hy - 10); ctx.lineTo(hx + 4, hy - 20); ctx.moveTo(hx + 5, hy - 9); ctx.lineTo(hx + 12, hy - 17); ctx.stroke();
-    },
-    chrysalis(x, y) {
-      ctx.strokeStyle = OL; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(x - 50, y - 44); ctx.lineTo(x + 50, y - 40); ctx.stroke();
-      ctx.strokeStyle = '#a0683a'; ctx.lineWidth = 5; ctx.stroke();
-      ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 42); ctx.lineTo(x, y - 32); ctx.stroke();
-      ink(P2(`M${x},${y - 32} C${x + 22},${y - 22} ${x + 22},${y + 22} ${x},${y + 44} C${x - 22},${y + 22} ${x - 22},${y - 22} ${x},${y - 32} Z`), '#7ad8a0', 2);
-      ctx.fillStyle = '#ffd23a'; for (const dy of [-12, 0]) { circle(x - 6, y + dy, 2.5); circle(x + 6, y + dy, 2.5); }
-      ctx.fillStyle = 'rgba(255,255,255,.5)'; ellipse(x - 7, y - 4, 3, 12);
-    },
-    butterfly(x, y) { drawButterfly(x, y, 1, S.t * 1.2, '#ff8fc8', '#ffd84a'); },
-    frogspawn(x, y) {
-      water(x, y, 120, 96);
-      for (const [dx, dy] of [[-24, -14], [-6, -20], [12, -12], [-18, 6], [2, 0], [20, 8], [-6, 18], [14, -28], [30, -8]]) {
-        ctx.fillStyle = 'rgba(255,255,255,.75)'; circle(x + dx, y + dy, 10); ctx.strokeStyle = 'rgba(91,63,115,.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + dx, y + dy, 10, 0, TAU); ctx.stroke();
-        ctx.fillStyle = '#2a1a2a'; circle(x + dx, y + dy, 3.4);
+  // --- butterfly life cycle: live every stage of a monarch's life, then a chicken's, and close each circle ----
+  const BC_TOP = 122;                       // the play area starts under the prompt strip
+  const BC_CYC = [
+    { name: 'Butterfly', who: 'a monarch butterfly', steps: [['egg', 'Egg', '#f0a030'], ['eat', 'Caterpillar', '#4fb04a'], ['spin', 'Chrysalis', '#26a888'], ['emerge', 'Butterfly', '#ff7a1a']],
+      loop: 'Egg, caterpillar, chrysalis, butterfly. Then the butterfly lays a new egg, and round it goes again. That is a life cycle!' },
+    { name: 'Chicken', who: 'a chicken', steps: [['warm', 'Egg', '#d08a3a'], ['hatch', 'Hatching', '#f0a030'], ['chick', 'Chick', '#d8a800'], ['hen', 'Hen', '#e0503a']],
+      loop: 'Egg, hatching, chick, hen. Then the hen lays a new egg, and round it goes again. That is a life cycle too!' },
+  ];
+  const BC_LOSS = 0.05;                     // score lost per mistake
+  const bcT = (g, a) => a[g.tier - 1];      // pick a value by tier
+  const bcLocal = (x, y, rot, px, py) => { const dx = px - x, dy = py - y, c = Math.cos(rot), s = Math.sin(rot); return [dx * c + dy * s, -dx * s + dy * c]; };
+  const bcWorld = (x, y, rot, lx, ly) => [x + lx * Math.cos(rot) - ly * Math.sin(rot), y + lx * Math.sin(rot) + ly * Math.cos(rot)];
+  const bcC = (x, y, rx, ry = rx, rot = 0) => { const p = new Path2D(); p.ellipse(x, y, rx, ry, rot, 0, TAU); return p; };
+  // outline every shape first, then fill them, so overlapping parts read as one body
+  function bcInk(list, lw = 2.2) {
+    ctx.strokeStyle = OL; ctx.lineWidth = lw * 2; ctx.lineJoin = 'round';
+    for (const [p] of list) ctx.stroke(p);
+    for (const [p, f] of list) { ctx.fillStyle = f; ctx.fill(p); }
+  }
+  function bcLeafP(len, wid) {
+    const p = new Path2D(); p.moveTo(0, 0);
+    p.bezierCurveTo(len * 0.25, -wid * 1.3, len * 0.75, -wid * 1.1, len, 0);
+    p.bezierCurveTo(len * 0.75, wid * 1.1, len * 0.25, wid * 1.3, 0, 0); p.closePath(); return p;
+  }
+  // a milkweed leaf growing from its stalk end (x, y); turn 0..1 rolls it over to the pale, fuzzy underside
+  function bcLeaf(x, y, len, wid, rot, turn = 0, col = '#4fb84a') {
+    const k = Math.cos(turn * Math.PI), under = k < 0;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(1, Math.max(0.08, Math.abs(k)));
+    ink(bcLeafP(len, wid), under ? '#b9de92' : col, 2);
+    ctx.strokeStyle = under ? '#eaf8d6' : mix(col, '#eaffd0', 0.5); ctx.lineCap = 'round';
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(len * 0.93, 0); ctx.stroke();
+    ctx.lineWidth = 1.6;
+    for (let i = 1; i < 6; i++) {
+      const vx = len * i / 6.6, w = wid * 0.8 * Math.sin((i / 6.6 + 0.12) * Math.PI);
+      for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(vx, 0); ctx.quadraticCurveTo(vx + len * 0.07, d * w * 0.55, vx + len * 0.15, d * w); ctx.stroke(); }
+    }
+    if (under) { ctx.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 16; i++) circle(len * (0.12 + (i * 0.37) % 0.78), wid * (((i * 0.61) % 1.1) - 0.55), 1.4); }
+    ctx.restore();
+  }
+  // the monarch's egg: a tiny cream football with ridges down its sides
+  function bcTinyEgg(x, y, s) {
+    inkEllipse(x, y, 5 * s, 7.5 * s, 0, '#fff4c4', Math.max(1, s * 0.45));
+    ctx.strokeStyle = 'rgba(190,150,80,.75)'; ctx.lineWidth = Math.max(1, s * 0.45);
+    for (const d of [-0.55, 0, 0.55]) { ctx.beginPath(); ctx.moveTo(x + d * 4 * s, y - 6.5 * s); ctx.quadraticCurveTo(x + d * 7 * s, y, x + d * 4.5 * s, y + 6.8 * s); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ellipse(x - 2 * s, y - 2.5 * s, 1.2 * s, 2.4 * s);
+  }
+  // a monarch from the front; wing 0..1 unfolds crumpled wings, wet 0..1 makes them dark and shiny
+  const BC_UPW = P2('M2,-4 C10,-38 48,-46 52,-20 C54,-6 30,4 2,2 Z'), BC_LOW = P2('M2,2 C24,4 40,14 33,32 C27,45 6,33 2,8 Z');
+  function bcMonarch(x, y, s, flap, rot = 0, wing = 1, wet = 0) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+    const k = 0.22 + 0.78 * Math.abs(Math.cos(flap * Math.PI));
+    const orange = mix('#ff8a1a', '#b85a20', wet * 0.6);
+    for (const side of [-1, 1]) {
+      ctx.save(); ctx.scale(side * k * (0.3 + 0.7 * wing), 0.42 + 0.58 * wing);
+      if (wing < 1) ctx.rotate((1 - wing) * 0.6);
+      ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.stroke(BC_UPW); ctx.stroke(BC_LOW);
+      ctx.fillStyle = '#2a1622'; ctx.fill(BC_UPW); ctx.fill(BC_LOW);
+      for (const [p, cx, cy] of [[BC_UPW, 22, -18], [BC_LOW, 16, 16]]) {
+        ctx.save(); ctx.translate(cx, cy); ctx.scale(0.74, 0.72); ctx.translate(-cx, -cy); ctx.fillStyle = orange; ctx.fill(p); ctx.restore();
       }
-    },
-    tadpole(x, y) {
-      water(x, y, 120, 96);
-      for (const [dx, dy, s] of [[-14, -8, 1], [24, 20, 0.7]]) {
-        ctx.save(); ctx.translate(x + dx, y + dy); ctx.scale(s, s);
-        ink(P2(`M0,-4 C-16,-10 -30,${2 + Math.sin(S.t * 8) * 6} -42,${Math.sin(S.t * 8) * 8} C-30,${8 + Math.sin(S.t * 8) * 4} -16,8 0,6 Z`), '#5a4a3a', 1.4);
-        inkEllipse(6, 0, 14, 11, 0, '#5a4a3a', 1.6);
-        ctx.fillStyle = '#fff'; circle(12, -3, 3); ctx.fillStyle = '#000'; circle(13, -3, 1.6);
+      ctx.strokeStyle = '#2a1622'; ctx.lineWidth = 1.6;
+      for (const [ex, ey] of [[46, -30], [36, -37], [24, -37], [44, -16]]) { ctx.beginPath(); ctx.moveTo(4, -2); ctx.quadraticCurveTo((4 + ex) / 2, ey * 0.35, ex, ey); ctx.stroke(); }
+      for (const [ex, ey] of [[29, 28], [19, 33], [33, 16]]) { ctx.beginPath(); ctx.moveTo(4, 4); ctx.lineTo(ex, ey); ctx.stroke(); }
+      ctx.fillStyle = '#fff';
+      for (const [dx, dy] of [[50, -22], [49, -30], [43, -38], [33, -42], [22, -41], [35, 33], [27, 40], [37, 22]]) circle(dx, dy, 1.6);
+      ctx.restore();
+    }
+    bcInk([[bcC(0, 4, 4.6, 18), '#2a1622'], [bcC(0, -14, 5.6), '#2a1622']], 1.4);
+    ctx.fillStyle = '#fff'; for (const dy of [0, 8]) { circle(-1.6, dy, 1.1); circle(1.6, dy + 3, 1.1); }
+    ctx.strokeStyle = '#2a1622'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(d * 2, -18); ctx.quadraticCurveTo(d * 7, -30, d * 12, -34); ctx.stroke(); ctx.fillStyle = '#2a1622'; circle(d * 12, -34, 2.6); }
+    if (wet > 0.02) { ctx.globalAlpha = wet * 0.7; ctx.fillStyle = '#ffffff'; for (const d of [-1, 1]) { ellipse(d * 24 * k * (0.3 + 0.7 * wing), -16, 3, 9, d * 0.5); circle(d * 18 * k, 18, 2.5); } ctx.globalAlpha = 1; }
+    ctx.restore();
+  }
+  // follow a trail back from the head to place the body segments
+  function bcBody(trail, n, gap, dir, hx, hy) {
+    const pts = [[hx, hy]]; let need = gap, px = hx, py = hy;
+    for (let i = trail.length - 1; i >= 0 && pts.length < n; i--) {
+      const [tx, ty] = trail[i]; let d = Math.hypot(tx - px, ty - py);
+      while (d >= need && pts.length < n) { const f = need / d; px += (tx - px) * f; py += (ty - py) * f; pts.push([px, py]); d = Math.hypot(tx - px, ty - py); need = gap; }
+      need -= d; px = tx; py = ty;
+    }
+    while (pts.length < n) { const l = pts[pts.length - 1]; pts.push([l[0] - Math.cos(dir) * gap, l[1] - Math.sin(dir) * gap]); }
+    return pts;
+  }
+  // a monarch caterpillar: yellow, black and white bands, black feelers at both ends; pts[0] is the head
+  function bcCaterpillar(pts, r, chew = 0, alpha = 1) {
+    const n = pts.length; if (n < 2) return;
+    const rs = pts.map((p, i) => r * (i === 0 ? 1 : 1 - (i / n) * 0.3));
+    ctx.save(); ctx.globalAlpha = alpha;
+    const feelers = (p, q, len, wig) => {
+      const a = Math.atan2(p[1] - q[1], p[0] - q[0]);
+      ctx.strokeStyle = '#231a28'; ctx.lineWidth = Math.max(2, r * 0.2); ctx.lineCap = 'round';
+      for (const d of [-0.55, 0.55]) {
+        const ex = p[0] + Math.cos(a + d) * len, ey = p[1] + Math.sin(a + d) * len;
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.quadraticCurveTo((p[0] + ex) / 2 + Math.sin(S.t * 5 + d) * wig, (p[1] + ey) / 2 - len * 0.25, ex, ey); ctx.stroke();
+      }
+    };
+    feelers(pts[0], pts[1], r * 1.9, 3); feelers(pts[n - 1], pts[n - 2], r * 1.4, 2);
+    ctx.fillStyle = OL; for (let i = 0; i < n; i++) circle(pts[i][0], pts[i][1], rs[i] + Math.max(2.4, r * 0.16));
+    for (let i = n - 1; i >= 1; i--) {
+      ctx.fillStyle = ['#ffd23a', '#2a2030', '#f8f6ec'][i % 3]; circle(pts[i][0], pts[i][1], rs[i]);
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; circle(pts[i][0] - rs[i] * 0.3, pts[i][1] - rs[i] * 0.35, rs[i] * 0.3);
+    }
+    const [hx, hy] = pts[0], a = Math.atan2(hy - pts[1][1], hx - pts[1][0]);
+    ctx.fillStyle = '#2a2030'; circle(hx, hy, r);
+    ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = r * 0.18;
+    ctx.beginPath(); ctx.arc(hx, hy, r * 0.62, a - 1.1, a + 1.1); ctx.stroke();
+    const ex = hx + Math.cos(a) * r * 0.35, ey = hy + Math.sin(a) * r * 0.35;
+    for (const d of [-1, 1]) {
+      const ox = ex + Math.cos(a + d * 1.4) * r * 0.42, oy = ey + Math.sin(a + d * 1.4) * r * 0.42;
+      ctx.fillStyle = '#fff'; circle(ox, oy, r * 0.24); ctx.fillStyle = '#231a28'; circle(ox + Math.cos(a) * r * 0.08, oy + Math.sin(a) * r * 0.08, r * 0.12);
+    }
+    if (chew > 0) { ctx.fillStyle = '#ff9ab0'; circle(hx + Math.cos(a) * r * 0.85, hy + Math.sin(a) * r * 0.85, r * (0.14 + 0.12 * Math.abs(Math.sin(S.t * 30)))); }
+    ctx.restore();
+  }
+  // a chrysalis hanging from (x, top); clear 0..1 shows the folded orange wings, empty draws the split shell
+  const BC_CHRYS = P2('M0,10 C26,18 32,58 22,86 C16,104 6,112 0,114 C-6,112 -16,104 -22,86 C-32,58 -26,18 0,10 Z');
+  function bcChrysalis(x, top, s, { col = '#5ad6a0', clear = 0, wob = 0, cracks = 0, gold = 1, empty = false } = {}) {
+    ctx.save(); ctx.translate(x, top); ctx.rotate(wob); ctx.scale(s, s);
+    ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 14); ctx.stroke();
+    ctx.strokeStyle = '#2a2030'; ctx.lineWidth = 2.5; ctx.stroke();
+    if (empty) {
+      ctx.globalAlpha = 0.75; ink(BC_CHRYS, 'rgba(235,245,240,.85)', 1.6); ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(255,255,255,.6)'; ellipse(-9, 50, 4, 16, 0.1);
+      ctx.restore(); return;
+    }
+    ink(BC_CHRYS, mix(col, '#2c2030', clear * 0.7), 2);
+    if (clear > 0) {
+      ctx.save(); ctx.clip(BC_CHRYS); ctx.globalAlpha = clear;
+      for (const d of [-1, 1]) {
+        ctx.save(); ctx.scale(d, 1);
+        ink(P2('M2,24 C-20,36 -24,78 -6,104 L4,100 C-6,78 -6,46 6,30 Z'), '#ff8a1a', 1.2);
+        ctx.strokeStyle = '#2a1622'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, 30); ctx.lineTo(-12, 70); ctx.moveTo(-2, 40); ctx.lineTo(-4, 92); ctx.stroke();
+        ctx.fillStyle = '#fff'; for (const dy of [44, 62, 80]) circle(-17, dy, 1.6);
         ctx.restore();
       }
-    },
-    froglet(x, y) { water(x, y + 20, 120, 50); frogShape(x + 10, y + 2, 0.85, true); },
-    frog(x, y) { inkEllipse(x, y + 26, 50, 13, 0, '#5ac85a', 1.6); frogShape(x, y, 1.05, false); },
-    seed(x, y) { soil(x, y + 24); ink(P2(`M${x},${y - 8} C${x + 14},${y + 2} ${x + 10},${y + 18} ${x},${y + 20} C${x - 10},${y + 18} ${x - 14},${y + 2} ${x},${y - 8} Z`), '#c8904a', 2); ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - 2); ctx.lineTo(x, y + 14); ctx.stroke(); },
-    sprout(x, y) { soil(x, y + 34); stem(x, y + 30, y - 6, []); leafShape(x - 16, y - 10, 17, 8, 0.4); leafShape(x + 16, y - 10, 17, 8, -0.4); },
-    bud(x, y) {
-      soil(x, y + 40); stem(x, y + 36, y - 22, [[y + 14, -1], [y + 2, 1]]);
-      ink(P2(`M${x},${y - 50} C${x + 14},${y - 40} ${x + 12},${y - 22} ${x},${y - 18} C${x - 12},${y - 22} ${x - 14},${y - 40} ${x},${y - 50} Z`), '#ffe066', 2);
-      ink(P2(`M${x - 11},${y - 30} C${x - 8},${y - 18} ${x + 8},${y - 18} ${x + 11},${y - 30} C${x + 4},${y - 22} ${x - 4},${y - 22} ${x - 11},${y - 30} Z`), '#5ac85a', 1.5);
-    },
-    flower(x, y) {
-      soil(x, y + 42); stem(x, y + 38, y - 10, [[y + 18, -1], [y + 4, 1]]);
-      for (let i = 0; i < 12; i++) { const a = i * TAU / 12; inkEllipse(x + Math.cos(a) * 20, y - 26 + Math.sin(a) * 20, 12, 6, a, '#ffd23a', 1.4); }
-      for (let i = 0; i < 12; i++) { const a = i * TAU / 12; ctx.fillStyle = '#ffd23a'; ellipse(x + Math.cos(a) * 20, y - 26 + Math.sin(a) * 20, 12, 6, a); }
-      inkCircle(x, y - 26, 13, '#8a5030', 1.5); ctx.fillStyle = '#5a3018'; for (let i = 0; i < 6; i++) circle(x - 5 + (i % 3) * 5, y - 30 + Math.floor(i / 3) * 7, 1.6);
-    },
-    egg(x, y) {
-      inkEllipse(x, y + 22, 48, 16, 0, '#d8a860', 1.8);
-      ctx.strokeStyle = '#a07030'; ctx.lineWidth = 2; for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.moveTo(x - 44 + i * 13, y + 12); ctx.lineTo(x - 36 + i * 13, y + 32); ctx.stroke(); }
-      inkEllipse(x, y - 2, 22, 28, 0, '#fffaf0', 2);
-      ctx.fillStyle = 'rgba(255,255,255,.9)'; ellipse(x - 8, y - 12, 4, 8);
-    },
-    hatch(x, y) { this.egg(x, y); emoji('🐣', x, y - 8, 54); },
-    chick(x, y) { inkEllipse(x, y + 30, 46, 10, 0, '#a8e07a', 1.4); emoji('🐥', x, y, 70); },
-    hen(x, y) { inkEllipse(x, y + 34, 46, 10, 0, '#a8e07a', 1.4); emoji('🐔', x, y, 82); },
-  };
-  const CYCLES = {
-    butterfly: { who: 'a butterfly', steps: [['leafegg', 'egg'], ['caterpillar', 'caterpillar'], ['chrysalis', 'cocoon'], ['butterfly', 'butterfly']] },
-    frog: { who: 'a frog', steps: [['frogspawn', 'eggs'], ['tadpole', 'tadpole'], ['froglet', 'froglet'], ['frog', 'frog']] },
-    plant: { who: 'a sunflower', steps: [['seed', 'seed'], ['sprout', 'sprout'], ['bud', 'bud'], ['flower', 'flower']] },
-    chicken: { who: 'a chicken', steps: [['egg', 'egg'], ['hatch', 'hatching'], ['chick', 'chick'], ['hen', 'hen']] },
-  };
-  const LC_SLOT_Y = 150, LC_CARD_Y = 334, LC_W = 168, LC_H = 156;
+      ctx.restore();
+    }
+    if (gold > 0) {
+      ctx.globalAlpha = gold; ctx.fillStyle = '#ffd23a';
+      for (let i = 0; i < 9; i++) { const f = i / 8; circle(-20 + f * 40, 38 + Math.sin(f * Math.PI) * 6, 2.2); }
+      ctx.strokeStyle = '#2a2030'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-20, 40); ctx.quadraticCurveTo(0, 50, 20, 40); ctx.stroke();
+      for (const [dx, dy] of [[-12, 22], [12, 22], [-8, 98], [8, 98], [0, 104]]) circle(dx, dy, 2.4);
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ellipse(-10, 60, 4, 18, 0.1);
+    ctx.strokeStyle = '#fffaf0'; ctx.lineWidth = 2.5;
+    for (let i = 0; i < cracks; i++) { const y0 = 92 - i * 16; ctx.beginPath(); ctx.moveTo(-14, y0); ctx.lineTo(-5, y0 - 7); ctx.lineTo(2, y0 + 2); ctx.lineTo(10, y0 - 6); ctx.lineTo(15, y0); ctx.stroke(); }
+    ctx.restore();
+  }
+  function bcBranch(y) {
+    ctx.strokeStyle = OL; ctx.lineWidth = 20; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-20, y + 14); ctx.quadraticCurveTo(480, y - 16, W + 20, y + 10); ctx.stroke();
+    ctx.strokeStyle = '#a0683a'; ctx.lineWidth = 15; ctx.stroke();
+    ctx.strokeStyle = '#c08850'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(40, y + 8); ctx.quadraticCurveTo(480, y - 22, W - 40, y + 2); ctx.stroke();
+    for (const [x, d, r] of [[150, 1, 0.5], [300, -1, 2.6], [690, 1, 0.4], [840, -1, 2.7]]) bcLeaf(x, y + d * 4, 90, 26, r, 0, '#4fb84a');
+  }
+  function bcMilkFlowers(x, y, r) {
+    ctx.fillStyle = OL; circle(x, y, r + 2);
+    for (let i = 0; i < 16; i++) {
+      const a = i * 2.4, d = r * 0.75 * Math.sqrt((i + 0.5) / 16);
+      flower(x + Math.cos(a) * d, y + Math.sin(a) * d - 2, r * 0.32, i % 3 ? '#ff8ac0' : '#ffb0d6', '#fff0f6', 1);
+    }
+  }
+  // --- the chicken's things ---
+  function bcEggPath(rx, ry) {
+    const p = new Path2D(); p.moveTo(0, -ry);
+    p.bezierCurveTo(rx * 0.72, -ry, rx, -ry * 0.2, rx, ry * 0.25); p.bezierCurveTo(rx, ry * 0.78, rx * 0.56, ry, 0, ry);
+    p.bezierCurveTo(-rx * 0.56, ry, -rx, ry * 0.78, -rx, ry * 0.25); p.bezierCurveTo(-rx, -ry * 0.2, -rx * 0.72, -ry, 0, -ry);
+    p.closePath(); return p;
+  }
+  // a hen's egg; roll turns it (a little heart drawn on one side shows it turning)
+  function bcHenEgg(x, y, rx, ry, tilt = 0, roll = null) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
+    const p = bcEggPath(rx, ry); ink(p, '#f4e2c6', 2.2);
+    ctx.save(); ctx.clip(p);
+    ctx.fillStyle = 'rgba(160,110,60,.25)'; for (let i = 0; i < 12; i++) circle(Math.sin(i * 2.3) * rx * 0.7, Math.cos(i * 1.7) * ry * 0.7, 1.6 + (i % 3));
+    ctx.fillStyle = 'rgba(190,140,90,.25)'; ellipse(rx * 0.25, ry * 0.4, rx * 0.8, ry * 0.6);
+    if (roll !== null && Math.cos(roll) > 0) { ctx.save(); ctx.translate(Math.sin(roll) * rx * 0.62, 0); ctx.scale(Math.cos(roll), 1); heart(0, -ry * 0.14, rx * 0.5, '#ff6fa0'); ctx.restore(); }
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,.8)'; ellipse(-rx * 0.4, -ry * 0.45, rx * 0.12, ry * 0.2, 0.3);
+    ctx.restore();
+  }
+  function bcNestBack(x, y, w) { inkEllipse(x, y, w / 2, w * 0.2, 0, '#c99a50', 2); ctx.fillStyle = '#8a6030'; ellipse(x, y - 2, w * 0.4, w * 0.13); }
+  function bcNestFront(x, y, w) {
+    const p = new Path2D(); p.ellipse(x, y, w / 2, w * 0.2, 0, 0, Math.PI); p.ellipse(x, y + w * 0.06, w * 0.42, w * 0.12, 0, Math.PI, 0, true); p.closePath();
+    ink(p, '#e0b860', 2);
+    ctx.strokeStyle = '#a87a30'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (let i = 0; i < 16; i++) { const f = i / 15, a = 0.15 + f * (Math.PI - 0.3), sx = x + Math.cos(a) * w * 0.46, sy = y + Math.sin(a) * w * 0.16; ctx.beginPath(); ctx.moveTo(sx - 12, sy - 4 + (i % 3) * 2); ctx.lineTo(sx + 12, sy + 3 - (i % 2) * 4); ctx.stroke(); }
+  }
+  function bcStraw(x, y, rot = 0, s = 1) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+    bcInk([[bcC(0, 0, 40, 15), '#f0cc60']], 2);
+    ctx.strokeStyle = '#c8a040'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (let i = 0; i < 9; i++) { const yy = -11 + i * 2.8; ctx.beginPath(); ctx.moveTo(-36 + (i % 3) * 3, yy); ctx.lineTo(36 - (i % 2) * 5, yy + 1); ctx.stroke(); }
+    ctx.strokeStyle = '#ffeaa0'; for (const [a, b] of [[-46, -6], [44, 4], [-42, 8], [46, -8]]) { ctx.beginPath(); ctx.moveTo(a * 0.75, b * 0.8); ctx.lineTo(a, b); ctx.stroke(); }
+    inkRect(-5, -16, 10, 32, '#e05a5a', 1.2, 3);
+    ctx.restore();
+  }
+  // a hen standing at (x, y) feet; sit 0..1 settles her down, peck 0..1 dips her head
+  function bcHen(x, y, s, dir = 1, sit = 0, peck = 0) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s * dir, s);
+    const by = -50 + sit * 26, hx = 32 + peck * 16, hy = by - 36 + peck * 34;
+    if (sit < 0.95) {
+      ctx.globalAlpha = 1 - sit; ctx.lineCap = 'round';
+      for (const d of [-9, 9]) {
+        ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(d, -24); ctx.lineTo(d + 2, 0); ctx.lineTo(d + 12, 2); ctx.stroke();
+        ctx.strokeStyle = '#ffb030'; ctx.lineWidth = 3.5; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    const tail = P2(`M-34,${by - 6} C-64,${by - 58} -76,${by - 30} -68,${by - 12} C-62,${by} -48,${by + 12} -30,${by + 14} Z`);
+    const comb = new Path2D(); for (const [cx, cy, r] of [[-8, -14, 6], [0, -17, 7], [8, -14, 6]]) comb.ellipse(hx + cx, hy + cy, r, r, 0, 0, TAU);
+    bcInk([[tail, '#8a3a1a'], [comb, '#ff3a3a'], [bcC(hx + 9, hy + 14, 5, 8), '#ff3a3a'], [bcC(0, by, 46, 33), '#c8642a'], [bcC(hx, hy, 18), '#c8642a']], 2.2);
+    ctx.fillStyle = '#c8642a'; ellipse(hx - 10, hy + 16, 14, 16, 0.4);
+    ctx.fillStyle = '#e8925a'; ellipse(22, by + 6, 20, 20);
+    ink(P2(`M-26,${by - 10} C-4,${by - 22} 18,${by - 6} 14,${by + 8} C8,${by + 22} -18,${by + 20} -30,${by + 8} Z`), '#a84a1e', 1.4);
+    ctx.strokeStyle = '#7a3010'; ctx.lineWidth = 1.6; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-14 + i * 10, by + 6, 6, 0.2, Math.PI - 0.2); ctx.stroke(); }
+    ctx.strokeStyle = '#6a2a10'; for (const k of [0, 1]) { ctx.beginPath(); ctx.moveTo(-40, by - 6 + k * 10); ctx.quadraticCurveTo(-56, by - 30 + k * 8, -64, by - 22 + k * 10); ctx.stroke(); }
+    ink(P2(`M${hx + 15},${hy - 4} L${hx + 30},${hy + 1} L${hx + 15},${hy + 6} Z`), '#ffc23a', 1.2);
+    ctx.fillStyle = '#fff'; circle(hx + 5, hy - 4, 4.5); ctx.fillStyle = '#231a28'; circle(hx + 6, hy - 4, 2.6);
+    ctx.restore();
+  }
+  // a chick (grow 0) that turns into a young hen with feathers and a comb (grow 1)
+  function bcChick(x, y, s, grow = 0, dir = 1, peck = 0, wet = 0) {
+    ctx.save(); ctx.translate(x, y); const sc = s * (1 + grow * 0.6); ctx.scale(sc * dir, sc);
+    const body = mix(mix('#ffe04a', '#e09040', grow * 0.85), '#c8a020', wet * 0.5);
+    ctx.lineCap = 'round';
+    for (const d of [-5, 5]) { ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(d, -10); ctx.lineTo(d + 1, 0); ctx.lineTo(d + 7, 1); ctx.stroke(); ctx.strokeStyle = '#ff9a2a'; ctx.lineWidth = 2.4; ctx.stroke(); }
+    const hx = 13 + peck * 8, hy = -36 + peck * 18;
+    const list = [[bcC(0, -22, 20, 17), body], [bcC(hx, hy, 12), body]];
+    if (grow > 0.3) list.unshift([P2('M-16,-28 C-30,-46 -34,-36 -32,-26 C-30,-18 -24,-14 -14,-14 Z'), mix(body, '#8a3a1a', 0.5)]);
+    if (grow > 0.4) { const c = new Path2D(), k = (grow - 0.4) / 0.6; for (const [cx, r] of [[-4, 3], [1, 4], [6, 3]]) c.ellipse(hx + cx, hy - 11, r * k + 0.5, r * k + 0.5, 0, 0, TAU); list.unshift([c, '#ff3a3a']); }
+    bcInk(list, 1.8);
+    if (grow < 0.7 && wet < 0.5) { ctx.globalAlpha = 1 - grow / 0.7; ctx.fillStyle = body; for (let i = 0; i < 10; i++) { const a = -2.6 + i * 0.5; circle(Math.cos(a) * 20, -22 + Math.sin(a) * 17, 3.2); } ctx.globalAlpha = 1; }
+    ink(P2('M-12,-24 C-2,-30 10,-24 6,-16 C0,-10 -10,-12 -14,-18 Z'), mix(body, '#c86a1a', 0.35 + grow * 0.3), 1.2);
+    ink(P2(`M${hx + 10},${hy - 3} L${hx + 20},${hy + 1} L${hx + 10},${hy + 4} Z`), '#ff9a2a', 1);
+    ctx.fillStyle = '#231a28'; circle(hx + 4, hy - 3, 2.4); ctx.fillStyle = '#fff'; circle(hx + 4.8, hy - 3.8, 0.9);
+    ctx.fillStyle = 'rgba(255,140,160,.5)'; circle(hx + 1, hy + 3, 2.6);
+    ctx.restore();
+  }
+  function bcSeed(x, y, s = 1) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ink(P2('M0,-9 C7,-8 8,2 5,7 C2,10 -2,10 -5,7 C-8,2 -7,-8 0,-9 Z'), '#ffc21a', 1.4); ctx.fillStyle = '#fff0a0'; ellipse(0, 4, 2.6, 3.2); ctx.restore(); }
+  function bcPebble(x, y, s = 1) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); inkEllipse(0, 0, 12, 9, 0.2, '#9a96a8', 1.4); ctx.fillStyle = 'rgba(255,255,255,.4)'; ellipse(-4, -3, 4, 2.4, 0.3); ctx.fillStyle = 'rgba(60,50,80,.25)'; circle(4, 3, 2); ctx.restore(); }
+  function bcCoopBg() {
+    for (let x = 0; x < W; x += 48) {
+      ctx.fillStyle = (x / 48) % 2 ? '#c45c38' : '#d06a42'; ctx.fillRect(x, 0, 48, 400);
+      ctx.fillStyle = 'rgba(80,20,10,.35)'; ctx.fillRect(x, 0, 3, 400);
+      ctx.fillStyle = 'rgba(90,30,10,.3)'; ellipse(x + 20 + (x * 7) % 14, 120 + (x * 13) % 220, 4, 6);
+    }
+    ctx.fillStyle = '#a84a2a'; ctx.fillRect(0, 108, W, 12); ctx.fillRect(0, 300, W, 12);
+    // a window onto the sunny meadow
+    rrect(92, 136, 176, 136, 10, OL);
+    ctx.save(); ctx.beginPath(); ctx.rect(98, 142, 164, 124); ctx.clip();
+    const sky = ctx.createLinearGradient(0, 142, 0, 266); sky.addColorStop(0, '#6cc8ff'); sky.addColorStop(1, '#d8f4ff'); ctx.fillStyle = sky; ctx.fillRect(98, 142, 164, 124);
+    ctx.fillStyle = '#ffd84a'; circle(228, 172, 16);
+    ctx.fillStyle = '#9adc7a'; ellipse(150, 268, 110, 40); ctx.fillStyle = '#7cc862'; ellipse(250, 274, 90, 34);
+    ctx.fillStyle = '#fff'; ellipse(140, 176, 22, 9); ellipse(158, 170, 14, 9);
+    ctx.restore();
+    ctx.fillStyle = '#f6e6c8'; ctx.fillRect(176, 142, 8, 124); ctx.fillRect(98, 200, 164, 8);
+    rrect(84, 268, 192, 14, 5, '#f6e6c8', OL, 2.5);
+    tinyFlower(120, 262, 8, '#ff8ac0'); tinyFlower(150, 260, 7, '#ffd23a'); tinyFlower(240, 262, 8, '#ffffff');
+    // a roost bar and a hanging feed sack
+    inkRect(600, 210, 300, 14, '#a0683a', 2, 6); for (const x of [620, 880]) inkRect(x - 5, 222, 10, 80, '#8a5a30', 1.8, 3);
+    ink(P2('M760,140 C790,136 812,150 812,190 C812,240 800,262 760,262 C720,262 708,240 708,190 C708,150 730,136 760,140 Z'), '#e8d0a0', 2.5);
+    text('FEED', 760, 210, 20, '#a06a3a', 'center', 800);
+    // a straw floor
+    const fl = ctx.createLinearGradient(0, 380, 0, H); fl.addColorStop(0, '#e8c468'); fl.addColorStop(1, '#d6a848');
+    ctx.fillStyle = fl; ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, 392);
+    for (let x = 0; x <= W; x += 24) ctx.lineTo(x, 388 + Math.sin(x * 0.07) * 5); ctx.lineTo(W, H); ctx.fill();
+    const R = rng(31); ctx.lineCap = 'round';
+    for (let i = 0; i < 260; i++) {
+      const x = R() * W, y = 392 + R() * 150, a = R() * Math.PI, l = 8 + R() * 12;
+      ctx.strokeStyle = ['#f6dc8a', '#c8963a', '#fff0b0'][i % 3]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * l, y - Math.sin(a) * l * 0.3); ctx.stroke();
+    }
+    for (const [x, y] of [[-30, 360], [910, 350]]) { inkRect(x, y, 110, 60, '#f0cc60', 2.5, 10); ctx.strokeStyle = '#c8a040'; ctx.lineWidth = 2; for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x + 6, y + k * 15); ctx.lineTo(x + 104, y + k * 15); ctx.stroke(); } }
+  }
+  function bcLeafyBg() {
+    const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#c8f2a8'); gr.addColorStop(1, '#86d468');
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+    const R = rng(77);
+    ctx.globalAlpha = 0.13;
+    for (let i = 0; i < 14; i++) bcLeaf(R() * W, 80 + R() * H, 120 + R() * 110, 36 + R() * 26, R() * TAU, 0, ['#5fbf4a', '#8ad86a', '#4aa83e'][i % 3]);
+    ctx.globalAlpha = 1;
+    for (let i = 0; i < 30; i++) { const x = R() * W, y = 130 + R() * 400, r = 2 + R() * 4; ctx.fillStyle = 'rgba(255,255,255,.55)'; circle(x, y, r); ctx.fillStyle = 'rgba(255,255,255,.9)'; circle(x - r * 0.3, y - r * 0.3, r * 0.35); }
+    for (let i = 0; i < 12; i++) tinyFlower(R() * W, 140 + R() * 390, 5, ['#ff9ac8', '#ffffff', '#ffd23a'][i % 3]);
+  }
+  // a little picture of each step for the circle cards (fits about 130 x 80)
+  const BC_PICS = [
+    [
+      (x, y) => { bcLeaf(x - 62, y + 6, 124, 30, -0.08, 1); bcTinyEgg(x + 6, y + 4, 2.4); },
+      (x, y) => { bcLeaf(x - 62, y + 22, 124, 18, 0, 0); bcCaterpillar([0, 1, 2, 3, 4, 5, 6].map(i => [x + 40 - i * 13, y + 6 - Math.sin(i * 0.9 + S.t * 3) * 4]), 8.5); },
+      (x, y) => { ctx.strokeStyle = OL; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x - 60, y - 34); ctx.lineTo(x + 60, y - 38); ctx.stroke(); ctx.strokeStyle = '#a0683a'; ctx.lineWidth = 6; ctx.stroke(); bcChrysalis(x, y - 34, 0.66); },
+      (x, y) => bcMonarch(x, y + 8, 1.15, 0.1 + Math.sin(S.t * 2) * 0.1),
+    ],
+    [
+      (x, y) => { bcNestBack(x, y + 26, 120); bcHenEgg(x, y, 22, 28); bcNestFront(x, y + 26, 120); },
+      (x, y) => {
+        bcNestBack(x, y + 30, 120);
+        ctx.save(); ctx.beginPath(); ctx.rect(x - 60, y - 6, 120, 80); ctx.clip(); bcHenEgg(x, y + 4, 26, 32); ctx.restore();
+        bcChick(x, y + 14, 0.9); ctx.save(); ctx.beginPath(); ctx.rect(x - 60, y + 2, 120, 80); ctx.clip(); bcHenEgg(x, y + 4, 26, 32); ctx.restore();
+        bcNestFront(x, y + 30, 120);
+      },
+      (x, y) => { ctx.fillStyle = 'rgba(150,110,40,.25)'; ellipse(x, y + 34, 34, 7); bcChick(x - 4, y + 34, 1.15); },
+      (x, y) => { ctx.fillStyle = 'rgba(150,110,40,.25)'; ellipse(x, y + 40, 44, 8); bcHen(x - 4, y + 40, 0.72); },
+    ],
+  ];
+  const BC_SPOTS = [[390, 186], [606, 330], [390, 470], [174, 330]], BC_CW = 160, BC_CH = 100;
+  const BC_CX = 390, BC_CY = 328, BC_RX = 216, BC_RY = 142;
+
   MG.butterflycycle = {
-    kind: 'learn', title: () => 'Butterfly Life Cycle', icon: () => '🐛',
-    how: () => 'Every living thing grows in steps! Tap the pictures in order, from the very first step to the last.',
+    kind: 'learn', title: () => 'Butterfly & Chicken Life Cycles', icon: () => '🐛',
+    how: () => 'Help a butterfly grow up, one step at a time! Then help a chicken grow up too.',
     init(g) {
-      const order = g.tier === 1 ? ['butterfly', 'frog', 'plant'] : ['butterfly', 'frog', 'chicken', 'plant'];
-      Object.assign(g, { order, round: 0, rounds: order.length, total: 0, shake: {} });
-      this.next(g);
+      Object.assign(g, { err: 0, round: 0, si: 0, hold: null, flash: 0, tip: '', shake: {} });
+      this.begin(g, 0, 0);
     },
     start(g) { speak(g.say); },
-    next(g) {
-      const c = CYCLES[g.order[g.round]];
-      const cards = c.steps.map((s, i) => ({ pic: s[0], word: s[1], step: i }));
-      // on the hardest places, one picture from a different animal sneaks in
-      if (g.tier === 3) {
-        const other = CYCLES[pick(Object.keys(CYCLES).filter(k => k !== g.order[g.round]))];
-        const s = pick(other.steps.slice(1, 3));
-        cards.push({ pic: s[0], word: s[1], step: -1 });
-      }
-      Object.assign(g, { cyc: c, cards: shuffle(cards), placed: 0, misses: 0, state: 'pick', t2: 0 });
-      g.cards.forEach((cd, i) => { cd.x = this.cardX(g, i); cd.y = LC_CARD_Y; cd.at = -1; });
-      g.say = `How does ${c.who} grow? Tap the first step!`;
+    later(g, t, fn) { g.hold = { t, fn }; },
+    oops(g, x, y, msg, w = 1) { g.err += w; SFX.miss(); floatText(x, y, msg, '#ffd6d6', false, 22); speak(msg); },
+    yay(g, x, y, msg, n = 16) { SFX.hit(); burst(x, y, n); if (msg) floatText(x, y - 24, msg, '#fff6a8', false, 26); },
+    tell(g, say, tip) { g.say = say; if (tip) g.tip = tip; speak(say); },
+    begin(g, round, si) {
+      Object.assign(g, { round, si, hold: null, s: {}, flash: 1.6, shake: {} });
+      g.st = si < 4 ? BC_CYC[round].steps[si][0] : 'recap';
+      this['in_' + g.st](g, g.s);
       if (g.phase === 'play') speak(g.say);
     },
-    cardX(g, i) { const n = g.cards.length, gap = n > 4 ? 14 : 26; return W / 2 - (n * LC_W + (n - 1) * gap) / 2 + i * (LC_W + gap); },
-    slotX(i) { return W / 2 - (4 * LC_W + 3 * 50) / 2 + i * (LC_W + 50); },
-    update(g, dt, id) {
-      tickShake(g, dt);
-      for (const cd of g.cards) if (cd.at >= 0) { cd.x = lerp(cd.x, this.slotX(cd.at), Math.min(1, dt * 10)); cd.y = lerp(cd.y, LC_SLOT_Y, Math.min(1, dt * 10)); }
-      if (g.state === 'pick') {
-        const k = numKey(g.cards.length), i = id ? pickId(id, 'lc:') : k;
-        if (i >= 0 && g.cards[i].at < 0) {
-          const cd = g.cards[i];
-          if (cd.step === g.placed) {
-            cd.at = g.placed++; SFX.pick(); chime(cd.step * 3);
-            if (g.placed === 4) {
-              g.state = 'yay'; g.t2 = 3.4; SFX.sparkle(); burst(W / 2, LC_SLOT_Y + 70, 30);
-              g.total += Math.max(0, 1 - g.misses * 0.25);
-              speak(`${g.cyc.steps.map(s => s[1]).join(', ')}! That's how ${g.cyc.who} grows!`);
-            } else speak(`${cap(cd.word)}! What comes next?`);
-          } else {
-            g.shake[i] = 0.45; g.misses++; SFX.miss();
-            speak(cd.step < 0 ? `That's not part of ${g.cyc.who}'s life!` : g.placed ? `Hmm, what comes right after the ${g.cyc.steps[g.placed - 1][1]}?` : 'What comes first of all?');
-          }
-        }
-      } else if ((g.t2 -= dt) <= 0) {
-        g.round++;
-        if (g.round >= g.rounds) g.done = true; else this.next(g);
-      }
-      g.progress = `${cap(g.cyc.who.slice(2))} ${Math.min(g.round + 1, g.rounds)} of ${g.rounds}`;
-      g.score = g.total / g.rounds;
+    next(g) {
+      if (g.si < 4) this.begin(g, g.round, g.si + 1);
+      else if (g.round === 0) this.begin(g, 1, 0);
+      else g.done = true;
     },
-    card(cd, x, y, color, on, id, key) {
-      if (id) button(id, x, y, LC_W, LC_H, '', { color, on, key });
-      else { rrect(x, y, LC_W, LC_H, 16, color); rrect(x, y, LC_W, LC_H, 16, null, 'rgba(255,255,255,.85)', 2.5); }
-      rrect(x + 8, y + 8, LC_W - 16, LC_H - 42, 12, '#fffaf2');
-      ctx.save(); ctx.beginPath(); ctx.roundRect(x + 8, y + 8, LC_W - 16, LC_H - 42, 12); ctx.clip();
-      ctx.translate(x + LC_W / 2, y + 66); ctx.scale(0.85, 0.85);
-      LC_PICS[cd.pic](0, 0); ctx.restore();
-      text(cd.word, x + LC_W / 2, y + LC_H - 18, 20, '#fff', 'center', 800);
+    update(g, dt, id) {
+      g.flash = Math.max(0, g.flash - dt);
+      tickShake(g, dt);
+      this['up_' + g.st](g, g.s, dt, !g.hold, id);
+      if (g.hold && (g.hold.t -= dt) <= 0) { const f = g.hold.fn; g.hold = null; f(); }
+      const c = BC_CYC[g.round];
+      g.progress = `${c.name}: ${g.si < 4 ? c.steps[g.si][1] : 'Circle'}`;
+      g.score = clamp(1 - g.err * BC_LOSS, 0, 1);
     },
     draw(g) {
-      panel(W / 2 - 300, 70, 600, 56, 20);
-      text(g.state === 'yay' ? `That's how ${g.cyc.who} grows!` : `How does ${g.cyc.who} grow?`, W / 2, 98, 24, '#5a2a6e', 'center', 700);
-      // the four empty steps, joined by arrows, with a loop arrow round to the start again
-      for (let i = 0; i < 4; i++) {
-        const x = this.slotX(i);
-        rrect(x, LC_SLOT_Y, LC_W, LC_H, 16, 'rgba(255,255,255,.78)', 'rgba(91,63,115,.45)', 3);
-        if (i >= g.placed) outlined(String(i + 1), x + LC_W / 2, LC_SLOT_Y + LC_H / 2, 46, 'rgba(255,255,255,.95)', 'center', 'rgba(91,63,115,.35)');
-        if (i < 3) { const ax = x + LC_W + 8; ink(P2(`M${ax},${LC_SLOT_Y + 68} L${ax + 22},${LC_SLOT_Y + 68} L${ax + 22},${LC_SLOT_Y + 58} L${ax + 36},${LC_SLOT_Y + 78} L${ax + 22},${LC_SLOT_Y + 98} L${ax + 22},${LC_SLOT_Y + 88} L${ax},${LC_SLOT_Y + 88} Z`), '#ffd84a', 2); }
+      if (g.round === 1) still('bc_coop', bcCoopBg);
+      this['dr_' + g.st](g, g.s);
+      // the prompt strip: which step this is, and what to do
+      const c = BC_CYC[g.round], step = g.si < 4 ? c.steps[g.si] : [0, 'Circle!', '#9a6ae0'];
+      panel(16, 64, 928, 52, 18);
+      rrect(24, 71, 168, 38, 14, step[2]);
+      text(g.si < 4 ? `${g.si + 1}. ${step[1]}` : step[1], 108, 90, 20, '#fff', 'center', 800);
+      text(g.tip, 206, 90, 19, '#5a2a6e', 'left', 700);
+      if (g.flash > 0 && g.si < 4) { ctx.globalAlpha = Math.min(1, g.flash * 1.4); outlined(step[1] + '!', W / 2, 176 - (1.6 - g.flash) * 12, 56, '#fff6a8'); ctx.globalAlpha = 1; }
+    },
+
+    // ============ ROUND 1: the monarch butterfly ============
+    // ---- 1. egg: watch the mother land, peel back her leaf, tap the egg to hatch it
+    in_egg(g, s) {
+      const ys = g.tier === 1 ? [262, 404] : [222, 328, 432];
+      s.leaves = [];
+      ys.forEach((y, r) => [-1, 1].forEach(side => s.leaves.push({ x: 480 + side * 6, y, rot: side > 0 ? -0.3 - r * 0.05 : Math.PI + 0.3 + r * 0.05, len: 178 - r * 10, wid: 44, turn: 0, open: false, back: 0 })));
+      Object.assign(s, { egg: randInt(0, s.leaves.length - 1), mum: 0, sub: 'look', wrong: 0, cracks: 0, hatch: 0, wob: 0 });
+      g.say = 'Egg! A mother monarch lays a tiny egg under a milkweed leaf. Watch where she lands, then tap that leaf to peel it back!';
+      g.tip = 'Watch where the butterfly lands, then peel back that leaf!';
+    },
+    inLeaf(l, px, py, pad) {
+      const [lx, ly] = bcLocal(l.x, l.y, l.rot, px, py);
+      return lx > -pad && lx < l.len + pad && Math.abs(ly) < l.wid * Math.sin(clamp(lx / l.len, 0.05, 0.95) * Math.PI) + pad;
+    },
+    eggPos(l) { return bcWorld(l.x, l.y, l.rot, l.len * 0.6, 10); },
+    // where the mother butterfly is: flying in, resting on the egg leaf, then flying off
+    mumPos(s) {
+      const l = s.leaves[s.egg], [lx, ly] = bcWorld(l.x, l.y, l.rot, l.len * 0.62, -l.wid * 0.35), t = s.mum;
+      if (t < 2.4) { const f = t / 2.4, e = f * f * (3 - 2 * f); return [lerp(-60, lx, e), lerp(170, ly - 26, e) + Math.sin(f * 9) * 30 * (1 - f), 1]; }
+      if (t < 4.6) return [lx, ly - 26, 0.25];
+      const f = (t - 4.6) / 2; return [lerp(lx, W + 90, f), lerp(ly - 26, 150, f) + Math.sin(f * 8) * 20, 1];
+    },
+    up_egg(g, s, dt, live) {
+      s.mum += dt; s.wob = Math.max(0, s.wob - dt);
+      if (s.sub === 'look' && s.mum > 6.6 + bcT(g, [2.5, 4, 7])) s.mum = 0;   // she comes back if the egg is still hidden
+      for (const l of s.leaves) {
+        l.turn = clamp(l.turn + (l.open ? 1 : -1) * dt * 2.4, 0, 1);
+        if (l.back > 0 && (l.back -= dt) <= 0) l.open = false;
       }
-      if (g.state === 'yay') {
-        const x0 = this.slotX(0) + LC_W / 2, x1 = this.slotX(3) + LC_W / 2, y = LC_SLOT_Y + LC_H + 10;
-        ctx.strokeStyle = OL; ctx.lineWidth = 10; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(x1, y); ctx.quadraticCurveTo(W / 2, y + 60, x0, y); ctx.stroke();
-        ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 6; ctx.stroke();
-        ink(P2(`M${x0 - 14},${y + 12} L${x0},${y - 6} L${x0 + 18},${y + 8} Z`), '#ffd84a', 2);
-        outlined('...and round again!', W / 2, y + 68, 26, '#fff6a8');
+      if (s.sub === 'look' && live && pointer.clicked) {
+        const i = s.leaves.findIndex(l => !l.open && l.turn === 0 && this.inLeaf(l, pointer.x, pointer.y, bcT(g, [22, 14, 8])));
+        if (i >= 0) {
+          const l = s.leaves[i], [cx, cy] = bcWorld(l.x, l.y, l.rot, l.len * 0.55, 0);
+          l.open = true; tone(520, 0.18, 'triangle', 0.06, 0, 900); noise(0.08, 0.02);
+          if (i === s.egg) {
+            s.sub = 'found'; const [ex, ey] = this.eggPos(l);
+            this.later(g, 0.5, () => { this.yay(g, ex, ey, 'An egg!'); this.later(g, 1.1, () => { s.sub = 'zoom'; this.tell(g, 'You found it! The egg is as small as a pinhead. Tap it to help the caterpillar hatch!', 'Tap the egg to help it hatch!'); }); });
+          } else {
+            l.back = 1.1;
+            if (s.mum < 2.4) floatText(cx, cy, 'Watch the butterfly first!', '#fff', false, 20);
+            else { s.wrong++; this.oops(g, cx, cy, 'No egg here. Where did she land?'); }
+          }
+        }
+      } else if (s.sub === 'zoom' && live && pointer.clicked && Math.hypot(pointer.x - 480, pointer.y - 330) < bcT(g, [120, 100, 80])) {
+        s.cracks++; s.wob = 0.35; SFX.pop(); burst(480, 300, 6, { colors: ['#fff4c4', '#ffffff'] });
+        if (s.cracks >= 3) {
+          s.sub = 'hatch'; s.hatch = 0;
+          this.tell(g, "It hatched! The tiny caterpillar's very first meal is its own eggshell. Munch, munch!", 'Munch, munch!');
+          this.later(g, 3.6, () => this.next(g));
+        }
       }
-      g.cards.forEach((cd, i) => {
-        const placed = cd.at >= 0;
-        const col = placed ? CARD_COLS[cd.at] : CARD_COLS[i % CARD_COLS.length];
-        this.card(cd, cd.x + (placed ? 0 : shakeX(g, i)), cd.y, col, g.state === 'pick' && !placed, placed ? null : `lc:${i}`, placed ? null : String(i + 1));
+      if (s.sub === 'hatch') { const k = Math.floor(s.hatch * 6); s.hatch += dt; if (s.hatch > 1 && Math.floor(s.hatch * 6) !== k) tone(260 + rand(0, 60), 0.05, 'square', 0.025); }
+    },
+    dr_egg(g, s) {
+      const gr = ctx.createRadialGradient(480, 330, 40, 480, 330, 440); gr.addColorStop(0, 'rgba(255,255,236,.7)'); gr.addColorStop(1, 'rgba(255,255,236,0)');
+      ctx.fillStyle = gr; ctx.fillRect(0, BC_TOP, W, H - BC_TOP);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = OL; ctx.lineWidth = 17; ctx.beginPath(); ctx.moveTo(480, H + 10); ctx.quadraticCurveTo(472, 330, 480, 170); ctx.stroke();
+      ctx.strokeStyle = '#6cbf4a'; ctx.lineWidth = 12; ctx.stroke();
+      ctx.strokeStyle = '#9ade7a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(476, H); ctx.quadraticCurveTo(470, 330, 477, 180); ctx.stroke();
+      bcMilkFlowers(480, 160, 34);
+      for (const [i, l] of s.leaves.entries()) {
+        const sh = g.shake[i] ? Math.sin(g.shake[i] * 50) * 4 : 0;
+        bcLeaf(l.x, l.y + sh, l.len, l.wid, l.rot, l.turn);
+        if (i === s.egg && l.turn > 0.6) { const [ex, ey] = this.eggPos(l); ctx.globalAlpha = (l.turn - 0.6) / 0.4; bcTinyEgg(ex, ey, 1.4); ctx.globalAlpha = 1; if (s.sub === 'found') { ctx.strokeStyle = '#fff6a8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ex, ey, 18 + Math.sin(S.t * 8) * 3, 0, TAU); ctx.stroke(); } }
+      }
+      // a little sparkle on the right leaf if the egg has been hard to find
+      if (s.sub === 'look' && (g.tier === 1 ? s.wrong >= 2 : s.wrong >= 4)) { const l = s.leaves[s.egg], [cx, cy] = bcWorld(l.x, l.y, l.rot, l.len * 0.6, 0); star(cx, cy - 4, 10 + Math.sin(S.t * 6) * 4, '#fff6a8', 4); }
+      if (s.mum < 6.6) { const [mx, my, fl] = this.mumPos(s); bcMonarch(mx, my, 0.9, S.t * (fl > 0.5 ? 3.2 : 0.8)); }
+      if (s.sub === 'zoom' || s.sub === 'hatch') {
+        // the magnifying glass shows the egg up close
+        ctx.fillStyle = 'rgba(40,20,60,.25)'; ctx.fillRect(0, BC_TOP, W, H - BC_TOP);
+        ctx.strokeStyle = OL; ctx.lineWidth = 26; ctx.beginPath(); ctx.moveTo(570, 420); ctx.lineTo(650, 500); ctx.stroke(); ctx.strokeStyle = '#9a6ae0'; ctx.lineWidth = 18; ctx.stroke();
+        ctx.save(); ctx.beginPath(); ctx.arc(480, 330, 130, 0, TAU); ctx.clip();
+        ctx.fillStyle = '#c4e4a0'; ctx.fillRect(340, 190, 280, 280);
+        ctx.strokeStyle = '#e4f6cc'; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(340, 420); ctx.quadraticCurveTo(480, 400, 620, 440); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 40; i++) circle(350 + (i * 73) % 260, 200 + (i * 41) % 260, 2);
+        const eat = clamp((s.hatch - 1.1) / 2, 0, 1), wob = Math.sin(s.wob * 40) * 0.08;
+        ctx.save(); ctx.translate(480, 330); ctx.rotate(wob); ctx.scale(1 - eat * 0.8, 1 - eat * 0.8);
+        if (eat < 0.95) bcTinyEgg(0, 0, 6.4);
+        ctx.strokeStyle = '#a07a3a'; ctx.lineWidth = 3;
+        for (let i = 0; i < Math.min(3, s.cracks); i++) { const y0 = -20 + i * 14; ctx.beginPath(); ctx.moveTo(-26, y0); ctx.lineTo(-10, y0 + 8); ctx.lineTo(0, y0 - 4); ctx.lineTo(12, y0 + 6); ctx.lineTo(28, y0 - 2); ctx.stroke(); }
+        ctx.restore();
+        if (s.sub === 'hatch') {
+          let pts;
+          if (s.hatch < 1.1) { const out = s.hatch / 1.1, hx = 470 - 72 * out, hy = 300 + 40 * out, a = Math.atan2(330 - hy, 480 - hx); pts = [0, 1, 2, 3, 4, 5].map(i => [hx + Math.cos(a) * i * 15, hy + Math.sin(a) * i * 15]); }
+          else { const hx = 466 - 30 * (1 - eat); pts = [0, 1, 2, 3, 4, 5].map(i => [hx - i * 15, 340 + Math.sin(i * 1.3 + S.t * 6) * 2]); }
+          bcCaterpillar(pts, 11, s.hatch > 1.1 && eat < 1 ? 1 : 0);
+        }
+        ctx.restore();
+        ctx.strokeStyle = OL; ctx.lineWidth = 18; ctx.beginPath(); ctx.arc(480, 330, 132, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = '#c6a2ff'; ctx.lineWidth = 11; ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(480, 330, 112, 3.6, 4.4); ctx.stroke();
+        if (s.sub === 'zoom') outlined(['Tap!', 'Tap again!', 'One more!'][s.cracks] || '', 480, 486, 30, '#fff6a8');
+      }
+    },
+
+    // ---- 2. caterpillar: steer it to munch milkweed, grow and molt, and hide from the bird
+    in_eat(g, s) {
+      Object.assign(s, { x: 480, y: 330, dir: 0, trail: [], bites: 0, need: bcT(g, [12, 16, 20]), chew: 0, wob: 0, molts: [], food: [], bad: [], respawn: [],
+        bird: null, birds: bcT(g, [1, 2, 3]), birdNo: 0, badCd: 0, molted: 0, done: false });
+      s.shade = [{ x: 190, y: 290 }, { x: 770, y: 420 }];
+      s.slots = [[350, 205], [620, 210], [330, 440], [570, 470], [830, 230], [130, 470], [470, 330], [700, 330]];
+      for (let i = 0; i < 3; i++) this.addFood(s, false);
+      for (let i = 1; i < g.tier; i++) this.addFood(s, true);
+      g.say = 'Caterpillar! It eats milkweed leaves and grows bigger and bigger. Steer it to munch!' + (g.tier > 1 ? ' Only milkweed, not the orange leaves!' : '');
+      g.tip = g.tier > 1 ? 'Steer to munch milkweed. Not the orange leaves!' : 'Steer the caterpillar to munch the leaves!';
+    },
+    addFood(s, bad) {
+      const used = [...s.food, ...s.bad].map(l => l.slot);
+      const free = s.slots.map((p, i) => i).filter(i => !used.includes(i) && Math.hypot(s.slots[i][0] - s.x, s.slots[i][1] - s.y) > 150);
+      const slot = free.length ? pick(free) : pick(s.slots.map((p, i) => i).filter(i => !used.includes(i)));
+      if (slot === undefined) return;
+      const [cx, cy] = s.slots[slot], rot = rand(-0.5, 0.5) + (Math.random() < 0.5 ? Math.PI : 0), len = 140, wid = 44;
+      const [bx, by] = bcWorld(cx, cy, rot, -len / 2, 0);
+      const l = { slot, cx, cy, bx, by, rot, len, wid, grow: 0 };
+      if (bad) s.bad.push(l);
+      else { l.bites = [[0.28, -0.42], [0.28, 0.42], [0.55, -0.52], [0.55, 0.52], [0.8, -0.32], [0.8, 0.32]].map(([f, w]) => ({ lx: f * len, ly: w * wid, w: bcWorld(bx, by, rot, f * len, w * wid), eaten: false })); s.food.push(l); }
+    },
+    up_eat(g, s, dt, live) {
+      s.chew = Math.max(0, s.chew - dt); s.wob = Math.max(0, s.wob - dt); s.badCd = Math.max(0, s.badCd - dt);
+      for (const l of [...s.food, ...s.bad]) l.grow = Math.min(1, l.grow + dt * 2.5);
+      for (const m of s.molts) m.t -= dt; s.molts = s.molts.filter(m => m.t > 0);
+      for (const r of s.respawn) r.t -= dt; while (s.respawn.length && s.respawn[0].t <= 0) { s.respawn.shift(); this.addFood(s, false); }
+      const r = 17 + 9 * Math.min(1, s.bites / s.need);
+      // steering
+      let tx = s.x, ty = s.y;
+      if (pointerMoved(g)) { tx = pointer.x; ty = pointer.y; }
+      const kx = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), ky = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+      if (kx || ky) { tx = s.x + kx * 100; ty = s.y + ky * 100; }
+      const dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx, dy);
+      s.mv = live && d > 5 && s.wob <= 0;
+      if (s.mv) {
+        const sp = Math.min(d * 6, 150 + g.tier * 10) * dt;
+        s.dir = Math.atan2(dy, dx); s.x += dx / d * sp; s.y += dy / d * sp;
+        s.x = clamp(s.x, 30, W - 30); s.y = clamp(s.y, BC_TOP + 24, H - 24);
+        s.trail.push([s.x, s.y]); if (s.trail.length > 500) s.trail.splice(0, 100);
+      }
+      if (live && !s.done) {
+        // munch any milkweed under its mouth
+        if (s.chew <= 0) for (const l of s.food) {
+          if (l.grow < 1) continue;
+          const b = l.bites.find(b => !b.eaten && Math.hypot(b.w[0] - s.x, b.w[1] - s.y) < 20 + r * 0.7);
+          if (!b) continue;
+          b.eaten = true; s.bites++; s.chew = 0.2;
+          tone(300 + s.bites * 12, 0.07, 'square', 0.035); burst(b.w[0], b.w[1], 5, { colors: ['#5ac85a', '#9ae87a'], spread: 60, up: 30, size: [2, 4] });
+          if (l.bites.every(b => b.eaten)) { s.food.splice(s.food.indexOf(l), 1); s.respawn.push({ t: 0.6 }); }
+          if (s.molted < 2 && s.bites >= Math.round(s.need * (s.molted + 1) / 3)) {
+            s.molted++; s.molts.push({ pts: bcBody(s.trail, 5 + Math.round(5 * s.bites / s.need), r * 1.1, s.dir, s.x, s.y), r, t: 1.8 });
+            SFX.sparkle(); floatText(s.x, s.y - 40, 'It molted!', '#fff6a8', false, 24);
+            if (!s.bird) this.tell(g, 'It molts! It wiggles out of its old, tight skin so it can keep growing.');
+          }
+          break;
+        }
+        // orange leaves are not food for a monarch caterpillar
+        for (const l of s.bad) {
+          if (s.badCd > 0 || Math.hypot(l.cx - s.x, l.cy - s.y) > 52 + r * 0.5) continue;
+          s.badCd = 2; s.wob = 0.4; const a = Math.atan2(s.y - l.cy, s.x - l.cx); s.x += Math.cos(a) * 40; s.y += Math.sin(a) * 40;
+          this.oops(g, l.cx, l.cy - 40, 'Yuck! Monarch caterpillars only eat milkweed!');
+        }
+        // a hungry bird comes now and then
+        if (!s.bird && s.birdNo < s.birds && s.bites >= Math.floor(s.need * (s.birdNo + 1) / (s.birds + 1))) {
+          s.bird = { t: 0, warn: bcT(g, [4.2, 3.4, 2.8]), dir: pick([-1, 1]), checked: false, pass: bcT(g, [2.2, 1.9, 1.6]) };
+          SFX.alert(); this.tell(g, 'A bird is coming! Hide under a big leaf!');
+        }
+        if (s.done === false && s.bites >= s.need && !s.bird) {
+          s.done = true; this.yay(g, s.x, s.y, 'So big!', 24);
+          this.tell(g, 'What a big, fat caterpillar! Now it is ready for its next step.');
+          this.later(g, 2.8, () => this.next(g));
+        }
+      }
+      if (s.bird) {
+        const b = s.bird; b.t += dt;
+        const f = (b.t - b.warn) / b.pass;
+        b.x = b.dir > 0 ? lerp(-260, W + 260, f) : lerp(W + 260, -260, f);
+        if (f > 0 && !b.checked && (b.dir > 0 ? b.x > s.x : b.x < s.x)) {
+          b.checked = true;
+          if (s.shade.some(h => Math.hypot(h.x - s.x, h.y - s.y) < bcT(g, [95, 85, 72]))) { this.yay(g, s.x, s.y - 30, 'Safe!'); speak('Phew! Safe under the leaf.'); }
+          else { s.wob = 0.6; this.oops(g, s.x, s.y - 40, 'The bird spotted you! Hide under a leaf next time.'); }
+        }
+        if (f >= 1) { s.bird = null; s.birdNo++; if (live) this.tell(g, 'The bird flew away. Keep munching!'); }
+      }
+    },
+    dr_eat(g, s) {
+      still('bc_leafy', bcLeafyBg);
+      // a soft light pool so the leaves and the caterpillar stand out from the leafy wall
+      const lg = ctx.createRadialGradient(480, 330, 80, 480, 330, 560); lg.addColorStop(0, 'rgba(255,255,236,.45)'); lg.addColorStop(1, 'rgba(60,110,50,.18)');
+      ctx.fillStyle = lg; ctx.fillRect(0, BC_TOP, W, H - BC_TOP);
+      const r = 17 + 9 * Math.min(1, s.bites / s.need), n = 6 + Math.round(4 * Math.min(1, s.bites / s.need));
+      for (const l of s.bad) {
+        ctx.save(); ctx.globalAlpha = l.grow; ctx.translate(l.cx, l.cy); ctx.rotate(l.rot);
+        const lobes = [[-50, 0, 18], [-28, -20, 20], [-28, 20, 20], [0, -26, 22], [0, 26, 22], [28, -20, 20], [28, 20, 20], [50, 0, 18], [0, 0, 30]];
+        bcInk(lobes.map(([x, y, rr]) => [bcC(x, y, rr * 0.9 + 2, rr * 0.8 + 2), '#f08a3a']), 2);
+        ctx.strokeStyle = '#c05a1a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-62, 0); ctx.lineTo(56, 0); ctx.stroke();
+        ctx.restore();
+      }
+      for (const l of s.food) {
+        ctx.save();
+        for (const b of l.bites) if (b.eaten) { ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.arc(b.w[0], b.w[1], 20, 0, TAU); ctx.clip('evenodd'); }
+        ctx.globalAlpha = l.grow; bcLeaf(l.bx, l.by, l.len, l.wid, l.rot, 0, '#56c04a');
+        ctx.translate(l.bx, l.by); ctx.rotate(l.rot); ctx.clip(bcLeafP(l.len, l.wid));
+        ctx.strokeStyle = OL; ctx.lineWidth = 4; for (const b of l.bites) if (b.eaten) { ctx.beginPath(); ctx.arc(b.lx, b.ly, 20, 0, TAU); ctx.stroke(); }
+        ctx.restore();
+      }
+      for (const m of s.molts) { ctx.save(); ctx.globalAlpha = Math.min(1, m.t) * 0.55; ctx.fillStyle = OL; for (const p of m.pts) circle(p[0] - 14, p[1] + 10, m.r + 2); ctx.fillStyle = '#e8e2c8'; for (const p of m.pts) circle(p[0] - 14, p[1] + 10, m.r); ctx.restore(); }
+      const wob = s.wob > 0 ? Math.sin(s.wob * 40) * 4 : 0;
+      // the caterpillar is the star: a glow under it, a ring round its head, and a little crawl bounce
+      const body = bcBody(s.trail, n, r * 1.05, s.dir, s.x + wob, s.y).map(([x, y], i) => [x, y - Math.abs(Math.sin(S.t * 9 - i * 0.8)) * (s.mv ? 4 : 1)]);
+      ctx.fillStyle = 'rgba(255,255,220,.5)'; for (const [x, y] of body) circle(x, y + 4, r * 1.7);
+      ctx.fillStyle = 'rgba(40,60,20,.25)'; for (const [x, y] of body) ellipse(x + 3, y + r * 0.8, r, r * 0.45);
+      ctx.strokeStyle = '#fff6a8'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(body[0][0], body[0][1], r * 1.6 + Math.sin(S.t * 6) * 3, 0, TAU); ctx.stroke();
+      bcCaterpillar(body, r, s.chew > 0 ? 1 : 0);
+      // the big shady leaves to hide under
+      for (const h of s.shade) {
+        ctx.save(); ctx.globalAlpha = 0.72; bcLeaf(h.x - 120, h.y + 26, 240, 66, -0.2, 0, '#3f9a3e'); ctx.restore();
+        if (s.bird && !s.bird.checked) { ctx.setLineDash([10, 8]); ctx.strokeStyle = '#fff6a8'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(h.x, h.y, bcT(g, [95, 85, 72]) + Math.sin(S.t * 8) * 4, 0, TAU); ctx.stroke(); ctx.setLineDash([]); outlined('Hide here!', h.x, h.y - 96, 22, '#fff6a8'); }
+      }
+      if (s.bird) {
+        const b = s.bird;
+        if (b.t < b.warn) {
+          const ex = b.dir > 0 ? 70 : W - 70, pulse = 1 + Math.sin(S.t * 10) * 0.08;
+          ctx.save(); ctx.translate(ex, 300); ctx.scale(pulse, pulse);
+          inkCircle(0, 0, 46, '#ff6a6a', 3); emoji('🐦', 0, -4, 46); outlined('!', 30, -30, 34, '#fff6a8');
+          ctx.restore();
+          outlined(`${Math.ceil(b.warn - b.t)}`, ex, 368, 30, '#fff');
+        }
+        ctx.save(); ctx.translate(b.x ?? -400, 320); ctx.scale(2.6 * b.dir, 2.6); ctx.fillStyle = 'rgba(30,20,50,.32)';
+        ctx.fill(P2('M-90,0 C-60,-22 -30,-16 -10,-5 C-6,-18 6,-18 10,-5 C30,-16 60,-22 90,0 C60,-6 30,2 10,10 C6,26 -6,26 -10,10 C-30,2 -60,-6 -90,0 Z'));
+        ctx.restore();
+      }
+      // how much it has munched
+      rrect(320, 506, 320, 22, 11, 'rgba(48,24,72,.6)');
+      rrect(324, 510, Math.max(14, 312 * Math.min(1, s.bites / s.need)), 14, 7, '#9ae84a');
+      text(`Munches: ${Math.min(s.bites, s.need)} / ${s.need}`, 480, 517, 13, '#fff', 'center', 800);
+    },
+
+    // ---- 3. chrysalis: carry it up to the twig, it hangs in a J, then rub round and round to wrap it
+    in_spin(g, s) {
+      Object.assign(s, { sub: 'climb', x: 300, y: 470, home: [300, 470], drag: false, j: 0, acc: 0, la: null, p: 0, q: 0, turns: bcT(g, [3, 4, 5]), sparks: [] });
+      g.say = 'Chrysalis! First the caterpillar hangs upside down in a J shape. Drag it up to the twig!';
+      g.tip = 'Drag the caterpillar up to the silk on the twig!';
+    },
+    jPts(jt) {
+      let x = 480, y = 172, h = Math.PI / 2; const pts = [[x, y]];
+      for (let i = 1; i < 10; i++) { if (i > 5) h -= jt * 0.46; x += Math.cos(h) * 21; y += Math.sin(h) * 21; pts.push([x, y]); }
+      return pts.reverse();
+    },
+    up_spin(g, s, dt, live) {
+      const pad = [480, 172];
+      if (s.sub === 'climb' && live) {
+        if (pointer.clicked && Math.hypot(pointer.x - s.x, pointer.y - s.y) < 100) s.drag = true;
+        if (s.drag && pointer.down) { s.x = pointer.x; s.y = clamp(pointer.y, BC_TOP + 20, H - 20); }
+        else if (s.drag) {
+          s.drag = false;
+          if (Math.hypot(s.x - pad[0], s.y - pad[1] - 20) < bcT(g, [120, 95, 75])) this.attach(g, s);
+          else { floatText(s.x, s.y - 30, 'Up to the twig!', '#fff', false, 20); }
+        }
+        if (!s.drag) { s.x = lerp(s.x, s.home[0], Math.min(1, dt * 4)); s.y = lerp(s.y, s.home[1], Math.min(1, dt * 4)); }
+        if (pressed[' '] || pressed.enter || pressed.arrowup) this.attach(g, s);
+      } else if (s.sub === 'j') {
+        s.j = Math.min(1, s.j + dt / 1.3);
+        if (s.j >= 1) { s.sub = 'wrap'; this.tell(g, 'Now rub round and round, to wrap it up in a chrysalis!', 'Rub round and round the caterpillar!'); }
+      } else if (s.sub === 'wrap' && live) {
+        const dx = pointer.x - 480, dy = pointer.y - 280, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+        const [lo, hi] = bcT(g, [[30, 270], [45, 230], [60, 200]]), inBand = d > lo && d < hi;
+        if (s.la !== null && inBand) { let da = a - s.la; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; if (Math.abs(da) < 0.9) { s.acc += Math.abs(da); if (Math.abs(da) > 0.02 && Math.random() < 0.5) s.sparks.push({ x: pointer.x, y: pointer.y, t: 0.6 }); } }
+        s.la = inBand ? a : null;
+        if (keys.arrowleft || keys.arrowright || keys[' ']) s.acc += 5 * dt;
+        s.p = Math.min(1, s.acc / (s.turns * TAU));
+        const q = Math.floor(s.p * s.turns * 4);
+        if (q > s.q) { s.q = q; chime(q); }
+        if (s.p >= 1) {
+          s.sub = 'done'; SFX.sparkle(); burst(480, 280, 30, { colors: ['#ffd23a', '#5ad6a0', '#ffffff'] });
+          this.tell(g, 'A chrysalis! Inside it, the caterpillar is changing into a butterfly.', 'Shh... something amazing is happening inside!');
+          this.later(g, 3.6, () => this.next(g));
+        }
+      }
+      for (const p of s.sparks) p.t -= dt; s.sparks = s.sparks.filter(p => p.t > 0);
+    },
+    attach(g, s) { s.sub = 'j'; s.drag = false; SFX.pick(); this.yay(g, 480, 180, 'Hang on!', 10); speak('It holds on tight with a silk pad, and curls into a J.'); },
+    dr_spin(g, s) {
+      ctx.fillStyle = 'rgba(255,255,240,.25)'; ctx.fillRect(0, BC_TOP, W, H - BC_TOP);
+      bcBranch(150);
+      // the silk pad
+      ctx.fillStyle = '#ffffff'; for (let i = 0; i < 6; i++) circle(474 + i * 2.5, 168 + (i % 2) * 3, 5);
+      if (s.sub === 'climb') {
+        const pr = bcT(g, [120, 95, 75]);
+        ctx.setLineDash([8, 8]); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(480, 192, pr * 0.6 + Math.sin(S.t * 5) * 4, 0, TAU); ctx.stroke();
+        if (!s.drag) { ctx.beginPath(); ctx.moveTo(s.x + 30, s.y - 40); ctx.quadraticCurveTo(380, 260, 470, 220); ctx.stroke(); }
+        ctx.setLineDash([]);
+        const pts = s.drag ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => [s.x + Math.sin(i * 0.7 + S.t * 6) * 4, s.y + i * 20]) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => [s.x + 90 - i * 21, s.y - Math.abs(Math.sin(i * 0.6 + S.t * 4)) * 6]);
+        bcCaterpillar(pts, 19);
+        if (!s.drag) outlined('Drag me up!', s.x, s.y - 52, 22, '#fff6a8');
+        return;
+      }
+      const p = s.sub === 'j' ? 0 : s.p;
+      if (p < 1) bcCaterpillar(this.jPts(s.sub === 'j' ? s.j : 1), 19 - p * 4, 0, 1 - p * 0.6);
+      if (p > 0) {
+        // the chrysalis wraps up from the bottom, changing colour as it goes
+        const top = 172, h = 1.7 * 114, cut = top + h * (1 - p) + 4;
+        ctx.save(); ctx.beginPath(); ctx.rect(380, cut, 200, 300); ctx.clip();
+        bcChrysalis(480, top, 1.7, { col: mix('#d8e070', '#5ad6a0', p), gold: s.sub === 'done' ? 1 : 0 });
+        ctx.restore();
+        if (p < 1) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2.5; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(480, cut + i * 6, 46, 7, Math.sin(S.t * 6 + i) * 0.15, 0, TAU); ctx.stroke(); } }
+      }
+      if (s.sub === 'wrap') {
+        ctx.setLineDash([10, 10]); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(480, 280, 150, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = OL; ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(480, 280, 150, -Math.PI / 2, -Math.PI / 2 + TAU * s.p); ctx.stroke();
+        ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 9; ctx.stroke();
+        for (let i = 0; i < 4; i++) {
+          const a = S.t * 1.2 + i * Math.PI / 2, x = 480 + Math.cos(a) * 150, y = 280 + Math.sin(a) * 150;
+          inkAt(x, y, a + Math.PI / 2, P2('M-10,-9 L10,0 L-10,9 Z'), '#fff6a8', 1.6);
+        }
+        outlined('Rub round and round!', 480, 470, 26, '#fff6a8');
+      }
+      for (const sp of s.sparks) { ctx.globalAlpha = sp.t / 0.6; star(sp.x, sp.y, 7, '#ffffff', 4); }
+      ctx.globalAlpha = 1;
+    },
+
+    // ---- 4. butterfly: cheer the wiggling chrysalis, pump the new wings, let them dry, fly to a flower
+    in_emerge(g, s) {
+      Object.assign(s, { sub: 'clear', clear: 0, wig: 0, wigT: 1.4, cracks: 0, need: bcT(g, [3, 4, 4]), out: 0, wing: 0.12, pumps: 0, pneed: bcT(g, [6, 8, 10]),
+        last: 0, pulse: 0, padHit: [0, 0], dry: 0, bx: 480, by: 392, sip: 0, webCd: 0, flowerI: 0 });
+      const far = shuffle([0, 3]);
+      s.targets = g.tier === 1 ? [far[0]] : far;
+      s.flowers = [[150, 418, '#ff6fae'], [360, 450, '#c6a2ff'], [600, 450, '#ffd23a'], [810, 418, '#ff9a5a']];
+      g.say = 'Butterfly! Days later, the chrysalis turns clear, and you can see orange wings inside! Tap it when it wiggles to cheer it on!';
+      g.tip = 'Tap the chrysalis when it wiggles!';
+    },
+    up_emerge(g, s, dt, live) {
+      s.pulse = Math.max(0, s.pulse - dt * 2.5); s.webCd = Math.max(0, s.webCd - dt);
+      s.padHit = s.padHit.map(v => Math.max(0, v - dt * 3));
+      if (s.sub === 'clear' || s.sub === 'crack') {
+        s.clear = Math.min(1, s.clear + dt / 1.4);
+        if (s.clear >= 1) s.sub = 'crack';
+        if (s.wig > 0) s.wig = Math.max(0, s.wig - dt);
+        else if ((s.wigT -= dt) <= 0) { s.wig = bcT(g, [1.5, 1.1, 0.85]); s.wigT = rand(0.9, 1.7); tone(330, 0.1, 'triangle', 0.05); }
+        if (live && pointer.clicked && Math.hypot(pointer.x - 480, pointer.y - 272) < bcT(g, [100, 82, 66])) {
+          if (s.wig > 0) {
+            s.cracks++; s.wig = 0; s.wigT = rand(0.7, 1.4); SFX.pop(); this.yay(g, 480, 260, ['Go!', 'Push!', 'Almost!', 'Yes!'][s.cracks - 1] || 'Yes!', 10);
+            if (s.cracks >= s.need) {
+              s.sub = 'out'; s.out = 0;
+              this.tell(g, 'Out comes the butterfly! Its new wings are wet and crumpled. Tap left, right, left, right, to pump them open!', 'Tap LEFT, then RIGHT, to pump the wings open!');
+            }
+          } else if (g.tier === 1) floatText(pointer.x, pointer.y - 20, 'Wait for the wiggle!', '#fff', false, 20);
+          else this.oops(g, pointer.x, pointer.y - 20, 'Wait for the wiggle!');
+        }
+      } else if (s.sub === 'out') {
+        s.out = Math.min(1, s.out + dt / 1.4);
+        if (s.out >= 1) s.sub = 'pump';
+      } else if (s.sub === 'pump' && live) {
+        let side = 0;
+        if (pointer.clicked && pointer.y > BC_TOP) side = pointer.x < 480 ? -1 : 1;
+        if (pressed.arrowleft || pressed.a) side = -1;
+        if (pressed.arrowright || pressed.d) side = 1;
+        if (side) {
+          s.padHit[side < 0 ? 0 : 1] = 1;
+          if (side !== s.last) {
+            s.last = side; s.pumps++; s.pulse = 1; s.wing = 0.12 + 0.88 * s.pumps / s.pneed; chime(s.pumps * 2);
+            if (s.pumps >= s.pneed) {
+              s.sub = 'dry'; s.dry = 0; SFX.sparkle(); burst(480, 380, 20);
+              this.tell(g, 'Big wings! Now they dry in the warm sun. A butterfly cannot fly until its wings are dry.', 'Wait for the wings to dry...');
+            }
+          } else this.oops(g, pointer.y > BC_TOP && pointer.clicked ? pointer.x : 480, 300, side < 0 ? 'Now tap the right side!' : 'Now tap the left side!', g.tier === 1 ? 0.5 : 1);
+        }
+      } else if (s.sub === 'dry') {
+        s.dry = Math.min(1, s.dry + dt / 2.6);
+        if (s.dry >= 1) { s.sub = 'fly'; this.tell(g, 'Its wings are dry! Fly the butterfly to the glowing flower for a sip of nectar.', 'Fly the butterfly to the glowing flower!'); }
+      } else if (s.sub === 'fly' && live) {
+        let tx = s.bx, ty = s.by;
+        if (pointerMoved(g)) { tx = pointer.x; ty = pointer.y; }
+        const kx = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), ky = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+        if (kx || ky) { tx = s.bx + kx * 100; ty = s.by + ky * 100; }
+        const dx = tx - s.bx, dy = ty - s.by, d = Math.hypot(dx, dy);
+        if (d > 4 && s.sip <= 0) { const sp = Math.min(d * 6, 290) * dt; s.bx += dx / d * sp; s.by += dy / d * sp; s.vx = dx / d; }
+        s.bx = clamp(s.bx, 30, W - 30); s.by = clamp(s.by, BC_TOP + 30, H - 30);
+        const web = this.webPos(g, s);
+        if (web && s.webCd <= 0 && Math.hypot(web[0] - s.bx, web[1] - s.by) < 62) {
+          s.webCd = 1.5; s.by = web[1] - 110; this.oops(g, web[0], web[1] - 70, 'Watch out for the sticky web!');
+        }
+        if (s.sip > 0) {
+          s.sip -= dt;
+          if (s.sip <= 0) {
+            s.flowerI++;
+            if (s.flowerI >= s.targets.length) {
+              s.sub = 'done';
+              this.tell(g, 'Yum, nectar! Soon she will lay eggs of her own, and the life cycle starts all over again!', 'She will lay eggs of her own!');
+              this.later(g, 4.2, () => this.next(g));
+            } else this.tell(g, 'Yum! Now fly to the next glowing flower!');
+          }
+        } else {
+          const f = s.flowers[s.targets[s.flowerI]];
+          if (Math.hypot(f[0] - s.bx, f[1] - s.by) < bcT(g, [72, 60, 50])) { s.sip = 1.1; s.bx = f[0]; s.by = f[1] - 16; this.yay(g, f[0], f[1] - 40, 'Sip!', 18); }
+        }
+      }
+    },
+    webPos(g, s) {
+      if (g.tier === 1 || s.flowerI >= s.targets.length) return null;
+      const f = s.flowers[s.targets[s.flowerI]];
+      return [(f[0] + 480) / 2, 360];
+    },
+    dr_emerge(g, s) {
+      ctx.fillStyle = 'rgba(255,255,240,.25)'; ctx.fillRect(0, BC_TOP, W, H - BC_TOP);
+      bcBranch(150);
+      ctx.fillStyle = '#ffffff'; for (let i = 0; i < 6; i++) circle(474 + i * 2.5, 168 + (i % 2) * 3, 5);
+      const sun = s.sub === 'dry' ? s.dry : 0;
+      if (sun > 0) { ctx.save(); ctx.globalAlpha = Math.min(1, Math.sin(sun * Math.PI) * 2); bdSunburst(820, 210); ctx.restore(); }
+      if (s.sub === 'clear' || s.sub === 'crack') {
+        const wob = s.wig > 0 ? Math.sin(S.t * 34) * 0.12 : Math.sin(S.t * 1.5) * 0.02;
+        bcChrysalis(480, 172, 1.7, { clear: s.clear, wob, cracks: s.cracks });
+        if (s.wig > 0) { outlined('NOW!', 600, 260, 34, '#fff6a8'); for (const d of [-1, 1]) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(480, 272, 96, d > 0 ? -0.5 : Math.PI - 0.5, d > 0 ? 0.5 : Math.PI + 0.5); ctx.stroke(); } }
+        else outlined('Wait for the wiggle...', 480, 470, 22, '#fff');
+        return;
+      }
+      bcChrysalis(480, 172, 1.7, { empty: true });
+      const flap = 0.3 - s.pulse * 0.3;   // wings half up at rest; each pump opens them wide
+      if (s.sub === 'out') { ctx.save(); ctx.globalAlpha = s.out; bcMonarch(480, lerp(320, 392, s.out), 1.6, 0.3, 0, 0.12, 1); ctx.restore(); }
+      else if (s.sub === 'pump' || s.sub === 'dry') {
+        const fl = s.sub === 'dry' ? 0.15 + Math.sin(S.t * 2) * 0.15 : flap;
+        bcMonarch(480, 392, 1.6, fl, 0, s.wing, s.sub === 'dry' ? 1 - s.dry : 1);
+        if (s.sub === 'dry') { for (let i = 0; i < 3; i++) { const t = (S.t * 0.8 + i / 3) % 1; ctx.globalAlpha = 1 - t; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(420 + i * 60, 360 - t * 60); ctx.quadraticCurveTo(430 + i * 60, 350 - t * 60, 420 + i * 60, 340 - t * 60); ctx.stroke(); } ctx.globalAlpha = 1; }
+        if (s.sub === 'pump') {
+          for (const [i, side] of [[0, -1], [1, 1]]) {
+            const x = 480 + side * 270, want = s.last !== side, glow = s.padHit[i];
+            rrect(x - 90, 300, 180, 150, 28, want ? 'rgba(255,246,168,.55)' : 'rgba(255,255,255,.25)', glow ? '#fff' : 'rgba(255,255,255,.7)', 4 + glow * 4);
+            inkAt(x, 360, side > 0 ? 0 : Math.PI, P2('M-34,-12 L6,-12 L6,-30 L38,0 L6,30 L6,12 L-34,12 Z'), want ? '#ffd84a' : '#d8c8e0', 2);
+            text(side < 0 ? 'Left' : 'Right', x, 422, 22, '#5a2a6e', 'center', 800);
+          }
+          rrect(400, 506, 160, 20, 10, 'rgba(48,24,72,.6)'); rrect(404, 510, Math.max(12, 152 * s.pumps / s.pneed), 12, 6, '#ffb03a');
+        }
+        return;
+      }
+      // flying: the flowers wait below
+      for (const [i, [x, y, c]] of s.flowers.entries()) {
+        const target = s.sub === 'fly' && s.targets[s.flowerI] === i, sw = Math.sin(S.t * 1.5 + i) * 4;
+        sway(x, H + 4, H - y + 4, sw, OL, 9); sway(x, H + 4, H - y + 4, sw, '#4fae4a', 5);
+        bcLeaf(x + sw * 0.3, y + 50, 50, 14, -0.6, 0); bcLeaf(x + sw * 0.3, y + 70, 50, 14, Math.PI + 0.6, 0);
+        if (target) { const gl = ctx.createRadialGradient(x + sw, y, 6, x + sw, y, 80); gl.addColorStop(0, 'rgba(255,250,180,.9)'); gl.addColorStop(1, 'rgba(255,250,180,0)'); ctx.fillStyle = gl; ctx.fillRect(x - 90, y - 90, 180, 180); }
+        flower(x + sw, y, 34, c, '#ffd84a', 2.2);
+        if (target) outlined('Here!', x + sw, y - 56 + Math.sin(S.t * 5) * 4, 22, '#fff6a8');
+      }
+      const web = this.webPos(g, s);
+      if (web) {
+        const [wx, wy] = web; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(wx, BC_TOP); ctx.lineTo(wx, wy - 54); ctx.stroke();
+        for (let i = 0; i < 8; i++) { const a = i * TAU / 8; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * 56, wy + Math.sin(a) * 56); ctx.stroke(); }
+        for (let k = 1; k <= 3; k++) { ctx.beginPath(); for (let i = 0; i <= 8; i++) { const a = i * TAU / 8, rr = k * 17; ctx.lineTo(wx + Math.cos(a) * rr, wy + Math.sin(a) * rr); } ctx.stroke(); }
+        inkCircle(wx, wy, 9, '#3a2a4a', 1.4); ctx.fillStyle = '#fff'; circle(wx - 3, wy - 2, 2.2); circle(wx + 3, wy - 2, 2.2);
+      }
+      bcMonarch(s.bx, s.by, 1.0, S.t * (s.sip > 0 ? 0.8 : 3.4), (s.vx || 0) * 0.2);
+    },
+
+    // ============ ROUND 2: the chicken ============
+    // ---- 1. egg: the hen keeps it warm, and you roll it the way the arrow shows, day after day
+    in_warm(g, s) {
+      Object.assign(s, { want: pick([-1, 1]), turns: 0, need: bcT(g, [4, 5, 6]), days: 0, roll: 0, rollTo: 0, drag: null, tilt: 0, henX: 760, sitT: 0, sit: 0, wob: 0, ready: false });
+      g.say = 'Egg! A mother hen keeps her egg warm and turns it every day, for 21 days. Roll the egg the way the arrow points!';
+      g.tip = 'Drag the egg the way the arrow points!';
+    },
+    turnEgg(g, s, dir) {
+      if (dir === s.want) {
+        s.turns++; s.rollTo += dir * Math.PI; s.days = Math.round(21 * s.turns / s.need);
+        this.yay(g, 480, 330, `Day ${s.days}!`, 10); s.sitT = 1.5;
+        if (s.turns >= s.need) {
+          s.ready = true;
+          this.later(g, 1.9, () => { this.tell(g, 'Day 21! Peep, peep! The chick inside is ready to hatch.', 'Peep, peep!'); this.later(g, 2.6, () => this.next(g)); });
+        } else s.want = Math.random() < 0.6 ? -s.want : s.want;
+      } else { s.wob = 0.5; this.oops(g, 480, 320, 'Oops, the other way! Follow the arrow.'); }
+    },
+    up_warm(g, s, dt, live) {
+      s.wob = Math.max(0, s.wob - dt); s.sitT = Math.max(0, s.sitT - dt);
+      s.roll = lerp(s.roll, s.rollTo, Math.min(1, dt * 6));
+      s.henX = lerp(s.henX, s.sitT > 0 ? 480 : 760, Math.min(1, dt * 5));
+      s.sit = clamp(s.sit + (s.sitT > 0 && Math.abs(s.henX - 480) < 30 ? 1 : -1) * dt * 4, 0, 1);
+      const free = live && !s.ready && s.sitT <= 0 && s.sit < 0.05 && Math.abs(s.henX - 760) < 40;
+      if (!free) { s.drag = null; s.tilt = lerp(s.tilt, 0, Math.min(1, dt * 8)); return; }
+      if (pointer.clicked && Math.hypot(pointer.x - 480, pointer.y - 398) < bcT(g, [100, 85, 70])) s.drag = { x0: pointer.x };
+      if (s.drag && pointer.down) {
+        const dx = pointer.x - s.drag.x0; s.tilt = clamp(dx / 300, -0.3, 0.3);
+        if (Math.abs(dx) > bcT(g, [40, 55, 70])) { s.drag = null; this.turnEgg(g, s, Math.sign(dx)); }
+      } else { s.drag = null; s.tilt = lerp(s.tilt, 0, Math.min(1, dt * 8)); }
+      if (pressed.arrowleft || pressed.a) this.turnEgg(g, s, -1);
+      else if (pressed.arrowright || pressed.d) this.turnEgg(g, s, 1);
+    },
+    dr_warm(g, s) {
+      bcNestBack(480, 446, 220);
+      const wob = s.wob > 0 ? Math.sin(s.wob * 40) * 0.1 : 0;
+      bcHenEgg(480, 398, 46, 58, s.tilt + wob, s.roll);
+      bcNestFront(480, 446, 220);
+      bcHen(s.henX, 476 - s.sit * 16, 1.3, -1, s.sit);
+      if (s.sit > 0.7) { for (let i = 0; i < 3; i++) { const t = (S.t * 0.7 + i / 3) % 1; ctx.globalAlpha = 1 - t; heart(440 + i * 40, 330 - t * 60, 20, '#ff8ab0'); } ctx.globalAlpha = 1; outlined('Warm!', 480, 270, 26, '#fff6a8'); }
+      const free = !s.ready && s.sitT <= 0 && s.sit < 0.05;
+      if (free) {
+        const a = s.want, y = 290, pul = 1 + Math.sin(S.t * 6) * 0.08;
+        ctx.save(); ctx.translate(480 + a * (20 + Math.sin(S.t * 6) * 8), y); ctx.scale(a * pul, pul);
+        ink(P2('M-60,-14 L20,-14 L20,-36 L66,0 L20,36 L20,14 L-60,14 Z'), '#ffd84a', 2.4);
+        ctx.restore();
+        outlined(a < 0 ? 'Roll it LEFT' : 'Roll it RIGHT', 480, 236, 26, '#fff');
+      }
+      // the calendar: 21 days of keeping warm
+      panel(30, 300, 220, 150, 18);
+      text(`Day ${s.days} of 21`, 140, 328, 22, '#5a2a6e', 'center', 800);
+      for (let i = 0; i < 21; i++) { const x = 56 + (i % 7) * 28, y = 362 + Math.floor(i / 7) * 28; inkCircle(x, y, 10, i < s.days ? '#ffb03a' : '#fff4e0', 1.2); }
+      // a peek inside the egg: the chick is growing
+      const f = s.days / 21, cx = 800, cy = 220;
+      panel(cx - 86, cy - 86, 172, 196, 20);
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, 70, 0, TAU); ctx.clip();
+      const gl = ctx.createRadialGradient(cx, cy, 10, cx, cy, 80); gl.addColorStop(0, '#ffe2a0'); gl.addColorStop(1, '#e08a3a'); ctx.fillStyle = gl; ctx.fillRect(cx - 80, cy - 80, 160, 160);
+      ctx.globalAlpha = 0.5; bcHenEgg(cx, cy, 50, 64); ctx.globalAlpha = 1;
+      if (f < 0.25) { ctx.fillStyle = '#e04a3a'; circle(cx, cy, 5 + f * 20); ctx.strokeStyle = '#e04a3a'; ctx.lineWidth = 1.5; for (let i = 0; i < 6; i++) { const a = i; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(cx + Math.cos(a) * 20, cy + Math.sin(a) * 30, cx + Math.cos(a + 0.4) * 36, cy + Math.sin(a + 0.4) * 40); ctx.stroke(); } }
+      else { ctx.globalAlpha = 0.85; bcChick(cx - 4, cy + 30, 0.4 + f * 1.1, 0, 1, 0.6, 0.5); ctx.globalAlpha = 1; }
+      ctx.restore();
+      ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, cy, 70, 0, TAU); ctx.stroke();
+      text('Inside the egg', cx, cy + 94, 16, '#5a2a6e', 'center', 800);
+    },
+
+    // ---- 2. hatching: the chick pecks a ring round its shell; tap each glowing spot
+    in_hatch(g, s) {
+      const n = bcT(g, [5, 6, 8]);
+      s.spots = Array.from({ length: n }, (_, i) => { const f = i / (n - 1); return [480 - 80 + 160 * f, 296 + Math.sin(f * Math.PI) * 18]; });
+      Object.assign(s, { cur: 0, peck: 0, pop: 0, sub: 'peck', fluff: 0, wob: 0 });
+      g.say = 'Hatching! The chick pecks a ring around its shell with a tiny egg tooth. Tap each glowing spot to help it peck!';
+      g.tip = 'Tap each glowing spot to help the chick peck out!';
+    },
+    up_hatch(g, s, dt, live) {
+      s.peck = Math.max(0, s.peck - dt); s.wob = Math.max(0, s.wob - dt);
+      if (s.sub === 'pop') { s.pop = Math.min(1, s.pop + dt / 0.9); if (s.pop >= 1) s.fluff = Math.min(1, s.fluff + dt / 2.2); return; }
+      if (!live || !pointer.clicked) return;
+      const [sx, sy] = s.spots[s.cur];
+      if (Math.hypot(pointer.x - sx, pointer.y - sy) < bcT(g, [44, 32, 21])) {
+        s.cur++; s.peck = 0.45; s.wob = 0.3; tone(1300, 0.08, 'sine', 0.08, 0, 1800); tone(1500, 0.08, 'sine', 0.06, 0.1, 2000); burst(sx, sy, 6, { colors: ['#fff4e0', '#ffffff'], spread: 70, up: 40 });
+        if (s.cur >= s.spots.length) {
+          s.sub = 'pop'; SFX.sparkle(); this.yay(g, 480, 240, 'Peep!', 24);
+          this.tell(g, 'Hello, chick! It is wet at first. Soon it dries off, all soft and fluffy.', 'Hello, little chick!');
+          this.later(g, 4, () => this.next(g));
+        }
+      } else if (Math.hypot(pointer.x - 480, pointer.y - 340) < 170) this.oops(g, pointer.x, pointer.y - 20, 'Tap the glowing spot!', g.tier === 1 ? 0.5 : 1);
+    },
+    zig(s) {
+      const p = [[480 - 120, s.spots[0][1] + 10]];
+      s.spots.forEach(([x, y], i) => { p.push([x, y]); if (i < s.spots.length - 1) p.push([(x + s.spots[i + 1][0]) / 2, (y + s.spots[i + 1][1]) / 2 + (i % 2 ? -9 : 9)]); });
+      p.push([480 + 120, s.spots[s.spots.length - 1][1] + 10]);
+      return p;
+    },
+    dr_hatch(g, s) {
+      bcNestBack(480, 470, 320);
+      const ex = 480, ey = 340, rx = 96, ry = 120, wob = s.wob > 0 ? Math.sin(s.wob * 50) * 0.04 : Math.sin(S.t * 3) * 0.01;
+      const zig = this.zig(s);
+      const half = top => { const p = new Path2D(); p.moveTo(zig[0][0], top ? 0 : H); for (const [x, y] of zig) p.lineTo(x, y); p.lineTo(zig[zig.length - 1][0], top ? 0 : H); p.closePath(); return p; };
+      if (s.sub === 'pop') {
+        bcChick(480, 345, 2.3, 0, 1, 0, 1 - s.fluff);
+        ctx.save(); ctx.clip(half(false)); bcHenEgg(ex, ey, rx, ry); ctx.restore();
+        bcNestFront(480, 470, 320);
+        ctx.save(); ctx.translate(s.pop * 210, -s.pop * 90 + s.pop * s.pop * 150); ctx.rotate(s.pop * 0.9);
+        ctx.save(); ctx.clip(half(true)); bcHenEgg(ex, ey, rx, ry); ctx.restore(); ctx.restore();
+        if (s.fluff > 0.6) outlined('Fluffy!', 480, 230, 30, '#fff6a8');
+        return;
+      }
+      bcHenEgg(ex, ey, rx, ry, wob);
+      bcNestFront(480, 470, 320);
+      ctx.strokeStyle = '#7a5a3a'; ctx.lineWidth = 3.5; ctx.lineJoin = 'round';
+      if (s.cur > 0) { ctx.beginPath(); zig.slice(1, 2 * s.cur).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); }
+      s.spots.forEach(([x, y], i) => {
+        if (i < s.cur) return;
+        if (i === s.cur) { const r = bcT(g, [26, 21, 16]) + Math.sin(S.t * 8) * 3; ctx.fillStyle = 'rgba(255,240,140,.7)'; circle(x, y, r); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); }
+        else { ctx.fillStyle = 'rgba(120,90,60,.3)'; circle(x, y, 5); }
       });
-      if (g.state === 'pick') outlined(g.placed ? 'Tap the next step!' : 'Tap the FIRST step!', W / 2, LC_CARD_Y - 16, 22, '#fff');
+      if (s.peck > 0 && s.cur > 0) { const [x, y] = s.spots[s.cur - 1]; ink(P2(`M${x - 7},${y + 2} L${x},${y - 12} L${x + 7},${y + 2} Z`), '#ffb030', 1.2); }
+    },
+
+    // ---- 3. chick: tap seeds (not pebbles) to feed the chick, and watch it grow feathers
+    in_chick(g, s) {
+      Object.assign(s, { x: 480, y: 480, dir: 1, target: null, grow: 0, eaten: 0, need: bcT(g, [8, 10, 12]), peck: 0, items: [], half: false, done: false });
+      for (let i = 0; i < 4; i++) this.addItem(s, 'seed');
+      for (let i = 0; i < bcT(g, [1, 2, 3]); i++) this.addItem(s, 'pebble');
+      g.say = 'Chick! The fluffy chick pecks up seeds and grows bigger. Tap the seeds to feed it, but not the pebbles!';
+      g.tip = 'Tap the yellow seeds to feed the chick. Not the pebbles!';
+    },
+    addItem(s, kind) {
+      for (let k = 0; k < 40; k++) {
+        const x = rand(110, 850), y = rand(408, 518);
+        if (Math.hypot(x - s.x, y - s.y) < 110 || s.items.some(it => Math.hypot(it.x - x, it.y - y) < 76)) continue;
+        s.items.push({ kind, x, y, drop: 0, wob: 0 }); return;
+      }
+    },
+    up_chick(g, s, dt, live) {
+      s.peck = Math.max(0, s.peck - dt);
+      for (const it of s.items) { it.drop = Math.min(1, it.drop + dt * 3); it.wob = Math.max(0, it.wob - dt); }
+      if (live && !s.done && pointer.clicked) {
+        const r = bcT(g, [48, 40, 32]);
+        const it = s.items.filter(it => Math.hypot(it.x - pointer.x, it.y - pointer.y) < r).sort((a, b) => Math.hypot(a.x - pointer.x, a.y - pointer.y) - Math.hypot(b.x - pointer.x, b.y - pointer.y))[0];
+        if (it && it.kind === 'seed') { s.target = it; tone(1400, 0.06, 'sine', 0.06, 0, 1700); }
+        else if (it) { it.wob = 0.5; this.oops(g, it.x, it.y - 30, 'That is a pebble! Chicks eat seeds.'); }
+      }
+      if (s.target && s.peck <= 0) {
+        const t = s.target, dx = t.x - s.x, dy = t.y + 6 - s.y, d = Math.hypot(dx, dy);
+        if (Math.abs(dx) > 2) s.dir = Math.sign(dx);
+        if (d > 24) { const sp = Math.min(d * 8, 300) * dt; s.x += dx / d * sp; s.y += dy / d * sp; }
+        else {
+          s.peck = 0.35; s.items.splice(s.items.indexOf(t), 1); s.target = null; s.eaten++; s.grow = s.eaten / s.need;
+          chime(s.eaten * 2); burst(t.x, t.y, 6, { colors: ['#ffd23a', '#fff0a0'], spread: 60, up: 40, size: [2, 4] }); floatText(t.x, t.y - 40, 'Yum!', '#fff6a8', false, 20);
+          if (s.items.filter(i => i.kind === 'seed').length + s.eaten < s.need) this.addItem(s, 'seed');
+          if (!s.half && s.eaten >= Math.ceil(s.need / 2)) { s.half = true; SFX.sparkle(); this.tell(g, 'Look! Its fluffy down is changing into real feathers, and a little red comb is growing!'); }
+          if (s.eaten >= s.need) {
+            s.done = true; this.yay(g, s.x, s.y - 80, 'All grown up!', 24);
+            this.tell(g, 'The chick ate and grew, and grew, and now it is a grown-up hen!', 'All grown up!');
+            this.later(g, 3.4, () => this.next(g));
+          }
+        }
+      }
+    },
+    dr_chick(g, s) {
+      for (const it of s.items) {
+        const y = it.y - (1 - it.drop) * 200, wob = it.wob > 0 ? Math.sin(it.wob * 40) * 5 : 0;
+        ctx.fillStyle = 'rgba(120,80,30,.25)'; ellipse(it.x, it.y + 9, 12, 4);
+        if (it.kind === 'seed') { bcSeed(it.x + wob, y, 1.5); if (s.target === it) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(it.x, it.y, 24, 0, TAU); ctx.stroke(); } }
+        else bcPebble(it.x + wob, y, 1.6);
+      }
+      ctx.fillStyle = 'rgba(120,80,30,.25)'; ellipse(s.x, s.y + 2, 30 + s.grow * 20, 7);
+      bcChick(s.x, s.y, 1.7, s.grow, s.dir, s.peck > 0 ? 1 : 0);
+      rrect(380, 506, 200, 22, 11, 'rgba(48,24,72,.6)'); rrect(384, 510, Math.max(14, 192 * s.grow), 14, 7, '#ffd23a');
+      text(`Seeds: ${s.eaten} / ${s.need}`, 480, 517, 13, '#5a2a1a', 'center', 800);
+    },
+
+    // ---- 4. hen: drag straw into her nest box; she sits and lays a brand new egg
+    in_hen(g, s) {
+      const n = bcT(g, [3, 4, 5]), spots = [[150, 470], [300, 500], [690, 500], [840, 470], [230, 410]];
+      Object.assign(s, { need: n, filled: 0, drag: null, sub: 'nest', henX: 810, henDir: -1, sit: 0, layT: 0, egg: false });
+      s.straws = spots.slice(0, n).map(([x, y]) => ({ x, y, rot: rand(-0.4, 0.4), in: false }));
+      g.say = 'Hen! The chick grew up into a hen. She needs a cosy nest to lay her egg. Drag the straw into the nest box!';
+      g.tip = 'Drag the straw into the nest box!';
+    },
+    boxHit(g, x, y) { const p = bcT(g, [55, 38, 24]); return x > 480 - 120 - p && x < 480 + 120 + p && y > 360 - p && y < 470 + p; },
+    up_hen(g, s, dt, live) {
+      if (s.sub === 'nest' && live) {
+        if (pointer.clicked && !s.drag) s.drag = s.straws.find(st => !st.in && Math.hypot(st.x - pointer.x, st.y - pointer.y) < 56) || null;
+        if (s.drag && pointer.down) { s.drag.x = pointer.x; s.drag.y = pointer.y; }
+        else if (s.drag) {
+          const st = s.drag; s.drag = null;
+          if (this.boxHit(g, st.x, st.y)) {
+            st.in = true; s.filled++; SFX.pick(); noise(0.1, 0.03); this.yay(g, 480, 380, s.filled < s.need ? 'Cosy!' : 'All done!', 10);
+            if (s.filled >= s.need) { s.sub = 'lay'; s.layT = 0; this.tell(g, 'What a cosy nest! Here comes the hen.', 'Here comes the hen...'); }
+          } else { st.y = clamp(st.y, 330, 515); floatText(st.x, st.y - 30, 'Into the box!', '#fff', false, 20); }
+        }
+      } else if (s.sub === 'lay') {
+        s.layT += dt; const t = s.layT;
+        if (t < 1.4) { s.henX = lerp(810, 480, t / 1.4); s.henDir = -1; }
+        else if (t < 3.2) { s.sit = Math.min(1, s.sit + dt * 4); if (t - dt < 2 && t >= 2) { tone(500, 0.12, 'square', 0.05); tone(620, 0.16, 'square', 0.05, 0.14); floatText(560, 280, 'Bawk bawk!', '#fff', false, 26); } }
+        else if (t < 4.6) { s.egg = true; s.sit = Math.max(0, s.sit - dt * 4); s.henX = lerp(480, 720, (t - 3.2) / 1.4); s.henDir = 1; }
+        else { s.sub = 'egg'; s.henDir = -1; this.tell(g, 'She laid an egg! Tap the brand new egg.', 'Tap the new egg!'); }
+      } else if (s.sub === 'egg' && live && pointer.clicked && Math.hypot(pointer.x - 480, pointer.y - 384) < bcT(g, [80, 70, 60])) {
+        s.sub = 'done'; this.yay(g, 480, 360, 'A new egg!', 30); SFX.sparkle();
+        this.tell(g, 'A new egg, and the life cycle starts all over again!', 'Round and round it goes!');
+        this.later(g, 3.4, () => this.next(g));
+      }
+    },
+    dr_hen(g, s) {
+      // the nest box: back, straw inside, the hen, then the front board
+      inkRect(360, 340, 240, 70, '#7a4a2a', 2.5, 6);
+      const lvl = s.filled / s.need;
+      if (lvl > 0) { ctx.fillStyle = '#f0cc60'; ctx.beginPath(); ctx.ellipse(480, 410 - lvl * 24, 112, 14 + lvl * 10, 0, Math.PI, 0); ctx.fill(); ctx.strokeStyle = '#c8a040'; ctx.lineWidth = 2; for (let i = 0; i < 10 * lvl; i++) { ctx.beginPath(); ctx.moveTo(380 + i * 22, 404 - lvl * 26); ctx.lineTo(396 + i * 22, 398 - lvl * 30); ctx.stroke(); } }
+      if (s.egg) bcHenEgg(480, 384, 22, 28);
+      if (s.sub === 'lay' || s.sub === 'egg' || s.sub === 'done' || s.sub === 'nest') bcHen(s.henX, 470 - s.sit * 40, 1.25, s.henDir, s.sit);
+      inkRect(354, 404, 252, 76, '#c8844a', 2.5, 8);
+      ctx.strokeStyle = '#a0683a'; ctx.lineWidth = 3; for (const y of [428, 454]) { ctx.beginPath(); ctx.moveTo(362, y); ctx.lineTo(598, y); ctx.stroke(); }
+      text('NEST', 480, 442, 22, '#fff4e0', 'center', 800);
+      if (s.sub === 'nest') { ctx.setLineDash([10, 8]); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3; rrect(346, 326, 268, 164, 14, null, 'rgba(255,255,255,.8)', 3); ctx.setLineDash([]); }
+      if (s.sub === 'egg') { ctx.strokeStyle = '#fff6a8'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(480, 384, 40 + Math.sin(S.t * 6) * 4, 0, TAU); ctx.stroke(); }
+      for (const st of s.straws) if (!st.in) bcStraw(st.x, st.y, st.rot, s.drag === st ? 1.15 : 1);
+      text(`Straw: ${s.filled} / ${s.need}`, 480, 506, 18, '#5a2a1a', 'center', 800);
+    },
+
+    // ============ the circle: tap the steps in order, then watch it loop ============
+    in_recap(g, s) {
+      const c = BC_CYC[g.round];
+      Object.assign(s, { cards: shuffle([0, 1, 2, 3]).map((step, i) => ({ step, x: 780, y: 128 + i * 102, at: -1 })), placed: 0, loop: -1, bounce: [0, 0, 0, 0], lastSpot: -1 });
+      g.say = `Now close the circle! Tap the ${c.name.toLowerCase()}'s life steps in order. What comes first?`;
+      g.tip = 'Tap the steps in order to make the circle!';
+    },
+    up_recap(g, s, dt, live, id) {
+      const c = BC_CYC[g.round];
+      for (const cd of s.cards) if (cd.at >= 0) { const [sx, sy] = BC_SPOTS[cd.at]; cd.x = lerp(cd.x, sx - BC_CW / 2, Math.min(1, dt * 9)); cd.y = lerp(cd.y, sy - BC_CH / 2, Math.min(1, dt * 9)); }
+      s.bounce = s.bounce.map(b => Math.max(0, b - dt * 2.5));
+      if (s.loop >= 0) {
+        s.loop += dt;
+        const spot = Math.floor(((s.loop * 1.4) / (TAU / 4)) % 4);
+        if (spot !== s.lastSpot) { s.lastSpot = spot; s.bounce[spot] = 1; chime(spot * 3); }
+        if (id === 'bcnext' || s.loop > 8.5) this.next(g);
+        return;
+      }
+      if (!live) return;
+      const i = pickId(id, 'bcr:');
+      if (i < 0) return;
+      const cd = s.cards[i];
+      if (cd.at >= 0) return;
+      if (cd.step === s.placed) {
+        cd.at = s.placed++; SFX.pick(); chime(cd.step * 3);
+        if (s.placed === 4) { s.loop = 0; SFX.sparkle(); burst(BC_CX, BC_CY, 30); this.tell(g, c.loop, 'It goes round and round. A life cycle!'); }
+        else speak(`${c.steps[cd.step][1]}! What comes next?`);
+      } else {
+        g.shake[i] = 0.45;
+        this.oops(g, cd.x + BC_CW / 2, cd.y, s.placed ? `What comes right after the ${c.steps[s.placed - 1][1].toLowerCase()}?` : 'What comes first of all?');
+      }
+    },
+    recapCard(g, step, x, y, col) {
+      const c = BC_CYC[g.round];
+      rrect(x + 6, y + 6, BC_CW - 12, BC_CH - 34, 10, '#fffaf2');
+      ctx.save(); ctx.beginPath(); ctx.roundRect(x + 6, y + 6, BC_CW - 12, BC_CH - 34, 10); ctx.clip();
+      ctx.translate(x + BC_CW / 2, y + 40); ctx.scale(0.62, 0.62); BC_PICS[g.round][step](0, 0); ctx.restore();
+      text(c.steps[step][1], x + BC_CW / 2, y + BC_CH - 15, 18, '#fff', 'center', 800);
+    },
+    dr_recap(g, s) {
+      const c = BC_CYC[g.round];
+      ctx.fillStyle = 'rgba(255,248,252,.35)'; ctx.fillRect(0, BC_TOP, W, H - BC_TOP);
+      // arrows round the circle; the last one leads back to the start
+      const ang = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+      for (let i = 0; i < 4; i++) {
+        const lit = s.placed > i + 1 || (i === 3 && s.loop >= 0) || (s.placed === 4);
+        const a0 = ang[i] + 0.5, a1 = ang[i] + Math.PI / 2 - 0.5;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = OL; ctx.lineWidth = 12; ctx.beginPath(); ctx.ellipse(BC_CX, BC_CY, BC_RX, BC_RY, 0, a0, a1); ctx.stroke();
+        ctx.strokeStyle = lit ? (i === 3 ? '#ff8ac0' : '#ffd84a') : '#e8dcef'; ctx.lineWidth = 7; ctx.stroke();
+        const hx = BC_CX + Math.cos(a1) * BC_RX, hy = BC_CY + Math.sin(a1) * BC_RY, ta = Math.atan2(Math.cos(a1) * BC_RY, -Math.sin(a1) * BC_RX);
+        inkAt(hx, hy, ta, P2('M-6,-14 L16,0 L-6,14 Z'), lit ? (i === 3 ? '#ff8ac0' : '#ffd84a') : '#e8dcef', 2);
+      }
+      if (s.loop >= 0) {
+        const a = -Math.PI / 2 + s.loop * 1.4;
+        for (let k = 0; k < 8; k++) { const b = a - k * 0.07; ctx.globalAlpha = 1 - k / 8; star(BC_CX + Math.cos(b) * BC_RX, BC_CY + Math.sin(b) * BC_RY, 12 - k, '#fff6a8', 4); }
+        ctx.globalAlpha = 1;
+      }
+      // the creature in the middle of its own circle
+      if (g.round === 0) bcMonarch(BC_CX, BC_CY - 4, 0.7, S.t * 2); else bcHen(BC_CX + 4, BC_CY + 36, 0.62, 1, 0, Math.max(0, Math.sin(S.t * 3)) * 0.4);
+      outlined(s.loop >= 0 ? 'Life cycle!' : `${c.name}`, BC_CX, BC_CY + 56, 22, '#fff6a8');
+      for (let i = 0; i < 4; i++) {
+        const [sx, sy] = BC_SPOTS[i];
+        rrect(sx - BC_CW / 2, sy - BC_CH / 2, BC_CW, BC_CH, 14, 'rgba(255,255,255,.6)', 'rgba(91,63,115,.4)', 3);
+        if (i >= s.placed) outlined(String(i + 1), sx, sy, 40, 'rgba(255,255,255,.95)', 'center', 'rgba(91,63,115,.35)');
+      }
+      s.cards.forEach((cd, i) => {
+        const col = c.steps[cd.step][2];
+        if (cd.at >= 0) {
+          const b = s.bounce[cd.at], sc = 1 + Math.sin(b * Math.PI) * 0.12;
+          ctx.save(); ctx.translate(cd.x + BC_CW / 2, cd.y + BC_CH / 2); ctx.scale(sc, sc); ctx.translate(-cd.x - BC_CW / 2, -cd.y - BC_CH / 2);
+          rrect(cd.x, cd.y, BC_CW, BC_CH, 14, col, 'rgba(255,255,255,.9)', 3); this.recapCard(g, cd.step, cd.x, cd.y, col); ctx.restore();
+        } else {
+          const x = cd.x + shakeX(g, i);
+          button(`bcr:${i}`, x, cd.y, BC_CW, BC_CH - 6, '', { color: CARD_COLS[i], on: s.loop < 0 && !g.hold, key: String(i + 1) });
+          this.recapCard(g, cd.step, x, cd.y - 3, col);
+        }
+      });
+      if (s.loop > 1.5 && !g.done) button('bcnext', 780, 450, 160, 56, g.round === 0 ? 'Next ▶' : 'Done ▶', { color: '#5fb87a', size: 22 });
     },
   };
 
@@ -768,7 +1710,7 @@
   restage('meadow', {
     bg: 'meadow_bg',
     games: [['butterflycycle', 'petal'], ['gardenhelper', 'petal']],
-    intro: ["N:Psst! Want to know a secret? I wasn't ALWAYS a butterfly!", "A:surprised:You weren't?", "N:Nope! I started as a teeny tiny egg. Can you put my life in order?"],
+    intro: ["N:Psst! Want to know a secret? I wasn't ALWAYS a butterfly!", "A:surprised:You weren't?", "N:Nope! I started as a teeny tiny egg. Will you help me grow up, one step at a time? Then we'll visit the hens next door!"],
     mid: ["N:You know all my secrets now! Butterflies need flowers to visit, you know.", "N:Will you grow a little bucket garden for us? Pick three plants and take good care of them!", "A:excited:I'll be the best gardener ever!"],
     outro: ['N:The whole meadow is blooming! Take some petals. Every unicorn I know LOVES petals.', "A:surprised:How did you know about...? Never mind!"],
   });
@@ -3349,111 +4291,590 @@
   };
 
   // --- gnome door keys: match the numeral on the door to the key with that many dots -----
-  // dots in a die pattern up to 6, otherwise in one or two ten-frames
-  function dotPattern(n, x, y, r, col) {
-    const die = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
-    if (n <= 6) { for (const [dx, dy] of die[n]) inkCircle(x + dx * r * 2.6, y + dy * r * 2.6, r * 1.15, col, 1); return; }
-    const frames = n > 10 ? 2 : 1, s = r * 2.25;
-    for (let f = 0; f < frames; f++) for (let k = 0; k < 10; k++) {
-      const cx = x + (k % 5 - 2) * s, cy = y + (Math.floor(k / 5) - (frames === 2 ? 1.5 : 0.5) + f * 2) * s + (frames === 2 ? (f ? 2 : -2) : 0);
-      const idx = f * 10 + k;
-      if (idx < n) inkCircle(cx, cy, r, col, 0.9); else { ctx.strokeStyle = 'rgba(91,63,115,.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, r * 0.8, 0, TAU); ctx.stroke(); }
+  // Little doors sit in the roots of a giant tree. Drag a key off the jangly ring to the keyhole (or
+  // tap it), twist it round to push up the lock pins, and the door creaks open on something to count.
+  // Key faces: dots (tier 1); ten-frames, fingers or tally marks (tier 2); sums like 2+3 or a full
+  // ten-frame and some more (tier 3). A wrong key jams, and Gnorbert counts its dots out loud.
+  const GKD = { x: 480, top: 104, base: 326, hw: 76, kx: 480, ky: 284, ringY: 352, ringRx: 340, ringRy: 20, gx: 862, gy: 362, tx: 646, ty: 262 };
+  const GK_KEYS = [{ rim: '#ffd84a', dark: '#e0a828', dot: '#ff4f7a' }, { rim: '#e4eaf4', dark: '#a8b4c8', dot: '#3a8ff0' }, { rim: '#f4a868', dark: '#c8783a', dot: '#8c5cf0' }, { rim: '#ffbcd4', dark: '#e088a8', dot: '#2fae5a' }];
+  const GK_DOORS = ['#5fb8f0', '#ff8fb8', '#5adc7a', '#c06ae0', '#ff9a3a', '#4fc8c0'];
+  const GK_CAPS = ['#ff4a4a', '#c06ae0', '#ff9a3a', '#4f8fe8', '#ff5f9a'];
+  const GK_ROOMS = [
+    { id: 'tea', one: 'ladybug', many: 'ladybugs', tail: ' at the tea party' },
+    { id: 'glow', one: 'glowing mushroom', many: 'glowing mushrooms', tail: '' },
+    { id: 'hog', one: 'acorn', many: 'acorns', tail: ' for the sleepy hedgehog' },
+    { id: 'dinner', one: 'gnome', many: 'gnomes', tail: ' at dinner' },
+    { id: 'fly', one: 'firefly', many: 'fireflies', tail: ' glowing in the dark' },
+  ];
+  const GK_DIE = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
+  const gkEase = k => k * k * (3 - 2 * k);
+  const gkWords = (from, to) => { const w = []; for (let i = from; i <= to; i++) w.push(NUM_WORDS[i]); return w.join(', '); };
+  const gkJingle = n => { for (let i = 0; i < n; i++) tone(rand(2200, 3400), 0.07, 'triangle', 0.035, i * 0.05 + rand(0, 0.02)); };
+  const gkClunk = () => { tone(140, 0.18, 'square', 0.07, 0, 70); tone(70, 0.3, 'triangle', 0.12, 0.04); };
+  const gkTick = () => { tone(1800, 0.03, 'square', 0.04); tone(900, 0.05, 'triangle', 0.07, 0.02); };
+  const gkCreak = () => { tone(150, 0.9, 'sawtooth', 0.03, 0, 300); tone(210, 0.7, 'sawtooth', 0.02, 0.25, 130); };
+  const gkKnock = () => { tone(160, 0.08, 'triangle', 0.16); tone(150, 0.08, 'triangle', 0.16, 0.18); };
+  // how a key shows its number
+  function gkRep(v, tier) {
+    if (tier === 1) return { kind: 'dots', v };
+    if (tier === 2) return { kind: pick(v <= 6 ? ['frame', 'fingers', 'tally', 'dots'] : ['frame', 'fingers', 'tally']), v };
+    if (v > 10) return { kind: 'framex', v };
+    if (v >= 2 && Math.random() < 0.7) { const a = randInt(Math.max(1, v - 5), Math.min(5, v - 1)); return { kind: 'sum', v, a, b: v - a }; }
+    return { kind: 'frame', v };
+  }
+  const gkUnitName = rep => (rep.kind === 'tally' ? 'marks' : rep.kind === 'fingers' ? 'fingers' : 'dots');
+  // the things to count on a key face, in counting order, in key-face coordinates
+  function gkUnits(rep) {
+    const v = rep.v, u = [];
+    if (rep.kind === 'dots') for (const [a, b] of GK_DIE[v]) u.push([a * 15, b * 15]);
+    else if (rep.kind === 'frame') for (let i = 0; i < v; i++) u.push([(i % 5 - 2) * 13, (Math.floor(i / 5) - 0.5) * 13]);
+    else if (rep.kind === 'framex') for (let i = 0; i < v; i++) { const j = i % 10; u.push([(j % 5 - 2) * 11, (Math.floor(j / 5) - 0.5) * 11 + (i < 10 ? -13 : 13)]); }
+    else if (rep.kind === 'sum') { for (const [n, cx] of [[rep.a, -19], [rep.b, 19]]) for (const [a, b] of GK_DIE[n]) u.push([cx + a * 8.6, 12 + b * 8.6]); }
+    else if (rep.kind === 'tally') {
+      const gs = Math.ceil(v / 5);
+      for (let gi = 0; gi < gs; gi++) { const gx = gs === 1 ? 0 : (gi ? 17 : -17), c = Math.min(5, v - gi * 5); for (let m = 0; m < Math.min(c, 4); m++) u.push([gx - 10.5 + m * 7, -20]); if (c === 5) u.push([gx + 15, -11]); }
+    } else if (rep.kind === 'fingers') {
+      const hs = v > 5 ? 2 : 1;
+      for (let h = 0; h < hs; h++) { const hx = hs === 1 ? 0 : (h ? 16 : -16), m = hs === 1 || h ? 1 : -1, c = Math.min(5, v - h * 5); for (let i = 0; i < Math.min(c, 4); i++) u.push([hx - 9 + i * 6, -20]); if (c === 5) u.push([hx + 18 * m, -1]); }
+    }
+    return u;
+  }
+  function gkRepDraw(rep, col, hi, t) {
+    const u = gkUnits(rep), kd = rep.kind;
+    for (let i = 0; i < Math.min(hi, u.length); i++) { const cur = i === hi - 1; ctx.fillStyle = cur ? 'rgba(255,200,40,.9)' : 'rgba(255,226,110,.7)'; circle(u[i][0], u[i][1], cur ? 11 + Math.sin(t * 12) * 2 : 8.5); }
+    if (kd === 'frame' || kd === 'framex') {
+      const c = kd === 'frame' ? 13 : 11;
+      for (const oy of kd === 'frame' ? [0] : [-13, 13]) {
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(-2.5 * c, oy - c, 5 * c, 2 * c);
+        ctx.strokeStyle = 'rgba(91,63,115,.5)'; ctx.lineWidth = 1.5; ctx.beginPath();
+        for (let i = 1; i < 5; i++) { ctx.moveTo(-2.5 * c + i * c, oy - c); ctx.lineTo(-2.5 * c + i * c, oy + c); }
+        ctx.moveTo(-2.5 * c, oy); ctx.lineTo(2.5 * c, oy); ctx.stroke();
+        ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.strokeRect(-2.5 * c, oy - c, 5 * c, 2 * c);
+      }
+      for (const [x, y] of u) inkCircle(x, y, c * 0.36, col, 0.8);
+    } else if (kd === 'dots') for (const [x, y] of u) inkCircle(x, y, 7, col, 1);
+    else if (kd === 'sum') {
+      text(`${rep.a}+${rep.b}`, 0, -17, 23, '#4a2a5e', 'center', 800);
+      u.forEach(([x, y], i) => inkCircle(x, y, 3.4, i < rep.a ? '#ff4f7a' : '#3a8ff0', 0.7));
+    } else if (kd === 'tally') {
+      const gs = Math.ceil(rep.v / 5); ctx.lineCap = 'round';
+      for (let gi = 0; gi < gs; gi++) {
+        const gx = gs === 1 ? 0 : (gi ? 17 : -17), c = Math.min(5, rep.v - gi * 5), p = new Path2D();
+        for (let m = 0; m < Math.min(c, 4); m++) { const x = gx - 10.5 + m * 7; p.moveTo(x + (m % 2 ? 1 : -1), -14); p.lineTo(x, 14); }
+        if (c === 5) { p.moveTo(gx - 15, 9); p.lineTo(gx + 15, -9); }
+        ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke(p); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke(p);
+      }
+    } else if (kd === 'fingers') {
+      const hs = rep.v > 5 ? 2 : 1, skin = '#ffd2b0';
+      for (let h = 0; h < hs; h++) {
+        const hx = hs === 1 ? 0 : (h ? 16 : -16), m = hs === 1 || h ? 1 : -1, c = Math.min(5, rep.v - h * 5);
+        for (let i = 0; i < 4; i++) { const up = i < c; inkRect(hx - 11.8 + i * 6, up ? -24 : -7, 5.6, up ? 26 : 9, skin, 1.3, 2.8); }
+        ctx.save(); ctx.translate(hx + 10 * m, 7); ctx.rotate(m * 0.85); inkRect(-3, c === 5 ? -13 : -5, 6, c === 5 ? 15 : 7, skin, 1.3, 3); ctx.restore();
+        inkRect(hx - 13, -3, 26, 21, skin, 1.4, 8);
+        ctx.fillStyle = 'rgba(220,140,120,.35)'; ellipse(hx, 9, 7, 4);
+      }
+    }
+    // counted ones get a bright ring on top
+    for (let i = 0; i < Math.min(hi, u.length); i++) { const cur = i === hi - 1; ctx.strokeStyle = cur ? '#ff9a00' : '#ffc83a'; ctx.lineWidth = cur ? 3.5 : 2.5; ctx.beginPath(); ctx.arc(u[i][0], u[i][1], (kd === 'dots' ? 3 : 0) + (cur ? 9 + Math.sin(t * 12) * 1.5 : 7.5), 0, TAU); ctx.stroke(); }
+  }
+  // the key's round head: a scalloped ring, outlined first and filled after so the bumps read as one shape
+  const GK_BOW = (() => { const p = new Path2D(); p.arc(0, 0, 45, 0, TAU); for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + TAU / 16, x = Math.cos(a) * 46, y = Math.sin(a) * 46; p.moveTo(x + 9, y); p.arc(x, y, 9, 0, TAU); } return p; })();
+  // a key with its head centred on (x, y); o.loop draws the ring loop on top, o.shaft (0..1) how much of the shaft shows
+  function drawGKey(kk, x, y, rot, s, o = {}) {
+    const pal = GK_KEYS[kk.pal], sh = o.shaft ?? 1;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s); ctx.lineJoin = 'round';
+    if (o.lift) { ctx.fillStyle = 'rgba(40,20,60,.18)'; ellipse(10, 70, 46, 12); }
+    if (sh > 0) {
+      const L = 54 * sh, e = 44 + L;
+      if (sh > 0.6) { ink(P2(`M6,${e - 24} L20,${e - 24} L20,${e - 15} L14,${e - 15} L14,${e - 9} L20,${e - 9} L20,${e} L6,${e} Z`), pal.dark, 1.6); }
+      inkRect(-7, 40, 14, L + 4, pal.dark, 2.4, 5);
+      ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillRect(-4, 46, 3, L - 4);
+    }
+    inkRect(-12, 40, 24, 9, pal.rim, 2, 3);
+    if (o.loop) { ctx.strokeStyle = OL; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(0, -57, 9, 0, TAU); ctx.stroke(); ctx.strokeStyle = pal.rim; ctx.lineWidth = 4.5; ctx.stroke(); inkRect(-5, -52, 10, 9, pal.rim, 1.6, 2); }
+    ink(GK_BOW, pal.rim, 2.6);
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 42, Math.PI * 1.05, Math.PI * 1.55); ctx.stroke();
+    inkCircle(0, 0, 39, '#fffaf0', 2);
+    gkRepDraw(kk.rep, pal.dot, o.hi || 0, o.t || 0);
+    if (o.glint != null && o.glint < 1) {
+      ctx.save(); ctx.beginPath(); ctx.arc(0, 0, 55, 0, TAU); ctx.clip();
+      const gx = -70 + o.glint * 140; ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.beginPath(); ctx.moveTo(gx - 8, -60); ctx.lineTo(gx + 6, -60); ctx.lineTo(gx + 26, 60); ctx.lineTo(gx + 12, 60); ctx.closePath(); ctx.fill(); ctx.restore();
+      if (o.glint > 0.4 && o.glint < 0.7) star(30, -34, 9, '#ffffff', 4);
+    }
+    if (o.dim) { ctx.fillStyle = 'rgba(120,110,140,.55)'; circle(0, 0, 56); emoji('✖️', 0, 0, 30); }
+    ctx.restore();
+  }
+  function gkDoorPath(inset = 0) {
+    const { x, top, base, hw } = GKD, w = hw + inset, cy = top + hw;
+    return P2(`M${x - w},${base} L${x - w},${cy} A${w},${w} 0 0 1 ${x + w},${cy} L${x + w},${base} Z`);
+  }
+  function gkGroundStatic() {
+    const R = rng(71);
+    const fg = ctx.createLinearGradient(0, 330, 0, H); fg.addColorStop(0, '#7ccb5e'); fg.addColorStop(1, '#4f9a46');
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, 346); for (let x = 0; x <= W; x += 24) ctx.lineTo(x, 344 + Math.sin(x * 0.04) * 3); ctx.lineTo(W, H); ctx.fill();
+    ctx.fillStyle = 'rgba(160,230,120,.4)'; for (let i = 0; i < 46; i++) ellipse(R() * W, 360 + R() * 180, 16 + R() * 10, 3);
+    for (let i = 0; i < 26; i++) tinyFlower(R() * W, 372 + R() * 160, 3.5, ['#ffffff', '#ffd23a', '#ff9ac8', '#c6a2ff'][i % 4]);
+    for (let i = 0; i < 12; i++) { const x = R() * W, y = 380 + R() * 150; inkEllipse(x, y, 7 + R() * 5, 4 + R() * 2, 0, ['#c8c0d4', '#d8d0e0'][i % 2], 1.2); }
+    for (const [x, y, s] of [[30, 470, 0.9], [940, 480, 0.85], [130, 530, 0.7], [840, 540, 0.7]]) fern(x, y, s);
+    for (const [x, y, s, c] of [[70, 420, 1.6, '#ff5f6a'], [92, 428, 1.1, '#ffb03a'], [900, 416, 1.5, '#c06ae0'], [880, 426, 1, '#ff5f6a'], [40, 520, 1.3, '#ffb03a']]) tinyShroom(x, y, s, c);
+  }
+  function gkTreeStatic() {
+    const { x, base, hw } = GKD, R = rng(19);
+    const trunk = P2('M250,0 L710,0 C704,110 716,210 770,268 C820,318 880,336 958,350 L958,358 L2,358 L2,350 C80,336 140,318 190,268 C244,210 256,110 250,0 Z');
+    ink(trunk, '#9a6a44', 3);
+    ctx.save(); ctx.clip(trunk);
+    const tg = ctx.createLinearGradient(190, 0, 770, 0); tg.addColorStop(0, 'rgba(255,220,170,.22)'); tg.addColorStop(0.45, 'rgba(255,220,170,0)'); tg.addColorStop(1, 'rgba(40,20,10,.22)');
+    ctx.fillStyle = tg; ctx.fillRect(0, 0, W, 360);
+    // bark grain that splays out into the roots
+    for (let i = -12; i <= 12; i++) {
+      const x0 = 480 + i * 21;
+      for (const [col, lw, off] of [['rgba(70,35,15,.3)', 2.6, 0], ['rgba(255,225,180,.13)', 2, 5]]) {
+        ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath();
+        for (let y = 0; y <= 360; y += 8) { const k = (y / 356) ** 2.2, xx = x0 + off + (x0 - 480) * k * 1.9 + Math.sin(y * 0.035 + i * 1.7) * 4; if (y === 0) ctx.moveTo(xx, y); else ctx.lineTo(xx, y); }
+        ctx.stroke();
+      }
+    }
+    for (const [kx, ky, rx, ry] of [[296, 110, 9, 15], [664, 64, 8, 13], [700, 300, 11, 7], [228, 300, 10, 6], [560, 40, 6, 10]]) { inkEllipse(kx, ky, rx, ry, 0, '#7a4a2a', 1.6); ctx.strokeStyle = 'rgba(40,20,10,.45)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(kx, ky, rx * 0.5, ry * 0.5, 0, 0, TAU); ctx.stroke(); }
+    ctx.restore();
+    // two big roots curling down either side of the door
+    for (const d of [-1, 1]) {
+      const X = v => 480 + d * (v - 480);
+      const root = P2(`M${X(150)},358 C${X(200)},300 ${X(300)},282 ${X(352)},236 C${X(372)},220 ${X(398)},232 ${X(392)},258 C${X(384)},302 ${X(310)},334 ${X(270)},358 Z`);
+      ink(root, '#a8774c', 2.6);
+      ctx.save(); ctx.clip(root); ctx.strokeStyle = 'rgba(70,35,15,.3)'; ctx.lineWidth = 2.4;
+      for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(X(372 - k * 4), 240 + k * 6); ctx.bezierCurveTo(X(340 - k * 10), 290 + k * 6, X(260 - k * 10), 310 + k * 8, X(180 + k * 30), 360); ctx.stroke(); }
+      ctx.restore();
+      ctx.fillStyle = '#5ab84a'; ellipse(X(360), 238, 18, 6, d * 0.5); ellipse(X(250), 300, 22, 6, d * 0.4); ctx.fillStyle = '#7ad05a'; ellipse(X(356), 235, 9, 3, d * 0.5);
+    }
+    // moss along the top of the roots, and a few clinging mushrooms
+    for (let i = 0; i < 18; i++) { const px = 20 + R() * 920, py = 338 + R() * 12; ctx.fillStyle = ['#5ab84a', '#6cc85a'][i % 2]; ellipse(px, py, 14 + R() * 10, 5); }
+    for (const [mx, my, s, c] of [[214, 300, 1.3, '#ff5f6a'], [230, 304, 0.9, '#ffb03a'], [748, 300, 1.2, '#c06ae0'], [190, 338, 1, '#ff9a3a'], [790, 336, 1.4, '#ff5f6a'], [808, 340, 0.9, '#ffd23a']]) tinyShroom(mx, my, s, c);
+    // the doorway: a dark hollow ringed with mossy stones
+    ink(gkDoorPath(4), '#2a1828', 2);
+    const stones = [];
+    for (let i = 0; i <= 10; i++) { const a = Math.PI + i * Math.PI / 10; stones.push([x + Math.cos(a) * (hw + 11), GKD.top + hw + Math.sin(a) * (hw + 11), a + Math.PI / 2]); }
+    for (let y = GKD.top + hw + 22; y < base - 4; y += 24) for (const d of [-1, 1]) stones.push([x + d * (hw + 11), y, 0]);
+    stones.forEach(([sx, sy, a], i) => { ctx.save(); ctx.translate(sx, sy); ctx.rotate(a); inkRect(-11, -9, 22, 18, ['#cfc6d8', '#bdb4c8', '#dcd4e4'][i % 3], 2, 6); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-7, -6, 8, 3); ctx.restore(); });
+    for (const [mx, my] of [[x - 80, GKD.top + 52], [x + 88, GKD.top + 120], [x - 90, base - 30]]) { ctx.fillStyle = '#5ab84a'; ellipse(mx, my, 10, 5); }
+    // a stone doorstep with two stepping stones
+    inkRect(x - 100, base - 2, 200, 14, '#c8c0d4', 2.4, 6); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x - 92, base + 1, 120, 3);
+    inkEllipse(x - 30, base + 22, 26, 7, 0, '#d8d0e0', 1.6); inkEllipse(x + 34, base + 26, 22, 6, 0, '#cfc6d8', 1.6);
+    // window frames, a flower box, the lantern bracket and the crooked chimney
+    inkCircle(318, 176, 29, '#7a4a2a', 2.6); inkCircle(318, 176, 22, '#3a2030', 1.5);
+    inkRect(286, 206, 64, 14, '#c0703a', 2, 3); for (let i = 0; i < 6; i++) tinyFlower(292 + i * 10.5, 203, 5, ['#ff6fae', '#ffd23a', '#c6a2ff', '#ffffff', '#ff9a3a', '#7ad0ff'][i]);
+    for (let i = 0; i < 6; i++) { ctx.fillStyle = '#4aa040'; ellipse(290 + i * 11, 207, 5, 3, i); }
+    inkCircle(632, 150, 18, '#7a4a2a', 2.2); inkCircle(632, 150, 12, '#3a2030', 1.2);
+    ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(362, 214); ctx.lineTo(380, 214); ctx.lineTo(380, 224); ctx.stroke(); ctx.strokeStyle = '#5a4a5a'; ctx.lineWidth = 2.5; ctx.stroke();
+    ink(P2('M732,262 C730,240 738,226 736,206 L752,204 C754,224 746,240 750,262 Z'), '#c86a4a', 2.2);
+    inkRect(728, 194, 30, 12, '#a8504a', 2, 3);
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(738, 212, 3, 40);
+  }
+  function gkIvy(x, y0, len, t, ph) {
+    const sw = Math.sin(t * 1.3 + ph) * 7, cx = x + sw * 0.3, cy = y0 + len * 0.5, ex = x + sw, ey = y0 + len;
+    ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y0); ctx.quadraticCurveTo(cx, cy, ex, ey);
+    ctx.strokeStyle = OL; ctx.lineWidth = 4.5; ctx.stroke(); ctx.strokeStyle = '#3f8a3a'; ctx.lineWidth = 2.2; ctx.stroke();
+    for (let k = 0.12, j = 0; k <= 1.001; k += 0.13, j++) {
+      const px = (1 - k) * (1 - k) * x + 2 * k * (1 - k) * cx + k * k * ex, py = (1 - k) * (1 - k) * y0 + 2 * k * (1 - k) * cy + k * k * ey, d = j % 2 ? 1 : -1;
+      inkEllipse(px + d * 7, py, 7, 4.5, d * 0.6 + Math.sin(t * 2 + j) * 0.12, j % 3 ? '#5ab84a' : '#7ad05a', 1.2);
     }
   }
-  function drawKey(x, y, n, col, turn = 0) {
-    // the bow (round end) is centred on (x, y); the shaft points down
-    ctx.save(); ctx.translate(x, y); ctx.rotate(turn); ctx.scale(0.85, 0.85);
-    inkRect(-9, 50, 18, 92, '#e8b830', 2.5, 4);
-    ink(P2('M9,108 L30,108 L30,120 L22,120 L22,130 L9,130 Z'), '#e8b830', 2);
-    ink(P2('M9,136 L26,136 L26,148 L9,148 Z'), '#e8b830', 2);
-    inkCircle(0, 0, 62, '#ffd84a', 3);
-    inkCircle(0, 0, 50, '#fffaf0', 2);
-    ctx.fillStyle = 'rgba(255,255,255,.5)'; ellipse(-36, -30, 10, 18, 0.6);
-    dotPattern(n, 0, 0, n > 10 ? 6.2 : n > 6 ? 7.5 : 7.5, col);
+  function gkAwning(col) {
+    const x = GKD.x, y = 70;
+    ctx.fillStyle = 'rgba(40,20,30,.25)'; ellipse(x, y + 52, 110, 8);
+    const p = P2(`M${x - 124},${y + 40} C${x - 118},${y - 26} ${x + 118},${y - 26} ${x + 124},${y + 40} C${x + 70},${y + 54} ${x - 70},${y + 54} ${x - 124},${y + 40} Z`);
+    ink(p, col, 3);
+    ctx.save(); ctx.clip(p);
+    ctx.fillStyle = 'rgba(255,255,255,.28)'; ellipse(x - 40, y + 4, 54, 12, -0.15);
+    ctx.fillStyle = '#ffffff'; for (const [sx, sy, r] of [[-84, 26, 11], [-40, 8, 13], [6, 0, 10], [50, 12, 14], [92, 30, 9], [-8, 30, 7], [28, 34, 6]]) circle(x + sx, y + sy, r);
+    ctx.fillStyle = mix(col, '#ffe8d8', 0.55); ctx.fillRect(x - 130, y + 40, 260, 20);
+    ctx.strokeStyle = 'rgba(120,60,60,.35)'; ctx.lineWidth = 1.5; for (let i = -10; i <= 10; i++) { ctx.beginPath(); ctx.moveTo(x + i * 11, y + 41); ctx.lineTo(x + i * 11.5, y + 52); ctx.stroke(); }
     ctx.restore();
+  }
+  function gkLeaf(g, k) {
+    // the door itself: painted planks, iron straps, the number plaque, a knocker and the keyhole
+    const { x, top, base, hw } = GKD, door = gkDoorPath(0), col = k.door;
+    ink(door, col, 3);
+    ctx.save(); ctx.clip(door);
+    ctx.strokeStyle = mix(col, '#2a1a30', 0.35); ctx.lineWidth = 3; for (const d of [-38, 0, 38]) { ctx.beginPath(); ctx.moveTo(x + d, top); ctx.lineTo(x + d, base); ctx.stroke(); }
+    ctx.strokeStyle = mix(col, '#2a1a30', 0.18); ctx.lineWidth = 1.5;
+    for (let p = 0; p < 4; p++) for (let j = 0; j < 3; j++) { const px = x - 57 + p * 38 + j * 9 - 9; ctx.beginPath(); ctx.moveTo(px, top + 10); for (let y = top + 10; y <= base; y += 12) ctx.lineTo(px + Math.sin(y * 0.06 + p * 2 + j) * 2.5, y); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x - hw, top, 18, base - top);
+    ctx.fillStyle = 'rgba(40,20,40,.18)'; ctx.fillRect(x + hw - 14, top, 14, base - top);
+    for (const sy of [212, 304]) { inkRect(x - hw - 4, sy, hw * 2 + 8, 10, '#5a4a5e', 1.6, 2); ctx.fillStyle = '#c8c0d4'; for (let i = 0; i < 6; i++) circle(x - hw + 8 + i * 27, sy + 5, 2); }
+    ctx.restore();
+    ink(P2(`M${x - hw - 4},206 L${x - hw + 30},210 L${x - hw - 4},228 Z`), '#5a4a5e', 1.6);
+    // the plaque with the door's number
+    const sw = Math.sin(k.t * 2) * 0.03;
+    ctx.save(); ctx.translate(x, 132); ctx.rotate(sw);
+    ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-30, 8); ctx.lineTo(0, -6); ctx.lineTo(30, 8); ctx.stroke(); inkCircle(0, -6, 3, '#ffd84a', 1);
+    inkRect(-48, 8, 96, 66, '#fff6dc', 3, 16);
+    ctx.strokeStyle = 'rgba(200,150,90,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-42, 14, 84, 54, 12); ctx.stroke();
+    outlined(String(k.n), 0, 42, k.n >= 10 ? 50 : 56, '#e8403a');
+    ctx.restore();
+    // knocker: a brass ring that swings when knocked
+    const ka = Math.sin(k.t * 20) * (k.knock > 0 ? k.knock : 0) * 1.2;
+    inkCircle(x, 222, 5, '#e8b830', 1.4);
+    ctx.save(); ctx.translate(x, 222); ctx.rotate(ka); ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(0, 12, 10, 0, TAU); ctx.stroke(); ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 3.5; ctx.stroke(); ctx.restore();
+    // the keyhole plate; it glows while a key is being dragged near it
+    if (k.near) { const gl = ctx.createRadialGradient(x, GKD.ky, 4, x, GKD.ky, 60); gl.addColorStop(0, `rgba(255,240,140,${0.5 + 0.3 * Math.sin(k.t * 10)})`); gl.addColorStop(1, 'rgba(255,240,140,0)'); ctx.fillStyle = gl; circle(x, GKD.ky, 60); }
+    inkEllipse(x, GKD.ky, 19, 31, 0, '#e8b830', 2); ctx.fillStyle = 'rgba(255,255,255,.4)'; ellipse(x - 7, GKD.ky - 14, 4, 9);
+    ctx.fillStyle = '#1a0e1a'; circle(x, GKD.ky - 6, 6.5); tri(x - 5, GKD.ky - 4, x + 5, GKD.ky - 4, x, GKD.ky + 16);
+    ctx.fillStyle = '#c8c0d4'; for (const dy of [-24, 24]) circle(x, GKD.ky + dy, 2);
+    // the sliding bolt on the latch side
+    const bolt = k.st === 'unlock' ? 1 - gkEase(clamp(k.st_t / 0.4, 0, 1)) : ['open', 'reveal', 'cheer'].includes(k.st) ? 0 : 1;
+    inkRect(x + hw - 30, 254, 26, 12, '#5a4a5e', 1.6, 3); inkRect(x + hw - 22 + bolt * 16, 257, 18, 6, '#c8c0d4', 1.2, 2);
+  }
+  // inside each door, something to count
+  function gkItemPos(n, i) {
+    const rows = Math.ceil(n / 5), r = Math.floor(i / 5), c = i % 5, inRow = Math.min(5, n - r * 5);
+    return [GKD.x + (c - (inRow - 1) / 2) * 28, 216 - (rows - 1) * 17 + r * 34];
+  }
+  function gkItem(id, x, y, s, t, i) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    if (id === 'tea') {
+      inkCircle(0, -9, 5.5, '#2a1a2a', 1.2); inkEllipse(0, 1, 11, 10, 0, '#ff3a3a', 1.4);
+      ctx.strokeStyle = '#2a1a2a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 11); ctx.stroke();
+      ctx.fillStyle = '#2a1a2a'; for (const [dx, dy] of [[-5, -1], [5, -1], [-5, 6], [5, 6]]) circle(dx, dy, 2);
+      ctx.fillStyle = '#fff'; circle(-2.4, -11, 1.4); circle(2.4, -11, 1.4);
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ellipse(-5, -3, 3, 2, -0.5);
+    } else if (id === 'glow') {
+      const col = ['#7af0ff', '#ff8af0', '#b6ff6a', '#ffd86a'][i % 4], f = 0.7 + 0.3 * Math.sin(t * 3 + i);
+      const gl = ctx.createRadialGradient(0, -4, 1, 0, -4, 22); gl.addColorStop(0, mix(col, '#ffffff', 0.3) + 'cc'); gl.addColorStop(1, col + '00');
+      ctx.globalAlpha = f; ctx.fillStyle = gl; circle(0, -4, 22); ctx.globalAlpha = 1;
+      inkRect(-3, -4, 6, 13, '#f4f0ff', 1.2, 2);
+      ink(P2('M-11,-3 C-11,-15 11,-15 11,-3 C5,-1 -5,-1 -11,-3 Z'), col, 1.4);
+      ctx.fillStyle = 'rgba(255,255,255,.8)'; circle(-4, -8, 1.8); circle(4, -7, 1.3);
+    } else if (id === 'hog') {
+      ink(P2('M-1,-9 L1,-14'), '#5a3a20', 1.4);
+      inkEllipse(0, 3, 7.5, 9, 0, '#d89a50', 1.4); ctx.fillStyle = 'rgba(255,255,255,.35)'; ellipse(-3, 2, 2, 4);
+      inkEllipse(0, -5, 9.5, 5.5, 0, '#8a5a30', 1.4); ctx.strokeStyle = 'rgba(40,20,10,.4)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-6, -5); ctx.lineTo(6, -5); ctx.stroke();
+    } else if (id === 'dinner') {
+      ink(P2(`M-8,-6 L${1 + Math.sin(t * 2 + i) * 2},-24 L8,-6 Z`), ['#ff3f3f', '#4a7ae0', '#3fbf6a', '#ffb03a'][i % 4], 1.3);
+      inkCircle(0, -1, 7, '#ffd0b0', 1.2);
+      ink(P2('M-7,1 C-6,12 6,12 7,1 C3,4 -3,4 -7,1 Z'), '#ffffff', 1.1);
+      ctx.fillStyle = '#ff8a8a'; circle(0, 1, 2.4); ctx.fillStyle = '#2a1a2a'; circle(-3, -3, 1.2); circle(3, -3, 1.2);
+    } else {
+      const f = 0.55 + 0.45 * Math.sin(t * 4 + i * 1.9);
+      const gl = ctx.createRadialGradient(0, 2, 1, 0, 2, 18); gl.addColorStop(0, `rgba(255,250,140,${0.9 * f})`); gl.addColorStop(1, 'rgba(255,250,140,0)');
+      ctx.fillStyle = gl; circle(0, 2, 18);
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; ellipse(-5, -4, 5, 3, -0.5 + Math.sin(t * 30 + i) * 0.3); ellipse(5, -4, 5, 3, 0.5 - Math.sin(t * 30 + i) * 0.3);
+      inkEllipse(0, 0, 3.5, 6, 0, '#5a4a3a', 1); ctx.fillStyle = mix('#c8c060', '#fffaa0', f); circle(0, 4, 3.6);
+    }
+    ctx.restore();
+  }
+  function gkRoom(k) {
+    const { x, top, base } = GKD, t = k.t, id = k.room.id;
+    ctx.save(); ctx.clip(gkDoorPath(0));
+    const dark = id === 'glow' || id === 'fly';
+    const bg = ctx.createLinearGradient(0, top, 0, base);
+    bg.addColorStop(0, { tea: '#ffeab8', glow: '#2c2a5e', hog: '#ffd9a8', dinner: '#ffe2c4', fly: '#24305e' }[id]); bg.addColorStop(1, { tea: '#ffd090', glow: '#1a1838', hog: '#f0b878', dinner: '#ffc898', fly: '#141c3a' }[id]);
+    ctx.fillStyle = bg; ctx.fillRect(x - 90, top - 10, 180, base - top + 20);
+    if (id === 'tea') { ctx.fillStyle = 'rgba(255,130,170,.25)'; for (let i = -4; i <= 4; i++) ctx.fillRect(x + i * 20 - 4, top, 8, base - top); }
+    if (id === 'dinner') { ctx.fillStyle = 'rgba(200,100,80,.15)'; for (let i = 0; i < 9; i++) for (let j = 0; j < 12; j++) if ((i + j) % 2) ctx.fillRect(x - 90 + i * 20, top + j * 20, 20, 20); }
+    if (dark) { ctx.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 14; i++) circle(x - 70 + (i * 37) % 140, top + 20 + (i * 53) % 190 + Math.sin(t + i) * 4, 1.2); }
+    if (id === 'fly') { inkCircle(x + 46, top + 54, 14, '#6a80c0', 1.5); ctx.fillStyle = '#fff6c0'; circle(x + 50, top + 52, 7); ctx.fillStyle = '#6a80c0'; circle(x + 46, top + 50, 6); }
+    // floor
+    ctx.fillStyle = dark ? '#3a3466' : '#c88a50'; ctx.fillRect(x - 90, base - 26, 180, 30);
+    ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1.5; for (let i = -4; i <= 4; i++) { ctx.beginPath(); ctx.moveTo(x + i * 22, base - 26); ctx.lineTo(x + i * 30, base); ctx.stroke(); }
+    // the furniture for each room
+    if (id === 'tea') {
+      inkRect(x - 6, base - 34, 12, 20, '#c88a50', 1.5, 2);
+      inkEllipse(x, base - 36, 62, 9, 0, '#ffffff', 1.8); ctx.fillStyle = '#ff9ac8'; for (let i = -5; i <= 5; i++) circle(x + i * 11, base - 30, 3);
+      inkCircle(x + 34, base - 46, 7, '#7ad0ff', 1.3); inkRect(x + 40, base - 48, 7, 3, '#7ad0ff', 1, 1); inkRect(x + 31, base - 56, 6, 4, '#7ad0ff', 1, 1);
+      inkRect(x - 42, base - 46, 9, 8, '#ffffff', 1.2, 2); inkRect(x - 22, base - 46, 9, 8, '#ffffff', 1.2, 2);
+    } else if (id === 'hog') {
+      for (const r of [0, 1, 2]) if (r < Math.ceil(k.n / 5)) inkRect(x - 74, gkItemPos(k.n, r * 5)[1] + 9, 148, 6, '#a0683a', 1.4, 2);
+      inkRect(x - 62, base - 30, 124, 18, '#8a5a3a', 1.8, 4); inkRect(x - 58, base - 40, 116, 14, '#7ab8f0', 1.6, 6);
+      inkEllipse(x - 44, base - 40, 14, 7, 0, '#ffffff', 1.4);
+      ctx.save(); ctx.translate(x - 8, base - 44);
+      ink(P2('M-26,4 C-28,-14 -10,-22 6,-18 C14,-16 22,-8 22,4 Z'), '#8a6040', 1.6);
+      ctx.strokeStyle = '#5a3a20'; ctx.lineWidth = 1.5; for (let i = 0; i < 7; i++) { const a = Math.PI + 0.3 + i * 0.36; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 14, Math.sin(a) * 12); ctx.lineTo(Math.cos(a) * 22, Math.sin(a) * 19); ctx.stroke(); }
+      inkEllipse(24, 0, 8, 6, 0.2, '#e8c8a0', 1.3); ctx.fillStyle = '#2a1a1a'; circle(31, -1, 2); ctx.strokeStyle = '#2a1a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(22, -2, 2.5, 0.2, Math.PI - 0.2); ctx.stroke();
+      ctx.restore();
+      for (let i = 0; i < 3; i++) { const z = (t * 0.5 + i / 3) % 1; ctx.globalAlpha = 1 - z; text('z', x + 30 + z * 18, base - 56 - z * 40, 10 + z * 8, '#5a6ab0', 'center', 800); } ctx.globalAlpha = 1;
+    } else if (id === 'dinner') {
+      inkRect(x - 66, base - 40, 132, 10, '#a0683a', 1.8, 3); inkRect(x - 58, base - 30, 6, 16, '#8a5a3a', 1.2, 1); inkRect(x + 52, base - 30, 6, 16, '#8a5a3a', 1.2, 1);
+      inkEllipse(x, base - 44, 16, 6, 0, '#ffffff', 1.4); ctx.fillStyle = '#ff8a3a'; ellipse(x, base - 46, 11, 3);
+      for (let i = 0; i < 3; i++) { const z = (t * 0.6 + i / 3) % 1; ctx.fillStyle = `rgba(255,255,255,${0.6 * (1 - z)})`; circle(x - 4 + i * 4 + Math.sin(t * 2 + i) * 3, base - 52 - z * 20, 2 + z * 3); }
+      inkCircle(x - 40, base - 44, 5, '#ff4a5a', 1.1); inkCircle(x + 40, base - 44, 5, '#7a4ad0', 1.1);
+    } else if (id === 'glow') {
+      for (const [mx, s, c] of [[-56, 1.4, '#7af0ff'], [58, 1.2, '#ff8af0'], [-30, 0.9, '#b6ff6a']]) tinyShroom(x + mx, base - 24, s, c);
+    } else {
+      inkRect(x - 52, base - 40, 30, 16, '#8a6a5a', 1.4, 3); inkRect(x + 22, base - 40, 30, 16, '#8a6a5a', 1.4, 3);
+    }
+    // the things to count pop in one by one
+    for (let i = 0; i < k.shown; i++) {
+      const [ix, iy] = gkItemPos(k.n, i), age = k.t - (k.appear[i] ?? k.t), pop = age < 0.3 ? easeOut(age / 0.3) * (1 + 0.3 * Math.sin(age / 0.3 * Math.PI)) : 1;
+      gkItem(id, ix, iy + Math.sin(t * 3 + i) * 1.5, pop * (k.n > 10 ? 0.95 : 1.1), t, i);
+    }
+    // warm light spilling out
+    ctx.fillStyle = dark ? 'rgba(140,120,255,.08)' : 'rgba(255,230,140,.12)'; ctx.fillRect(x - 90, top, 180, base - top);
+    ctx.restore();
+  }
+  // a peek inside the lock: the pins pop up to the line one at a time as the key turns
+  function gkTumbler(k) {
+    const { tx: x, ty: y } = GKD;
+    ctx.fillStyle = 'rgba(40,20,60,.2)'; circle(x + 3, y + 5, 50);
+    inkCircle(x, y, 48, '#e8b830', 3); inkCircle(x, y, 39, '#3a2a40', 2);
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, 39, 0, TAU); ctx.clip();
+    ctx.fillStyle = '#b8bccc'; ctx.fillRect(x - 40, y - 40, 80, 40); ctx.fillStyle = '#ffcf4a'; ctx.fillRect(x - 40, y, 80, 40);
+    for (let i = 0; i < 4; i++) {
+      const px = x - 21 + i * 14, set = i < k.pins, off = set ? 0 : [8, -6, 10, -4][i];
+      const pop = set && k.pinT[i] != null ? Math.max(0, 1 - (k.t - k.pinT[i]) / 0.3) : 0;
+      ctx.fillStyle = '#2a1a30'; ctx.fillRect(px - 5, y - 36, 10, 66);
+      ctx.strokeStyle = '#e0e0ea'; ctx.lineWidth = 1.5; ctx.beginPath(); const s0 = y - 36, s1 = y - 20 + off - pop * 4; for (let j = 0; j <= 6; j++) ctx.lineTo(px + (j % 2 ? 3 : -3), s0 + (s1 - s0) * j / 6); ctx.stroke();
+      inkRect(px - 4, y - 20 + off - pop * 4, 8, 20, '#eef0f8', 1, 2);
+      inkRect(px - 4, y + off - pop * 4, 8, 22 - off, '#ff9a5a', 1, 2);
+      if (set) { ctx.fillStyle = `rgba(120,255,140,${0.5 + pop * 0.5})`; circle(px, y, 3); }
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 40, y); ctx.lineTo(x + 40, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
+  function gkBubble(x, y, str, size = 30) {
+    ctx.font = `800 ${size}px ${FONT}`;
+    const w = Math.max(64, ctx.measureText(str).width + 30), h = size + 24;
+    ctx.save(); ctx.shadowColor = 'rgba(40,20,60,.3)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+    rrect(x - w / 2, y - h / 2, w, h, 18, '#ffffff'); ctx.restore();
+    rrect(x - w / 2, y - h / 2, w, h, 18, null, OL, 2.5);
+    ink(P2(`M${x + 4},${y + h / 2 - 1} L${x + 24},${y + h / 2 + 16} L${x + 22},${y + h / 2 - 1} Z`), '#ffffff', 1.2);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 6, y + h / 2 - 4, 15, 4);
+    text(str, x, y + 1, size, '#5a2a6e', 'center', 800);
   }
   MG.gnomekeys = {
     kind: 'learn', title: () => 'Gnome Door Keys', icon: () => '🗝️',
-    how: () => "Each gnome door has a number on it. Find the key with that many dots, and tap it to open the door!",
+    how: g => (g.tier === 1
+      ? "Each gnome door has a number on it. Find the key with that many dots, drag it to the keyhole, and twist it round to open the door!"
+      : g.tier === 2
+        ? "Each gnome door has a number. The keys show numbers with ten-frames, fingers and tally marks. Drag the right key to the keyhole and twist it round!"
+        : "Each gnome door has a number. Some keys show sums, like 2 + 3, or a full ten-frame and some more. Find the key that makes the door's number!"),
     init(g) {
-      Object.assign(g, { round: 0, rounds: [6, 7, 8][g.tier - 1], total: 0, shake: {}, used: [] });
-      this.next(g);
+      g.gk = { t: 0, round: 0, rounds: 6, total: 0, used: [], roomOff: randInt(0, 4), doorOff: randInt(0, 5), lpx: pointer.x, lpy: pointer.y, jt: 0, mood: 'idle', mood_t: 0, knock: 0, bump: 0, near: false, appear: [], pinT: [] };
+      this.gkRound(g);
+      Object.assign(g.gk, { st: 'pick', slide: 0 });
+      g.progress = `Door 1 of ${g.gk.rounds}`;
     },
     start(g) { speak(g.say); },
-    next(g) {
-      const [lo, hi] = [[1, 10], [3, 15], [6, 20]][g.tier - 1];
-      let n; do n = randInt(lo, hi); while (g.used.includes(n) && g.used.length < hi - lo);
-      g.used.push(n);
-      const opts = new Set([n]), cands = shuffle([n - 1, n + 1, n - 2, n + 2, n + 3, n - 3].filter(v => v >= 1 && v <= Math.max(hi, 10)));
-      for (const c of cands) { if (opts.size >= (g.tier === 1 ? 3 : 4)) break; opts.add(c); }
-      Object.assign(g, { n, keys: shuffle([...opts]), tried: [], state: 'pick', t2: 0, open: 0, door: pick(['#5fb8f0', '#ff8fb8', '#5adc7a', '#c06ae0', '#ff9a3a']), friend: pick(['🍄', '🫐', '💎', '🐞', '🐌', '🦔', '🐸', '🌰']) });
-      g.say = g.tier === 1 ? `This door says ${NUM_WORDS[n]}. Find the key with ${NUM_WORDS[n]} dots!` : 'What number is on the door? Find the key with that many dots!';
-      if (g.phase === 'play') speak(g.say);
+    gkRound(g) {
+      const k = g.gk, [lo, hi] = [[1, 5], [1, 10], [4, 15]][g.tier - 1];
+      let n; do n = randInt(lo, hi); while (k.used.includes(n) && k.used.length < hi - lo + 1);
+      k.used.push(n);
+      const vals = new Set([n]), top = [6, 10, 15][g.tier - 1];
+      for (const c of shuffle([n - 1, n + 1, n - 2, n + 2, n + 3, n - 3, n + 4, n - 4])) { if (vals.size >= 4) break; if (c >= 1 && c <= top) vals.add(c); }
+      k.keys = shuffle([...vals]).map((v, i) => ({ v, rep: gkRep(v, g.tier), a: rand(-0.5, 0.5), va: rand(-2, 2), tried: false, pal: i }));
+      Object.assign(k, { n, tries: 0, st: 'arrive', st_t: 0, slide: 1, room: GK_ROOMS[(k.roomOff + k.round) % GK_ROOMS.length], door: GK_DOORS[(k.round + k.doorOff) % GK_DOORS.length], cap: GK_CAPS[k.round % GK_CAPS.length], open: 0, turn: 0, goal: 0, pins: 0, pinT: [], act: -1, drag: null, hi: 0, shown: 0, appear: [], lang: null, hinted: false });
+      const w = NUM_WORDS[n];
+      g.say = g.tier === 1 ? `This door says ${w}. Find the key with ${w} dots, and drag it to the keyhole!`
+        : g.tier === 2 ? 'What number is on the door? Find the key that shows that many, and drag it to the keyhole!'
+          : 'What number is on the door? Find the key that makes that number!';
+      if (k.round > 0) { speak(g.say); gkJingle(4); }
     },
-    keyX(g, i) { const n = g.keys.length, gap = n === 3 ? 230 : 190; return W / 2 - (n - 1) * gap / 2 + i * gap; },
+    keyX(g, i) { return GKD.x - 1.5 * 172 + i * 172; },
+    // where a hanging key's head is right now (its loop pivots on the ring, and it swings)
+    gkBow(g, i) {
+      const k = g.gk, kk = k.keys[i], px = this.keyX(g, i), py = GKD.ringY + GKD.ringRy * Math.sqrt(Math.max(0, 1 - ((px - GKD.x) / GKD.ringRx) ** 2)) + k.slide * 220;
+      return { x: px - Math.sin(kk.a) * 58, y: py + Math.cos(kk.a) * 58, rot: kk.a };
+    },
+    gkHit(g) {
+      const k = g.gk;
+      for (let i = 0; i < k.keys.length; i++) {
+        if (k.keys[i].tried || i === k.act) continue;
+        const b = this.gkBow(g, i);
+        if (Math.hypot(pointer.x - b.x, pointer.y - b.y) < 58 || (Math.abs(pointer.x - b.x) < 22 && pointer.y > b.y && pointer.y < b.y + 104)) return i;
+      }
+      return -1;
+    },
+    gkSet(k, st) { k.st = st; k.st_t = 0; },
+    gkMood(k, m) { k.mood = m; k.mood_t = 0; },
+    gkLaunch(g, i, x, y, rot) {
+      const k = g.gk, b = this.gkBow(g, i);
+      k.act = i; k.f0 = { x: x ?? b.x, y: y ?? b.y, rot: rot ?? b.rot };
+      Object.assign(k, { ax: k.f0.x, ay: k.f0.y, arot: k.f0.rot, as: 1, ash: 1 });
+      this.gkSet(k, 'fly'); SFX.pick(); gkJingle(3);
+      for (const kk of k.keys) kk.va += rand(-2.5, 2.5);
+    },
     update(g, dt, id) {
-      tickShake(g, dt);
-      if (g.state === 'pick') {
-        const k = numKey(g.keys.length), i = id ? pickId(id, 'key:') : k;
-        if (i >= 0 && !g.tried.includes(i)) {
-          g.tried.push(i);
-          if (g.keys[i] === g.n) {
-            g.state = 'unlock'; g.t2 = 0; g.ki = i; g.total += [1, 0.5, 0.2, 0][g.tried.length - 1];
-            SFX.pick(); speak(`${cap(NUM_WORDS[g.n])} dots! That's the key!`);
+      const k = g.gk; k.t += dt; k.st_t += dt; k.mood_t += dt; k.jt -= dt; k.knock = Math.max(0, k.knock - dt); k.bump = Math.max(0, k.bump - dt);
+      const mvx = pointer.x - k.lpx; k.lpx = pointer.x; k.lpy = pointer.y;
+      for (const kk of k.keys) { kk.va += (-kk.a * 26 - kk.va * 2.2) * dt; kk.a = clamp(kk.a + kk.va * dt, -1.1, 1.1); }
+      const kx = GKD.kx, ky = GKD.ky, key = k.keys[k.act];
+      k.near = false;
+      if (k.st === 'arrive') {
+        k.slide = 1 - easeOut(clamp(k.st_t / 0.8, 0, 1));
+        if (k.st_t >= 0.8) { k.slide = 0; this.gkSet(k, 'pick'); }
+      } else if (k.st === 'pick') {
+        const hv = this.gkHit(g);
+        if (hv >= 0 && !k.drag && Math.abs(mvx) > 1) { k.keys[hv].va += clamp(mvx * 0.03, -1.2, 1.2); if (k.jt <= 0) { gkJingle(1); k.jt = 0.2; } }
+        if (pointer.clicked && !k.drag && Math.hypot(pointer.x - kx, pointer.y - 234) < 22) { gkKnock(); k.knock = 0.6; speak(g.say); this.gkMood(k, 'happy'); }
+        else if (pointer.clicked && !k.drag && hv >= 0) {
+          const b = this.gkBow(g, hv);
+          k.drag = { i: hv, ox: pointer.x - b.x, oy: pointer.y - b.y, sx: pointer.x, sy: pointer.y, x: b.x, y: b.y, rot: b.rot, moved: false };
+          k.act = hv; gkJingle(2); for (const kk of k.keys) kk.va += rand(-1.5, 1.5);
+        }
+        if (k.drag) {
+          const d = k.drag;
+          if (Math.hypot(pointer.x - d.sx, pointer.y - d.sy) > 14) d.moved = true;
+          d.x = pointer.x - d.ox; d.y = pointer.y - d.oy; d.rot = lerp(d.rot, clamp(-mvx * 0.04, -0.6, 0.6), 0.2);
+          k.near = d.moved && Math.hypot(d.x - kx, d.y - ky) < 110;
+          if (!pointer.down) {
+            k.drag = null;
+            if (!d.moved || Math.hypot(d.x - kx, d.y - ky) < 110) this.gkLaunch(g, d.i, d.moved ? d.x : null, d.moved ? d.y : null, d.moved ? d.rot : null);
+            else { k.act = -1; k.keys[d.i].va += 4; gkJingle(2); }
+          }
+        } else { const i = numKey(k.keys.length); if (i >= 0 && !k.keys[i].tried) this.gkLaunch(g, i); }
+      } else if (k.st === 'fly') {
+        const e = easeOut(clamp(k.st_t / 0.45, 0, 1));
+        k.ax = lerp(k.f0.x, kx, e); k.ay = lerp(k.f0.y, ky, e) - Math.sin(e * Math.PI) * 40;
+        k.as = lerp(1, 0.75, e); k.ash = 1 - clamp((k.st_t - 0.25) / 0.2, 0, 1); k.arot = lerp(k.f0.rot, 0, e);
+        if (k.st_t >= 0.5) {
+          k.tries++; key.tried = true;
+          const w = NUM_WORDS[k.n];
+          if (key.v === k.n) {
+            k.total += [1, 0.2, 0, 0][k.tries - 1] ?? 0;
+            this.gkSet(k, 'turn'); this.gkMood(k, 'happy'); SFX.sparkle(); burst(kx, ky, 18, { colors: ['#fff6a8', '#ffd84a', '#ffffff'] });
+            const how = key.rep.kind === 'sum' ? `${cap(NUM_WORDS[key.rep.a])} and ${NUM_WORDS[key.rep.b]} make ${w}! ` : key.rep.kind === 'framex' ? `Ten and ${NUM_WORDS[k.n - 10]} make ${w}! ` : `${cap(w)}! `;
+            speak(`Yes! ${how}Now twist the key round and round!`);
           } else {
-            g.shake[i] = 0.5; SFX.miss();
-            speak(`That key has ${NUM_WORDS[g.keys[i]]} dots. The door needs ${g.tier === 1 || g.tried.length > 1 ? NUM_WORDS[g.n] : 'a different number'}.`);
+            this.gkSet(k, 'jam'); this.gkMood(k, 'oops'); gkClunk(); floatText(kx + 60, ky - 40, 'Clunk!', '#ffd0a0', false, 26);
+            const r = key.rep, list = r.kind === 'framex' ? `ten, ${gkWords(11, r.v)}` : gkWords(1, r.v);
+            const needs = g.tier === 1 || k.tries > 1 ? `But the door says ${w}.` : 'The door needs a different number.';
+            speak(`Clunk! That key won't turn. Let's count the ${gkUnitName(r)}: ${list}. ${cap(NUM_WORDS[r.v])}! ${needs}`);
           }
         }
-      } else {
-        g.t2 += dt;
-        if (g.state === 'unlock' && g.t2 > 1.1) { g.state = 'open'; g.t2 = 0; tone(220, 0.4, 'triangle', 0.08, 0, 330); SFX.sparkle(); burst(W / 2, 200, 24); }
-        if (g.state === 'open') { g.open = Math.min(1, g.t2 / 0.6); if (g.t2 > 2) { g.round++; if (g.round >= g.rounds) g.done = true; else this.next(g); } }
+      } else if (k.st === 'jam') {
+        k.arot = Math.sin(k.st_t * 30) * 0.3 * Math.max(0, 1 - k.st_t / 0.8);
+        if (k.st_t > 1.7) { this.gkSet(k, 'count'); this.gkMood(k, 'count'); k.hi = 0; }
+      } else if (k.st === 'count') {
+        // a full ten-frame is counted as "ten" in one go, then Gnorbert counts on
+        const r = key.rep, steps = r.kind === 'framex' ? r.v - 9 : r.v, iv = 0.5, s = Math.min(steps, Math.floor(k.st_t / iv) + 1), hi = r.kind === 'framex' ? s + 9 : s;
+        if (hi !== k.hi) { k.hi = hi; chime(hi - 1); k.bump = 0.25; }
+        if (k.st_t > steps * iv + 1) { this.gkSet(k, 'back'); k.hi = 0; }
+      } else if (k.st === 'back') {
+        const b = this.gkBow(g, k.act), e = easeOut(clamp(k.st_t / 0.45, 0, 1));
+        k.ax = lerp(kx, b.x, e); k.ay = lerp(ky, b.y, e) - Math.sin(e * Math.PI) * 50; k.as = lerp(1.15, 1, e); k.ash = clamp((k.st_t - 0.05) / 0.25, 0, 1); k.arot = lerp(0, b.rot, e);
+        if (k.st_t >= 0.45) { k.keys[k.act].va += 3; k.act = -1; gkJingle(3); this.gkSet(k, 'pick'); this.gkMood(k, 'idle'); }
+      } else if (k.st === 'turn') {
+        // drag round and round the keyhole (or tap the key / press space) to turn it; a pin clicks up every quarter turn
+        const q = TAU / 4, dx = pointer.x - kx, dy = pointer.y - ky, dist = Math.hypot(dx, dy);
+        if (pointer.down && dist > 14 && dist < 220) {
+          const ang = Math.atan2(dy, dx);
+          if (k.lang != null) { let d = ang - k.lang; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; if (Math.abs(d) < 0.9) { k.turn = Math.min(TAU, k.turn + Math.abs(d)); k.goal = Math.max(k.goal, k.turn); } }
+          k.lang = ang;
+        } else k.lang = null;
+        if ((pointer.clicked && dist < 80) || pressed.arrowright || pressed.arrowleft || pressed[' '] || pressed.enter) k.goal = Math.min(TAU, (Math.floor(k.goal / q + 1e-6) + 1) * q);
+        if (k.turn < k.goal) k.turn = Math.min(k.goal, k.turn + dt * 7);
+        k.arot = k.turn;
+        while (k.pins < 4 && k.turn >= (k.pins + 1) * q - 0.02) { k.pinT[k.pins] = k.t; k.pins++; gkTick(); burst(GKD.tx, GKD.ty, 6, { colors: ['#fff6a8', '#9affb0'], spread: 60, up: 40 }); }
+        if (!k.hinted && k.st_t > 7 && k.pins === 0) { k.hinted = true; speak('Tap the key, or drag your finger round and round it!'); }
+        if (k.pins >= 4) { this.gkSet(k, 'unlock'); tone(220, 0.08, 'square', 0.06); tone(520, 0.2, 'triangle', 0.09, 0.07); }
+      } else if (k.st === 'unlock') {
+        if (k.st_t > 0.55) { this.gkSet(k, 'open'); gkCreak(); }
+      } else if (k.st === 'open') {
+        k.open = gkEase(clamp(k.st_t / 1.0, 0, 1));
+        if (k.st_t >= 1.0) {
+          this.gkSet(k, 'reveal'); this.gkMood(k, 'count'); k.open = 1;
+          const r = k.room, w = NUM_WORDS[k.n];
+          speak(`${cap(gkWords(1, k.n))}. ${cap(w)} ${k.n === 1 ? r.one : r.many}${r.tail}!`);
+        }
+      } else if (k.st === 'reveal') {
+        const iv = k.n <= 10 ? 0.5 : 0.42, s = k.st_t < 0.2 ? 0 : Math.min(k.n, Math.floor((k.st_t - 0.2) / iv) + 1);
+        while (k.shown < s) { const [ix, iy] = gkItemPos(k.n, k.shown); k.appear[k.shown] = k.t; k.shown++; chime(k.shown - 1); floatText(ix, iy - 22, String(k.shown), '#fff6a8', false, 20); k.bump = 0.25; }
+        if (k.st_t > 0.2 + k.n * iv + 0.6) { this.gkSet(k, 'cheer'); this.gkMood(k, 'cheer'); SFX.sparkle(); burst(GKD.x, 200, 30); burst(GKD.gx, GKD.gy - 120, 14, { kind: 'heart', colors: ['#ff6fb5', '#ff9ac8'] }); }
+      } else if (k.st === 'cheer') {
+        if (id === 'gknext' || pressed.enter || pressed[' '] || k.st_t > 3.6) {
+          k.round++;
+          if (k.round >= k.rounds) g.done = true; else this.gkRound(g);
+        }
       }
-      g.progress = `Door ${Math.min(g.round + 1, g.rounds)} of ${g.rounds}`;
-      g.score = g.total / g.rounds;
+      g.progress = `Door ${Math.min(k.round + 1, k.rounds)} of ${k.rounds}`;
+      g.score = k.total / k.rounds;
     },
     draw(g) {
-      // a big tree trunk with a round gnome door in it
-      const dx = W / 2, dy = 84;
-      ink(P2(`M${dx - 190},${dy + 250} C${dx - 170},${dy + 120} ${dx - 160},${dy + 40} ${dx - 150},${dy - 40} L${dx + 150},${dy - 40} C${dx + 160},${dy + 40} ${dx + 170},${dy + 120} ${dx + 190},${dy + 250} Z`), '#9a6a44', 3);
-      ctx.strokeStyle = 'rgba(60,30,15,.35)'; ctx.lineWidth = 3; for (const k of [-120, -60, 60, 120]) { ctx.beginPath(); ctx.moveTo(dx + k, dy - 30); ctx.quadraticCurveTo(dx + k * 1.1, dy + 120, dx + k * 1.25, dy + 240); ctx.stroke(); }
-      const door = P2(`M${dx - 80},${dy + 236} L${dx - 80},${dy + 70} C${dx - 80},${dy - 22} ${dx + 80},${dy - 22} ${dx + 80},${dy + 70} L${dx + 80},${dy + 236} Z`);
-      ink(door, '#3a2030', 3);
-      // the open doorway shows who lives inside
-      if (g.open > 0) {
-        ctx.save(); ctx.clip(door);
-        ctx.fillStyle = `rgba(255,220,120,${0.6 * g.open})`; ctx.fillRect(dx - 80, dy - 30, 160, 270);
-        emoji(g.friend, dx, dy + 130, 80 * g.open);
-        ctx.restore();
+      const k = g.gk, t = k.t, { x, base } = GKD;
+      const shake = k.st === 'jam' && k.st_t < 0.6 ? Math.sin(k.st_t * 46) * 5 * (1 - k.st_t / 0.6) : 0;
+      still('gk_ground', gkGroundStatic);
+      ctx.save(); ctx.translate(k.slide * 760, 0);
+      still('gk_tree', gkTreeStatic);
+      // a warm flickering window (someone moving about inside), an attic window, ivy, chimney smoke and a lantern
+      const f = 0.8 + 0.1 * Math.sin(t * 5) + 0.08 * Math.sin(t * 13);
+      for (const [wx, wy, r] of [[318, 176, 22], [632, 150, 12]]) {
+        const gl = ctx.createRadialGradient(wx, wy, 2, wx, wy, r * 2.6); gl.addColorStop(0, `rgba(255,210,110,${0.45 * f})`); gl.addColorStop(1, 'rgba(255,210,110,0)'); ctx.fillStyle = gl; circle(wx, wy, r * 2.6);
+        inkCircle(wx, wy, r, mix('#ffb04a', '#fff2a0', f - 0.55), 1.4);
+        if (r > 15) { ctx.fillStyle = 'rgba(90,50,40,.5)'; const sx = wx + Math.sin(t * 0.7) * 8; ellipse(sx, wy + 10, 6, 9); circle(sx, wy - 2, 5); }
+        ctx.strokeStyle = '#7a4a2a'; ctx.lineWidth = r > 15 ? 4 : 3; ctx.beginPath(); ctx.moveTo(wx - r, wy); ctx.lineTo(wx + r, wy); ctx.moveTo(wx, wy - r); ctx.lineTo(wx, wy + r); ctx.stroke();
       }
-      ctx.save(); ctx.translate(dx - 80, 0); ctx.scale(1 - g.open * 0.85, 1); ctx.translate(-(dx - 80), 0);
-      ink(door, g.door, 3);
-      ctx.save(); ctx.clip(door); ctx.strokeStyle = 'rgba(40,20,40,.25)'; ctx.lineWidth = 3; for (const k of [-40, 0, 40]) { ctx.beginPath(); ctx.moveTo(dx + k, dy); ctx.lineTo(dx + k, dy + 240); ctx.stroke(); } ctx.restore();
-      if (g.open < 0.5) {
-        inkRect(dx - 58, dy + 30, 116, 84, '#fff6dc', 3, 14);
-        outlined(String(g.n), dx, dy + 74, 62, '#c0392b', 'center', '#fff');
-        inkCircle(dx + 50, dy + 160, 16, '#ffd84a', 2); ctx.fillStyle = '#3a2030'; circle(dx + 50, dy + 156, 5); tri(dx + 46, dy + 158, dx + 54, dy + 158, dx + 50, dy + 170);
-      }
+      for (const [ix, len, ph] of [[270, 130, 0], [292, 84, 2], [668, 150, 1], [690, 96, 3]]) gkIvy(ix, 0, len, t, ph);
+      for (let i = 0; i < 4; i++) { const z = (t * 0.32 + i / 4) % 1; ctx.fillStyle = `rgba(255,255,255,${0.55 * (1 - z)})`; circle(744 + Math.sin(t * 1.2 + i * 2) * 6 + z * 18, 190 - z * 110, 6 + z * 12); }
+      lantern(380, 226, t, 1, '#ffb03a');
+      gkAwning(k.cap);
+      ctx.translate(shake, 0);
+      if (k.open > 0) gkRoom(k);
+      // the door swings on its left hinge; the key in the lock swings with it
+      ctx.save();
+      const hinge = x - GKD.hw, sx = 1 - k.open * 0.86;
+      ctx.translate(hinge, 0); ctx.scale(sx, 1); ctx.translate(-hinge, 0);
+      gkLeaf(g, k);
+      const inLock = k.act >= 0 && ['jam', 'count', 'turn', 'unlock', 'open', 'reveal', 'cheer'].includes(k.st);
+      // a jammed key grows big so everyone can count it together
+      const ls = k.st === 'count' ? 1.15 : k.st === 'jam' ? lerp(0.75, 1.15, gkEase(clamp((k.st_t - 0.9) / 0.5, 0, 1))) : 0.75;
+      if (inLock) drawGKey(k.keys[k.act], GKD.kx, GKD.ky, k.arot, ls, { shaft: 0, hi: k.hi, t });
+      if (k.open > 0) { ctx.fillStyle = `rgba(30,15,30,${0.4 * k.open})`; ctx.fill(gkDoorPath(0)); }
       ctx.restore();
-      inkRect(dx - 96, dy + 236, 192, 14, '#a89ab4', 2, 4);
-      tinyShroom(dx - 120, dy + 248, 2, '#ff4a4a'); tinyShroom(dx + 124, dy + 248, 1.6, '#c06ae0');
-      // the keys
-      g.keys.forEach((n, i) => {
-        if (g.state !== 'pick' && i === g.ki) return;
-        const x = this.keyX(g, i) + shakeX(g, i), y = 396, used = g.tried.includes(i);
-        buttons.push({ id: `key:${i}`, x: x - 64, y: y - 60, w: 128, h: 190, on: g.state === 'pick' && !used, key: String(i + 1) });
-        ctx.globalAlpha = used ? 0.4 : 1;
-        drawKey(x, y, n, ['#ff5f7e', '#40b0ff', '#9c6cff', '#3fbf6a'][i], Math.sin(S.t * 2 + i) * 0.04);
-        ctx.globalAlpha = 1;
-        text(String(i + 1), x + 46, y + 56, 16, 'rgba(91,63,115,.6)', 'center', 800);
+      ctx.restore();
+      // Gnorbert watches from the root and reacts
+      const m = k.mood, mt = k.mood_t, gx = GKD.gx, gy = GKD.gy;
+      let hop = 0, rot = 0;
+      if (m === 'cheer') hop = Math.abs(Math.sin(mt * 9)) * 18;
+      else if (m === 'happy') hop = mt < 0.5 ? Math.sin(mt / 0.5 * Math.PI) * 14 : 0;
+      else if (m === 'oops') rot = Math.sin(mt * 16) * 0.12 * Math.max(0, 1 - mt / 1.2);
+      else if (m === 'count') hop = k.bump > 0 ? Math.sin(k.bump / 0.25 * Math.PI) * 8 : 0;
+      else rot = Math.sin(t * 1.5) * 0.04;
+      // (once the game is over the results screen draws its own Gnorbert)
+      if (!g.done) { ctx.save(); ctx.translate(gx, gy - hop); ctx.rotate(rot); drawCritter('Gnorbert the Gnome', 0, 0, 0.86, -1); ctx.restore(); }
+      const bubble = m === 'cheer' ? 'Hooray!' : m === 'oops' && k.st === 'jam' ? 'Oops!' : (k.st === 'count' && k.hi) ? String(k.hi) : (k.st === 'reveal' && k.shown) ? String(k.shown) : k.st === 'turn' ? 'Twist!' : k.st === 'pick' && !k.drag ? '?' : '';
+      if (bubble && !g.done) gkBubble(gx - 44, gy - 226, bubble, bubble.length > 2 ? 22 : 34);
+      // the big jangly key ring: back of the ring, the keys hanging on it, then the front of the ring
+      const ry = GKD.ringY + k.slide * 220;
+      const ringArc = (a0, a1) => { ctx.beginPath(); ctx.ellipse(x, ry, GKD.ringRx, GKD.ringRy, 0, a0, a1); ctx.strokeStyle = OL; ctx.lineWidth = 10; ctx.stroke(); ctx.strokeStyle = '#e8b830'; ctx.lineWidth = 5.5; ctx.stroke(); ctx.strokeStyle = 'rgba(255,248,180,.8)'; ctx.lineWidth = 1.6; ctx.stroke(); };
+      ringArc(Math.PI, TAU);
+      const hv = k.st === 'pick' && !k.drag ? this.gkHit(g) : -1;
+      k.keys.forEach((kk, i) => {
+        if (i === k.act) return;
+        const b = this.gkBow(g, i), gl = (t * 0.45 + i * 0.29) % 2.4;
+        drawGKey(kk, b.x, b.y, b.rot, i === hv ? 1.06 : 1, { loop: true, glint: kk.tried ? null : gl, dim: kk.tried, t });
+        if (!kk.tried) text(String(i + 1), b.x + 44, b.y + 50, 15, 'rgba(255,255,255,.85)', 'center', 800);
       });
-      // the right key flies to the lock and turns
-      if (g.state !== 'pick') {
-        const e = easeOut(clamp(g.t2 / 0.7, 0, 1)), sx = this.keyX(g, g.ki), turn = g.state === 'unlock' ? clamp((g.t2 - 0.7) / 0.3, 0, 1) * Math.PI / 2 : Math.PI / 2;
-        if (g.state === 'unlock') drawKey(lerp(sx, dx + 50, e), lerp(396, dy + 160 - 60, e), g.n, '#ff5f7e', turn * 0.3);
+      ringArc(0, Math.PI);
+      star(x - 250 + Math.sin(t * 0.8) * 30, ry + 14, 6 + Math.sin(t * 5) * 2, '#ffffff', 4);
+      // first door: show where keys go
+      if (k.round === 0 && k.tries === 0 && k.st === 'pick' && !k.drag) {
+        const p = (t * 0.7) % 1;
+        ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 4; ctx.setLineDash([10, 9]); ctx.lineDashOffset = -t * 30;
+        ctx.beginPath(); ctx.moveTo(x, 410); ctx.lineTo(x, 326); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+        ctx.fillStyle = 'rgba(255,255,255,.9)'; tri(x - 12, 330, x + 12, 330, x, 314);
+        ctx.globalAlpha = Math.sin(p * Math.PI); emoji('👆', x + 18, lerp(430, 320, p), 34); ctx.globalAlpha = 1;
       }
-      if (g.state === 'open') outlined('Open!', dx, 60 + 20, 34, '#fff6a8');
+      // a key on the move: dragged, flying to the lock or springing back to the ring
+      if (k.drag) drawGKey(k.keys[k.drag.i], k.drag.x, k.drag.y, k.drag.rot, 1.08, { lift: true, t });
+      else if (k.st === 'fly' || k.st === 'back') drawGKey(k.keys[k.act], k.ax, k.ay, k.arot, k.as, { shaft: k.ash, t });
+      // twisting: how far it has turned, an arrow circling the keyhole, and the lock pins
+      if (k.st === 'turn' || k.st === 'unlock') {
+        const kx = GKD.kx, ky = GKD.ky;
+        ctx.strokeStyle = 'rgba(40,20,60,.35)'; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(kx, ky, 56, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(kx, ky, 56, -Math.PI / 2, -Math.PI / 2 + k.turn); ctx.stroke();
+        for (let i = 0; i < 4; i++) { const a = -Math.PI / 2 + i * TAU / 4; inkCircle(kx + Math.cos(a) * 56, ky + Math.sin(a) * 56, 5, i < k.pins ? '#9affb0' : '#ffffff', 1.2); }
+        if (k.st === 'turn') {
+          const a = -Math.PI / 2 + k.turn + 0.5 + (t * 2.2) % 1.2;
+          ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(kx, ky, 74, a - 0.9, a); ctx.stroke();
+          ctx.fillStyle = '#ffffff'; ctx.save(); ctx.translate(kx + Math.cos(a) * 74, ky + Math.sin(a) * 74); ctx.rotate(a + Math.PI / 2); tri(-9, -7, 9, 0, -9, 7); ctx.restore();
+          if (k.turn < 0.3) emoji('👆', kx + Math.cos(a) * 84, ky + Math.sin(a) * 84 + 10, 30);
+        }
+        gkTumbler(k);
+      }
+      // a short reading line for grown-ups and early readers
+      const tip = k.st === 'pick' ? (g.tier === 1 ? `Find the key with ${k.n} dot${k.n > 1 ? 's' : ''}!` : `Which key shows ${k.n}?`) : k.st === 'turn' ? 'Twist the key round!' : k.st === 'count' ? 'Count with Gnorbert!' : k.st === 'reveal' || k.st === 'cheer' ? `${k.n} ${k.n === 1 ? k.room.one : k.room.many}!` : '';
+      if (tip) { ctx.font = `700 17px ${FONT}`; const tw = ctx.measureText(tip).width + 30; rrect(16, 66, tw, 34, 17, 'rgba(60,30,70,.75)'); text(tip, 16 + tw / 2, 83, 17, '#fff', 'center', 700); }
+      if (k.st === 'cheer' && !g.done) button('gknext', W - 200, 64, 184, 48, 'Next door', { icon: '🚪', color: '#5fb87a', size: 20 });
     },
   };
 
@@ -3801,7 +5222,7 @@
   }
   MG.sheepherd = {
     kind: 'action', title: () => 'Sheep Herding', icon: () => '🐑',
-    how: () => `You're the sheepdog! Move with the mouse or the arrow keys. Sheep run away from you, so get behind them and push them into the pen through the gate. There are 4 levels, and each one has more sheep and more things in the way!`,
+    how: () => `Herd the sheep, Aubrey! Move with the mouse or the arrow keys. Sheep run away from you, so get behind them and push them into the pen through the gate. There are 4 levels, and each one has more sheep and more things in the way!`,
     init(g) {
       Object.assign(g, { lvl: 0, pennedTotal: 0, between: 0, banner: '' });
       this.setup(g);
@@ -3896,7 +5317,7 @@
       ctx.globalAlpha = 1;
       outlined('PEN', PEN.x + 62, PEN.y + 34, 26, '#fff', 'center', '#a0683a');
       // everyone, back to front
-      const all = [...g.obs.filter(o => o[0] !== 'pond').map(o => ({ y: o[2] - 18, d: () => drawHerdObstacle(o, S.t) })), ...g.sheep.map(s => ({ y: s.y, d: () => drawFarmAnimal('sheep', s.x, s.y + 18, 0.5, false, s.dir) })), { y: g.dy, d: () => drawDog(g.dx, g.dy + 18, 0.75, g.t, g.ddir, g.run) }];
+      const all = [...g.obs.filter(o => o[0] !== 'pond').map(o => ({ y: o[2] - 18, d: () => drawHerdObstacle(o, S.t) })), ...g.sheep.map(s => ({ y: s.y, d: () => drawFarmAnimal('sheep', s.x, s.y + 18, 0.5, false, s.dir) })), { y: g.dy, d: () => drawAubrey(g.dx, g.dy + 18, g.run > 0.3 ? `run${1 + (Math.floor(g.t * 11) % 5)}` : 'idle_front', g.ddir || 1, 0, 104 / IMG.idle_front.height) }];
       all.sort((a, b) => a.y - b.y).forEach(o => o.d());
       for (const s of g.sheep) if (s.penned) { ctx.fillStyle = '#ff5f7e'; heart(s.x + 14, s.y - 46 + Math.sin(S.t * 4 + s.x) * 3, 14, '#ff5f7e'); }
       // butterflies flit over the meadow
@@ -3919,9 +5340,9 @@
     },
   };
 
-  // --- farm facts: read a fact, tap the animal it's about (and sometimes the other way round) ----
-  // each fact is [harder?, riddle in the animal's voice, what we say after]. Every fact must fit only
-  // ONE of these animals, because any of the others can turn up as a wrong choice.
+  // --- farm facts: Penny tells a fact, Aubrey catches the animal in the pen that it's about ----
+  // each fact is [harder?, fact in the animal's voice, what we say after]. Every fact must fit only
+  // ONE of these animals, because any of the others can be milling about in the pen.
   const FARM_FACTS = {
     cow: [[0, 'Most of the milk at the grocery store comes from me.', 'Cows give us most of the milk we drink.'],
       [0, 'A boy of my kind is called a bull, and my baby is a calf.', 'Boy cows are bulls, and babies are calves.'],
@@ -3958,118 +5379,307 @@
       [1, 'My bare head can change colour to red, white or blue!', 'A turkey\'s head changes colour when it gets excited.']],
   };
   const FARM_KINDS = Object.keys(FARM_FACTS);
-  function cardBg(x, y, w, h) {
-    ctx.save(); ctx.beginPath(); ctx.roundRect(x, y, w, h, 14); ctx.clip();
-    const sk = ctx.createLinearGradient(0, y, 0, y + h); sk.addColorStop(0, '#d8f2ff'); sk.addColorStop(0.62, '#f4fbff'); sk.addColorStop(0.62, '#9ad870'); sk.addColorStop(1, '#7cc858');
-    ctx.fillStyle = sk; ctx.fillRect(x, y, w, h);
+  // the pen: its fence line, the floor the animals' feet stay on, and the barn door they come and go by
+  const FFP = { x0: 196, x1: 944, y0: 214, y1: 530, ax0: 252, ax1: 896, ay0: 282, ay1: 484, door: { x: 862, y: 250 } };
+  // little animals are drawn a bit smaller, so the pen looks natural
+  const FF_SC = { hen: 0.36, duck: 0.36, rabbit: 0.36, turkey: 0.4, pig: 0.42, sheep: 0.44, goat: 0.44, donkey: 0.46, cow: 0.48, horse: 0.48, llama: 0.48 };
+  const ffSc = k => FF_SC[k] || 0.44;
+  // how far apart two animals are, squashed so side-by-side counts more than front-to-back
+  const ffGap = (a, b) => Math.hypot((a.x - b.x) / 100, (a.y - b.y) / 46);
+  const ffFree = a => a.mode === 'walk' || a.mode === 'graze' || a.mode === 'flee' || a.mode === 'enter';
+  function ffSpot(herd) {
+    let x, y, k = 0;
+    do { x = rand(FFP.ax0 + 20, FFP.ax1 - 20); y = rand(FFP.ay0 + 10, FFP.ay1 - 10); } while (herd.some(o => o.mode !== 'gone' && ffGap(o, { x, y }) < 1.15) && ++k < 80);
+    return { x, y };
   }
-  // an animal portrait (js/farmart*.js) filling a card
-  function animalCard(kind, x, y, w, h) {
-    cardBg(x, y, w, h);
-    const s = Math.min(w / 250, (h - 12) / 205);
-    if (!drawAnimalArt(kind, x + w / 2, y + h - 8, s)) text(kind, x + w / 2, y + h / 2, 18, '#a03a66', 'center', 800);
+  const ffAnimal = (k, x, y, mode = 'graze') => ({ k, x, y, vx: 0, vy: 0, dir: Math.random() < 0.5 ? 1 : -1, mode, mt: rand(0.5, 2.5), tx: x, ty: y, sp: rand(34, 56), ph: rand(0, 6), seed: rand(0, 9), bump: 0, line: '', lineT: 0, alpha: 1, fleeCD: 0 });
+  // the field and pen, painted once: grass, hedge, straw floor, mud, trough, fence and the barn
+  function ffPenPaint() {
+    const R = rng(23);
+    const fg = ctx.createLinearGradient(0, 60, 0, H); fg.addColorStop(0, '#a6e47e'); fg.addColorStop(1, '#6cc050');
+    ctx.fillStyle = fg; ctx.fillRect(0, 60, W, H - 60);
+    for (let x = -20; x < W + 40; x += 64 + R() * 30) inkCircle(x, 76, 28 + R() * 14, ['#3e9a48', '#4aa850', '#358a40'][Math.floor(R() * 3)], 2.5);
+    for (let x = -10; x < W + 20; x += 26) inkCircle(x, 104, 17, '#4fae4a', 2);
+    for (let x = -10; x < W + 20; x += 26) { ctx.fillStyle = '#62c058'; circle(x - 4, 98, 8); }
+    for (let i = 0; i < 16; i++) { ctx.fillStyle = ['#ff6a8a', '#fff', '#ffd23a'][i % 3]; circle(R() * W, 94 + R() * 18, 3); }
+    for (let i = 0; i < 26; i++) { const x = R() * 180, y = 130 + R() * 400; grassBlades(x - 8, x + 8, y, R, ['#4aa43c', '#78cc58', '#5ab44a'], 6, 13, 0.7); }
+    for (let i = 0; i < 7; i++) { const x = 14 + R() * 160, y = 330 + R() * 190, c = ['#ffffff', '#ffd23a', '#ff9ac8', '#b89cff'][i % 4]; for (let k = 0; k < 4; k++) tinyFlower(x + (R() - 0.5) * 24, y + (R() - 0.5) * 12, 3.5 + R() * 1.5, c); }
+    // straw floor with a darker edge, a scatter of straw and a few hay tufts
+    ctx.fillStyle = '#e6c878'; ctx.fillRect(FFP.x0, FFP.y0, FFP.x1 - FFP.x0, FFP.y1 - FFP.y0);
+    ctx.fillStyle = '#f4dc92'; ctx.fillRect(FFP.x0 + 10, FFP.y0 + 8, FFP.x1 - FFP.x0 - 20, FFP.y1 - FFP.y0 - 14);
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 150; i++) { const x = FFP.x0 + 12 + R() * (FFP.x1 - FFP.x0 - 30), y = FFP.y0 + 12 + R() * (FFP.y1 - FFP.y0 - 20), a = R() * 3; ctx.strokeStyle = R() < 0.5 ? 'rgba(200,150,60,.55)' : 'rgba(255,240,180,.8)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * 12, y + Math.sin(a) * 4); ctx.stroke(); }
+    // the mud patch, lower left
+    inkEllipse(330, 462, 78, 26, -0.05, '#8a5a3a', 2.5);
+    ctx.fillStyle = '#a06a44'; ellipse(326, 458, 60, 17);
+    ctx.fillStyle = 'rgba(255,255,255,.22)'; ellipse(300, 452, 20, 5); ellipse(352, 466, 12, 3);
+    // a hay pile in the far right corner of the floor
+    for (const [dx, dy, r] of [[-26, 2, 22], [0, -8, 26], [26, 2, 22]]) inkCircle(900 + dx, 500 + dy, r, '#f4cc5a', 2);
+    ctx.strokeStyle = 'rgba(190,140,40,.8)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 12; i++) { const x = 872 + R() * 56, y = 486 + R() * 26; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (R() - 0.5) * 16, y - 10); ctx.stroke(); }
+    // the barn, behind the fence on the right, door open to the pen
+    const bx = 796, by = 140, bw = 132, bh = 112, d = FFP.door;
+    inkRect(bx, by, bw, bh, '#d8504a', 2.5, 4);
+    ctx.strokeStyle = 'rgba(120,30,30,.35)'; ctx.lineWidth = 2; for (let x = bx + 14; x < bx + bw; x += 14) { ctx.beginPath(); ctx.moveTo(x, by + 4); ctx.lineTo(x, by + bh - 2); ctx.stroke(); }
+    ink(P2(`M${bx - 12},${by + 6} L${bx + bw / 2},${by - 46} L${bx + bw + 12},${by + 6} Z`), '#8a5a3a', 2.5);
+    inkRect(bx + bw / 2 - 16, by - 26, 32, 22, '#fff6e8', 2, 3); ctx.fillStyle = '#5a3a2a'; ctx.fillRect(bx + bw / 2 - 1, by - 24, 2, 18); ctx.fillRect(bx + bw / 2 - 14, by - 16, 28, 2);
+    inkRect(d.x - 34, by + 30, 68, bh - 30, '#3a2218', 2.5, 3);
+    ctx.fillStyle = 'rgba(255,220,140,.18)'; ctx.fillRect(d.x - 30, by + bh - 24, 60, 22);
+    // the trough along the back fence
+    inkRect(470, 220, 130, 30, '#a0683a', 2.5, 6); inkRect(477, 224, 116, 12, '#5ac0f0', 1.5, 4);
+    for (const x of [482, 588]) inkRect(x - 4, 246, 8, 12, '#7a4a2a', 1.5, 2);
+    // back and left fence: posts and two rails
+    const rail = (x0, y0, x1, y1, w = 9) => { ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = w + 5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.strokeStyle = '#d8a868'; ctx.lineWidth = w; ctx.stroke(); };
+    const post = (x, y, h) => inkRect(x - 6, y - h, 12, h + 4, '#b07840', 2, 3);
+    for (const yy of [FFP.y0 - 30, FFP.y0 - 10]) rail(FFP.x0, yy, bx, yy);
+    for (let x = FFP.x0; x <= bx; x += 75) post(x, FFP.y0, 50);
+    for (const xx of [FFP.x0 - 4, FFP.x0 + 4]) rail(xx, FFP.y0 - 20, xx, FFP.y1 - 16, 6);
+    for (let y = FFP.y0 + 60; y < FFP.y1 - 20; y += 80) post(FFP.x0, y, 46);
+    rail(FFP.x1 - 4, FFP.y0 + 30, FFP.x1 - 4, FFP.y1 - 16, 6);
+    // hay bales outside the pen, by Penny
+    for (const [x, y, w] of [[18, 520, 120], [36, 470, 90]]) {
+      inkRect(x, y - 44, w, 44, '#f4cc5a', 2.5, 8);
+      ctx.strokeStyle = 'rgba(190,140,40,.7)'; ctx.lineWidth = 2; for (let i = 0; i < 6; i++) { const sx = x + 8 + i * (w - 16) / 5; ctx.beginPath(); ctx.moveTo(sx, y - 40); ctx.lineTo(sx + 3, y - 4); ctx.stroke(); }
+      ctx.strokeStyle = '#c0503a'; ctx.lineWidth = 3; for (const xx of [x + w * 0.3, x + w * 0.7]) { ctx.beginPath(); ctx.moveTo(xx, y - 44); ctx.lineTo(xx, y); ctx.stroke(); }
+    }
+  }
+  // one pen animal: walking bob, grazing tilt, a bounce when it bumps, a hop of joy, a wriggle
+  function ffDrawAnimal(a) {
+    const s = ffSc(a.k), moving = Math.hypot(a.vx, a.vy) > 10;
+    let lift = 0, rot = 0, sx = 0;
+    if (a.mode === 'held') lift = 30 + Math.sin(S.t * 7) * 2;
+    else if (a.mode === 'hop') lift = Math.abs(Math.sin(a.mt * 7)) * 26;
+    else if (a.mode === 'wriggle') { lift = 18 * Math.max(0, a.mt / 0.7); rot = Math.sin(S.t * 34) * 0.16; sx = Math.sin(S.t * 40) * 4; }
+    else if (moving) { lift = Math.abs(Math.sin(a.ph)) * 5; rot = Math.sin(a.ph) * 0.04; }
+    else if (a.mode === 'graze') rot = 0.1 + Math.sin(S.t * 3 + a.seed) * 0.04;
+    if (a.bump > 0) lift += Math.sin(a.bump / 0.3 * Math.PI) * 8;
+    ctx.save(); ctx.globalAlpha = a.alpha;
+    if (lift > 2) { ctx.fillStyle = 'rgba(40,30,20,.14)'; ellipse(a.x, a.y + 2, 90 * s, 10 * s); }
+    ctx.translate(a.x + sx, a.y - lift); ctx.scale(a.dir, 1); ctx.rotate(rot);
+    drawAnimalArt(a.k, 0, 0, s, S.t + a.seed);
     ctx.restore();
   }
   MG.farmfacts = {
     kind: 'learn', title: () => 'Farm Facts', icon: () => '🐮',
-    how: () => 'Listen to each fact and tap the farm animal it is about. Sometimes you see the animal, and you pick the fact that matches it!',
+    how: () => 'Penny will tell you a farm fact. Listen, then find the animal it is about and catch it! Tap the animal, or walk up to it and press Space.',
     init(g) {
-      // which rounds are reverse (animal -> fact) and which use the trickier facts
-      const rounds = [6, 7, 8][g.tier - 1], nRev = [1, 2, 3][g.tier - 1], nHard = [1, 3, 4][g.tier - 1];
-      const kinds = shuffle(FARM_KINDS).slice(0, rounds);
-      const revAt = new Set(shuffle([...Array(rounds - 1).keys()].map(i => i + 1)).slice(0, nRev));
-      const plan = kinds.map((k, i) => {
-        const hard = i >= rounds - nHard, pool = FARM_FACTS[k].filter(f => !!f[0] === hard);
-        return { k, fact: pick(pool.length ? pool : FARM_FACTS[k]), rev: revAt.has(i) };
-      });
-      Object.assign(g, { round: 0, rounds, total: 0, shake: {}, plan });
+      const rounds = [6, 7, 8][g.tier - 1], nHard = [1, 3, 4][g.tier - 1], n = [4, 5, 6][g.tier - 1];
+      const pool = shuffle(FARM_KINDS), herd = [];
+      for (const k of pool.slice(0, n)) { const p = ffSpot(herd); herd.push(ffAnimal(k, p.x, p.y)); }
+      Object.assign(g, { round: 0, rounds, nHard, total: 0, herd, spare: pool.slice(n), ax: 560, ay: 400, adir: 1, run: 0, aim: null, hug: null, talk: 0, ffyay: 0, ffHint: 0 });
       this.next(g);
     },
-    start(g) { speak(g.say); },
+    start(g) { this.say(g, g.say); },
+    // Penny speaks (read aloud, and her talking wobble lasts about as long as the words)
+    say(g, str) { speak(str); g.talk = 0.5 + str.length * 0.062; },
     next(g) {
-      const r = g.plan[g.round];
-      Object.assign(g, { k: r.k, fact: r.fact, rev: r.rev, tried: [], state: 'pick', t2: 0 });
-      if (r.rev) {
-        // three facts: this animal's, and one each from two other animals
-        const others = shuffle(FARM_KINDS.filter(q => q !== r.k)).slice(0, 2).map(q => pick(FARM_FACTS[q]));
-        g.choices = shuffle([r.fact, ...others]);
-        g.say = `Which one would the ${r.k} say? ` + g.choices.map((c, i) => `${NUM_WORDS[i + 1]}: ${c[1]}`).join(' ');
-      } else {
-        const n = [4, 5, 6][g.tier - 1];
-        g.choices = shuffle([r.k, ...shuffle(FARM_KINDS.filter(q => q !== r.k)).slice(0, n - 1)]);
-        g.say = `${r.fact[1]} Who am I?`;
-      }
-      if (g.phase === 'play') speak(g.say);
+      const live = g.herd.filter(a => a.mode !== 'gone' && a.mode !== 'leave');
+      const tgt = pick(live), hard = g.round >= g.rounds - g.nHard, fp = FARM_FACTS[tgt.k].filter(f => !!f[0] === hard);
+      Object.assign(g, { k: tgt.k, tgt, fact: pick(fp.length ? fp : FARM_FACTS[tgt.k]), wrong: new Set(), ffstate: 'hunt', t2: 0, flees: 0 });
+      g.say = `Listen to the fact! One animal says: ${g.fact[1]} Catch that animal!`;
+      if (g.phase === 'play') this.say(g, g.say);
     },
-    isRight(g, i) { return g.rev ? g.choices[i] === g.fact : g.choices[i] === g.k; },
-    cardW(g) { const n = g.choices.length; return Math.min(206, (W - 40 - (n - 1) * 14) / n); },
-    cardX(g, i) { const n = g.choices.length, w = this.cardW(g), gap = 14; return W / 2 - (n * w + (n - 1) * gap) / 2 + i * (w + gap); },
-    update(g, dt, id) {
-      tickShake(g, dt);
-      if (g.state === 'pick') {
-        const k = numKey(g.choices.length), i = id ? pickId(id, 'ff:') : k;
-        if (i >= 0 && !g.tried.includes(i)) {
-          g.tried.push(i);
-          if (this.isRight(g, i)) {
-            g.state = 'yay'; g.t2 = 4; g.total += [1, 0.3, 0, 0, 0, 0][g.tried.length - 1];
-            SFX.sparkle(); burst(W / 2, 180, 24, { kind: 'star' });
-            speak(`Yes, the ${g.k}! ${g.fact[2]}`);
+    catchable: a => a.mode === 'walk' || a.mode === 'graze' || a.mode === 'flee' || a.mode === 'enter',
+    reach: (g, a) => Math.hypot((a.x - g.ax) / 1.7, a.y - g.ay) < 50,
+    // the animal under a point (its body sits above its feet)
+    under(g, x, y) {
+      let best = null, bd = 1;
+      for (const a of g.herd) {
+        if (!this.catchable(a)) continue;
+        const s = ffSc(a.k) / 0.45, d = Math.hypot((x - a.x) / (66 * s), (y - (a.y - 40 * s)) / (58 * s));
+        if (d < bd) { bd = d; best = a; }
+      }
+      return best;
+    },
+    grab(g, a) {
+      g.hug = { a, t: 0 }; g.aim = null; a.mode = 'held'; a.vx = a.vy = 0;
+      g.adir = Math.sign(a.x - g.ax) || g.adir; SFX.pop();
+    },
+    update(g, dt) {
+      const pm = pointerMoved(g);
+      g.talk = Math.max(0, g.talk - dt); g.ffyay = Math.max(0, g.ffyay - dt); g.ffHint = Math.max(0, g.ffHint - dt);
+      const hunting = g.ffstate === 'hunt' && !g.hug;
+      // Aubrey: arrow keys / WASD, or follow the pointer; tapping an animal sends her to catch it
+      if (pointer.clicked && hunting) { const a = this.under(g, pointer.x, pointer.y); if (a) g.aim = a; }
+      const ox = g.ax, oy = g.ay, sp = 300;
+      const kx = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), ky = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+      const toward = (tx, ty, v) => { const dx = tx - g.ax, dy = ty - g.ay, d = Math.hypot(dx, dy); if (d > 4) { const m = Math.min(d, v * dt); g.ax += dx / d * m; g.ay += dy / d * m; } };
+      if (g.hug) { /* holding still for the hug */ }
+      else if (kx || ky) { g.ax += kx * sp * dt; g.ay += ky * sp * 0.8 * dt; g.usePointer = false; g.aim = null; }
+      else if (g.aim && this.catchable(g.aim)) toward(g.aim.x - (Math.sign(g.aim.x - g.ax) || 1) * 60, g.aim.y, sp);
+      else if (pm) toward(clamp(pointer.x, FFP.ax0 - 20, FFP.ax1 + 20), clamp(pointer.y, FFP.ay0, FFP.ay1), sp);
+      g.ax = clamp(g.ax, FFP.ax0 - 20, FFP.ax1 + 20); g.ay = clamp(g.ay, FFP.ay0, FFP.ay1);
+      const moved = Math.hypot(g.ax - ox, g.ay - oy);
+      g.run = lerp(g.run, moved > 1 ? 1 : 0, Math.min(1, dt * 8));
+      if (Math.abs(g.ax - ox) > 0.5) g.adir = Math.sign(g.ax - ox);
+      // catching: reach the animal you tapped, or stand next to one and press Space
+      if (hunting) {
+        if (g.aim && !this.catchable(g.aim)) g.aim = null;
+        if (g.aim && this.reach(g, g.aim)) this.grab(g, g.aim);
+        else if (pressed[' '] || pressed.enter) {
+          const near = g.herd.filter(a => this.catchable(a) && this.reach(g, a)).sort((a, b) => Math.hypot(a.x - g.ax, a.y - g.ay) - Math.hypot(b.x - g.ax, b.y - g.ay))[0];
+          if (near) this.grab(g, near); else { g.ffHint = 1.4; SFX.blip(); }
+        }
+      }
+      // the hug: a quick scoop, then the animal tells us if it's the right one
+      if (g.hug) {
+        const h = g.hug, a = h.a; h.t += dt;
+        a.x = lerp(a.x, g.ax + g.adir * 30, Math.min(1, dt * 12)); a.y = lerp(a.y, g.ay + 4, Math.min(1, dt * 12)); a.dir = -g.adir;
+        if (h.t > 0.6) {
+          g.hug = null;
+          if (a === g.tgt) {
+            g.ffstate = 'yay'; g.ffyay = 1.2; g.total += [1, 0.3, 0][Math.min(2, g.wrong.size)];
+            a.mode = 'hop'; a.mt = 1.6; SFX.sparkle(); burst(a.x, a.y - 60, 24, { kind: 'star' });
+            this.say(g, `Yes, the ${a.k}! ${g.fact[2]}`); g.t2 = Math.max(3.4, g.talk);
           } else {
-            g.shake[i] = 0.45; SFX.miss();
-            speak(g.rev ? `No, a ${FARM_KINDS.find(q => FARM_FACTS[q].includes(g.choices[i]))} would say that. Try again!` : `Not the ${g.choices[i]}. Listen again: ${g.fact[1]}`);
+            g.wrong.add(a.k); a.mode = 'wriggle'; a.mt = 0.7; a.line = `Not me! I'm the ${a.k}!`; a.lineT = 2.4;
+            SFX.miss(); speak(a.line);
           }
         }
-      } else if ((g.t2 -= dt) <= 0) { g.round++; if (g.round >= g.rounds) g.done = true; else this.next(g); }
+      }
+      // the herd
+      const live = g.herd.filter(a => a.mode !== 'gone');
+      for (const a of live) {
+        a.mt -= dt; a.bump = Math.max(0, a.bump - dt); a.lineT = Math.max(0, a.lineT - dt); a.fleeCD = Math.max(0, a.fleeCD - dt);
+        let fx = 0, fy = 0;
+        if (a.mode === 'held') continue;
+        if (a.mode === 'wriggle') { if (a.mt <= 0) { a.mode = 'flee'; a.mt = 0.7; a.fsp = 110; } continue; }
+        if (a.mode === 'hop') { if (a.mt <= 0) { a.mode = 'leave'; } continue; }
+        if (a.mode === 'leave' || a.mode === 'enter') {
+          const tx = a.mode === 'leave' ? FFP.door.x : a.tx, ty = a.mode === 'leave' ? FFP.door.y : a.ty, dx = tx - a.x, dy = ty - a.y, d = Math.hypot(dx, dy);
+          if (d < 8) { if (a.mode === 'leave') { a.alpha -= dt * 4; if (a.alpha <= 0) { a.mode = 'gone'; SFX.blip(); } } else { a.mode = 'graze'; a.mt = rand(0.6, 1.6); } }
+          else { a.vx = dx / d * 95; a.vy = dy / d * 95; a.x += a.vx * dt; a.y += a.vy * dt; a.ph += dt * 11; }
+          if (a.mode === 'enter' && a.y > FFP.ay0) a.alpha = Math.min(1, a.alpha + dt * 4);
+          if (Math.abs(a.vx) > 6) a.dir = Math.sign(a.vx);
+          continue;
+        }
+        // the right animal gets a little playful at higher tiers: it trots off when Aubrey comes close
+        if (a === g.tgt && g.ffstate === 'hunt' && g.tier >= 2 && a.mode !== 'flee' && a.fleeCD <= 0 && g.flees < (g.tier === 2 ? 2 : 3) && Math.hypot((a.x - g.ax) / 1.5, a.y - g.ay) < 90) {
+          a.mode = 'flee'; a.mt = 0.75; a.fsp = g.tier === 2 ? 115 : 140; a.fleeCD = 2.6; g.flees++; a.bump = 0.3; tone(660, 0.12, 'triangle', 0.06, 0, 880);
+        }
+        if (a.mode === 'graze') { if (a.mt <= 0) { const p = ffSpot(live.filter(o => o !== a)); a.mode = 'walk'; a.tx = p.x; a.ty = p.y; a.mt = rand(2.5, 4.5); a.sp = rand(34, 56); } }
+        else if (a.mode === 'walk') {
+          const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
+          if (d < 10 || a.mt <= 0) { a.mode = 'graze'; a.mt = rand(1.2, 3.2); if (Math.random() < 0.3) a.dir *= -1; }
+          else { fx += dx / d * a.sp; fy += dy / d * a.sp; }
+        } else if (a.mode === 'flee') {
+          // away from Aubrey, leaning back toward the middle so it never gets stuck in a corner
+          const dx = a.x - g.ax, dy = (a.y - g.ay) * 1.4, d = Math.hypot(dx, dy) || 1, cx = (FFP.ax0 + FFP.ax1) / 2 - a.x, cy = (FFP.ay0 + FFP.ay1) / 2 - a.y;
+          fx += (dx / d) * a.fsp + cx * 0.25; fy += (dy / d) * a.fsp * 0.7 + cy * 0.4;
+          if (a.mt <= 0) { a.mode = 'graze'; a.mt = rand(0.8, 1.6); }
+        }
+        // keep a little apart; a close brush makes a small bump
+        for (const o of live) if (o !== a && o.mode !== 'held') {
+          const e = ffGap(a, o);
+          if (e < 1 && e > 0.001) { const ex = a.x - o.x, ey = a.y - o.y, m = Math.hypot(ex, ey) || 1; fx += ex / m * (1 - e) * 260; fy += ey / m * (1 - e) * 170; if (e < 0.7 && a.bump <= 0 && a.mode === 'walk') { a.bump = 0.3; a.mode = 'graze'; a.mt = rand(0.5, 1.2); } }
+        }
+        a.vx = lerp(a.vx, fx, Math.min(1, dt * 5)); a.vy = lerp(a.vy, fy, Math.min(1, dt * 5));
+        a.x = clamp(a.x + a.vx * dt, FFP.ax0, FFP.ax1); a.y = clamp(a.y + a.vy * dt, FFP.ay0, FFP.ay1);
+        const v = Math.hypot(a.vx, a.vy); a.ph += dt * (6 + v * 0.06);
+        if (Math.abs(a.vx) > 8) a.dir = Math.sign(a.vx);
+      }
+      // next fact once Penny has finished and the animal has gone into the barn
+      if (g.ffstate === 'yay' && (g.t2 -= dt) <= 0 && g.tgt.mode === 'gone') {
+        g.round++;
+        if (g.round >= g.rounds) g.done = true;
+        else {
+          if (g.spare.length) { const p = ffSpot(g.herd); const a = ffAnimal(g.spare.shift(), FFP.door.x, FFP.door.y, 'enter'); a.tx = p.x; a.ty = p.y; a.alpha = 0; g.herd.push(a); }
+          g.herd = g.herd.filter(a => a.mode !== 'gone');
+          this.next(g);
+        }
+      }
       g.progress = `Fact ${Math.min(g.round + 1, g.rounds)} of ${g.rounds}`;
       g.score = g.total / g.rounds;
     },
-    // a speech bubble pointing left at the card beside it
-    bubble(x, y, w, h, body, col) {
-      rrect(x, y, w, h, 22, '#fff6dc', '#d8b8c8', 3);
-      ctx.fillStyle = '#fff6dc'; tri(x + 2, y + h / 2 - 18, x - 22, y + h / 2, x + 2, y + h / 2 + 16);
-      ctx.strokeStyle = '#d8b8c8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y + h / 2 - 18); ctx.lineTo(x - 22, y + h / 2); ctx.lineTo(x, y + h / 2 + 16); ctx.stroke();
-      const sz = body.length > 60 ? 23 : 27, lines = wrap(body, w - 44, sz, 800);
-      lines.forEach((l, i) => text(l, x + w / 2, y + h / 2 + (i - (lines.length - 1) / 2) * (sz + 8), sz, col, 'center', 800));
-    },
     draw(g) {
-      const yay = g.state === 'yay';
-      panel(W / 2 - 340, 66, 680, 236, 22);
-      const px = W / 2 - 322, py = 82, pw = 210, ph = 168;
-      if (g.rev || yay) animalCard(g.k, px, py, pw, ph);
-      else { cardBg(px, py, pw, ph); ctx.restore(); outlined('?', px + pw / 2, py + ph / 2 + 4, 96, '#b89cff', 'center'); }
-      rrect(px, py, pw, ph, 14, null, '#d8b8c8', 3);
-      text(g.rev || yay ? `the ${g.k}` : 'Who am I?', px + pw / 2, py + ph + 26, 22, '#a03a66', 'center', 800);
-      const bx = px + pw + 30, bw = 418;
-      if (yay) this.bubble(bx, 92, bw, 180, g.fact[2], '#2a8a4a');
-      else if (g.rev) this.bubble(bx, 92, bw, 180, `Which one would I say?`, '#5a2a6e');
-      else this.bubble(bx, 92, bw, 180, g.fact[1], '#5a2a6e');
-      if (g.rev) {
-        // three fact strips to choose from
-        g.choices.forEach((c, i) => {
-          const x = W / 2 - 400 + shakeX(g, i), y = 318 + i * 70, used = g.tried.includes(i) && !this.isRight(g, i), right = yay && this.isRight(g, i);
-          button(`ff:${i}`, x, y, 800, 60, '', { color: right ? '#ffd23f' : used ? '#c9bcd4' : CARD_COLS[i], on: (g.state === 'pick' && !used) || right, key: String(i + 1) });
-          outlined(String(i + 1), x + 30, y + 31, 26, '#fff', 'center');
-          const sz = c[1].length > 62 ? 18 : 21;
-          text(c[1], x + 60, y + 31, sz, '#fff', 'left', 800);
-        });
-        return;
+      still('b1_ffpen', ffPenPaint);
+      const t = S.t, d = FFP.door;
+      // mud bubbles, trough ripples, the barn door swinging open when someone comes or goes
+      for (let i = 0; i < 3; i++) { const k = (t * 0.5 + i / 3) % 1; ctx.globalAlpha = Math.sin(k * Math.PI) * 0.8; ctx.strokeStyle = '#6a4228'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(290 + i * 34, 460 + (i % 2) * 6, 3 + k * 4, Math.PI, 0); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(490 + (t * 20) % 80, 230); ctx.lineTo(502 + (t * 20) % 80, 230); ctx.stroke();
+      const busy = g.herd.some(a => a.mode === 'leave' || a.mode === 'enter' || (a.mode === 'hop' && a.mt < 0.5));
+      g.ffDoor = lerp(g.ffDoor || 0, busy ? 1 : 0, 0.12);
+      const dw = 34 * (1 - g.ffDoor);
+      for (const s of [-1, 1]) {
+        const x0 = d.x + s * 34, x1 = x0 - s * dw * (1 - g.ffDoor * 0.2) - s * g.ffDoor * -14;
+        ink(P2(`M${x0},170 L${x1},${170 - g.ffDoor * 6} L${x1},${252 + g.ffDoor * 6} L${x0},252 Z`), '#e8645a', 2);
+        if (dw > 10) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0 - s * 4, 176); ctx.lineTo(x1 + s * 4, 246); ctx.moveTo(x1 + s * 4, 176); ctx.lineTo(x0 - s * 4, 246); ctx.stroke(); }
       }
-      const w = this.cardW(g), h = 196, y = 320;
-      g.choices.forEach((q, i) => {
-        const x = this.cardX(g, i) + shakeX(g, i), used = g.tried.includes(i) && q !== g.k, right = yay && q === g.k;
-        button(`ff:${i}`, x, y, w, h, '', { color: right ? '#ffd23f' : used ? '#c9bcd4' : CARD_COLS[i % CARD_COLS.length], on: (g.state === 'pick' && !used) || right, key: String(i + 1) });
-        animalCard(q, x + 7, y + 7, w - 14, h - 50);
-        if (used) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x + 7, y + 7, w - 14, h - 50); }
-        text(q, x + w / 2, y + h - 22, w < 160 ? 19 : 22, '#fff', 'center', 800);
-      });
+      // Penny by the fence, telling the fact
+      const tk = g.talk > 0 ? Math.abs(Math.sin(t * 11)) : 0;
+      ctx.save(); ctx.translate(98, 336); ctx.scale(1 + tk * 0.03, 1 - tk * 0.05); ctx.rotate(Math.sin(t * 5.5) * 0.03 * (g.talk > 0 ? 1 : 0));
+      drawCritter('Penny the Pig', 0, 0, 0.82, 1);
+      ctx.restore();
+      if (g.talk > 0) for (let i = 0; i < 2; i++) { const k = (t * 1.6 + i / 2) % 1; ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ff7aa8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(150, 250, 10 + k * 16, -0.7, 0.7); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+      this.bubble(g);
+      // rings under the animal Aubrey can catch right now, and the one the pointer is over
+      const hunting = g.ffstate === 'hunt' && !g.hug, hov = hunting ? this.under(g, pointer.x, pointer.y) : null;
+      for (const a of g.herd) if (hunting && this.catchable(a) && (a === hov || a === g.aim || this.reach(g, a))) {
+        const s = ffSc(a.k);
+        ctx.strokeStyle = `rgba(255,${a === hov || a === g.aim ? 240 : 255},${a === hov || a === g.aim ? 90 : 200},${0.7 + Math.sin(t * 6) * 0.25})`; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.ellipse(a.x, a.y + 2, 100 * s, 20 * s, 0, 0, TAU); ctx.stroke();
+      }
+      // everyone, back to front (a held animal is drawn just in front of Aubrey)
+      const ab = 158 / IMG.idle_front.height;
+      const frame = g.hug ? (g.hug.t < 0.2 ? 'crouch' : 'idle_front') : g.ffyay > 0 ? 'twirl' : g.run > 0.3 ? `run${1 + (Math.floor(g.t * 11) % 5)}` : 'idle_front';
+      // a soft glowing spot under Aubrey's feet, so the player is always easy to find
+      const gl = ctx.createRadialGradient(0, 0, 4, 0, 0, 62);
+      gl.addColorStop(0, `rgba(255,250,170,${0.8 + Math.sin(t * 4) * 0.15})`); gl.addColorStop(0.55, 'rgba(255,240,140,.45)'); gl.addColorStop(1, 'rgba(255,240,140,0)');
+      ctx.save(); ctx.translate(g.ax, g.ay + 4); ctx.scale(1, 0.34); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 62, 0, TAU); ctx.fill(); ctx.restore();
+      const aub = () => drawAubrey(g.ax, g.ay + 4, frame, g.adir || 1, 0, ab);
+      const all = g.herd.filter(a => a.mode !== 'gone').map(a => ({ y: a.mode === 'held' ? g.ay + 1 : a.y, d: () => ffDrawAnimal(a) }));
+      all.push({ y: g.ay, d: aub });
+      all.sort((p, q) => p.y - q.y).forEach(o => o.d());
+      // if an animal stands in front of her, show her through it as a see-through ghost
+      if (g.herd.some(a => a.mode !== 'gone' && a.mode !== 'held' && a.y > g.ay && Math.abs(a.x - g.ax) < 110 * ffSc(a.k) / 0.45 + 20 && a.y - g.ay < 150)) { ctx.save(); ctx.globalAlpha = 0.6; aub(); ctx.restore(); }
+      // name tags, hearts and what the animals say
+      for (const a of g.herd) {
+        if (a.mode === 'gone' || a.mode === 'held') continue;
+        ctx.globalAlpha = a.alpha;
+        ctx.font = `800 15px ${FONT}`; const tw = ctx.measureText(a.k).width + 16;
+        rrect(a.x - tw / 2, a.y + 6, tw, 21, 10, 'rgba(255,253,244,.85)', 'rgba(160,104,58,.6)', 1.5);
+        text(a.k, a.x, a.y + 17, 15, '#7a4a2a', 'center', 800);
+        ctx.globalAlpha = 1;
+        if (a.mode === 'hop') for (let i = 0; i < 3; i++) { const k = ((1.6 - a.mt) * 0.9 + i / 3) % 1; ctx.globalAlpha = 1 - k; const hx = a.x - 34 + i * 34, hy = a.y - 120 * ffSc(a.k) / 0.45 - k * 60; heart(hx, hy - 1.5, 34, OL); heart(hx, hy, 28, '#ff3a64'); }
+        ctx.globalAlpha = 1;
+        if (a.lineT > 0) {
+          ctx.font = `800 19px ${FONT}`; const lw = ctx.measureText(a.line).width + 26, lx = clamp(a.x - lw / 2, FFP.x0 + 4, W - 8 - lw), ly = a.y - 140 * ffSc(a.k) / 0.45 - 30;
+          ctx.globalAlpha = Math.min(1, a.lineT * 3);
+          rrect(lx, ly, lw, 34, 17, '#fff', OL, 2.5);
+          ctx.fillStyle = '#fff'; tri(a.x - 8, ly + 32, a.x + 8, ly + 32, a.x, ly + 44);
+          text(a.line, lx + lw / 2, ly + 18, 19, '#c0405a', 'center', 800);
+          ctx.globalAlpha = 1;
+        }
+      }
+      // the front fence
+      const rail = (y) => { ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 13; ctx.beginPath(); ctx.moveTo(FFP.x0 - 4, y); ctx.lineTo(FFP.x1, y); ctx.stroke(); ctx.strokeStyle = '#d8a868'; ctx.lineWidth = 8; ctx.stroke(); };
+      for (let x = FFP.x0; x <= FFP.x1; x += 75) inkRect(x - 6, 508, 12, 36, '#b07840', 2, 3);
+      rail(520); rail(536);
+      // a hint for small hands
+      const hint = g.ffHint > 0 ? 'Get closer to an animal first!' : hunting ? 'Tap the animal to catch it!' : g.ffstate === 'yay' ? 'You caught it!' : '';
+      if (hint) { rrect(10, 360, 172, 54, 16, 'rgba(255,253,244,.92)', '#d8b8c8', 2.5); wrap(hint, 150, 17, 800).forEach((l, i, L) => text(l, 96, 387 +(i - (L.length - 1) / 2) * 21, 17, g.ffHint > 0 ? '#c0405a' : '#5a2a6e', 'center', 800)); }
+    },
+    // Penny's speech bubble, its tail pointing down-left at her
+    bubble(g) {
+      const x = 186, y = 66, w = 596, h = 116, yay = g.ffstate === 'yay';
+      rrect(x, y, w, h, 24, '#fffaf0', OL, 3);
+      ctx.fillStyle = '#fffaf0'; tri(x + 2, y + h - 46, x + 2, y + h - 16, x - 34, y + h + 44);
+      ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y + h - 46); ctx.lineTo(x - 34, y + h + 44); ctx.lineTo(x, y + h - 16); ctx.stroke();
+      const body = yay ? g.fact[2] : `“${g.fact[1]}”`, head = yay ? `Yes, the ${g.k}!` : 'Listen to the fact! One animal says:';
+      const sz = body.length > 64 ? 21 : 24, lines = wrap(body, w - 44, sz, 800);
+      text(head, x + w / 2, y + 22, 17, yay ? '#2a8a4a' : '#a03a66', 'center', 800);
+      const top = y + 22 + (h - 22) / 2 + 2;
+      lines.forEach((l, i) => text(l, x + w / 2, top + (i - (lines.length - 1) / 2) * (sz + 6), sz, yay ? '#2a8a4a' : '#5a2a6e', 'center', 800));
     },
   };
 
   restage('farm', {
     bg: 'farm_bg',
     games: [['sheepherd', 'ribbon'], ['farmfacts', 'berry']],
-    intro: ["N:Oink! Oh, Aubrey, the gate blew open and the sheep wandered out!", "N:Be our sheepdog and push them back into the pen. Sheep run AWAY from you, so get behind them!", "A:determined:Here, sheepy sheepy!"],
-    mid: ['N:Oink oink! All safe. Now, how well do you know the farm animals?', 'N:I\'ll tell you a fact, and you find the animal it\'s about!', 'A:thinking:I know lots of animal facts!'],
+    intro: ["N:Oink! Oh, Aubrey, the gate blew open and the sheep wandered out!", "N:Can you herd them back into the pen? Sheep run AWAY from you, so get behind them!", "A:determined:Here, sheepy sheepy!"],
+    mid: ['N:Oink oink! All safe. Now, how well do you know the farm animals?', 'N:I\'ll tell you a fact, and you catch the animal in the pen that it\'s about!', 'A:thinking:I know lots of animal facts!'],
     outro: ['N:Everyone is home! You win the blue ribbon, and some berries from the farm stand.', 'A:laughing:Thank you, Penny!'],
   });
 }
