@@ -1146,69 +1146,599 @@ MG.rhythm = {
 // ===========================================================================
 
 // --- memory: flip cards to find matching pairs ----------------------------------------------
+// skin.set: emoji, or unicorn looks ({ mane, style, head, neck, back, tail, hooves, frame: head|full|sit, mood, facing, bg }).
+// optional skin.back: card-back theme (book|unicorn|night|sea); skin.names: { emoji: 'name' } for read-aloud.
+const MEM_THEMES = {
+  book:    { back: ['#c8405e', '#7e1c3a'], trim: '#ffd36b', felt: '#3f8a5c', wood: '#9a6234', glow: '#ffe7a8', fx: ['#ffd36b', '#fff6c8', '#ff9ec7', '#b8f0c8'] },
+  unicorn: { back: ['#ff8fca', '#a98cff'], trim: '#fff2a8', felt: '#8f6fd0', wood: '#c98a5a', glow: '#ffd8f0', fx: ['#fff6a8', '#ffb3e0', '#b8e6ff', '#d8b8ff'] },
+  night:   { back: ['#5050b8', '#24206a'], trim: '#ffe48a', felt: '#2f3f7c', wood: '#6d4a8a', glow: '#c8d0ff', fx: ['#fff6a8', '#c8d0ff', '#ffffff', '#ffd8f0'] },
+  sea:     { back: ['#3cc0e8', '#1e78b8'], trim: '#fff2d0', felt: '#3a9e98', wood: '#c4985e', glow: '#d0fff4', fx: ['#b8f0ff', '#ffffff', '#ffe0b0', '#9fe8d8'] },
+};
+const MEM_NAMES = { '🦄': 'unicorn', '🌈': 'rainbow', '⭐': 'star', '🌙': 'moon', '🍭': 'lollipop', '🎀': 'bow', '🧸': 'teddy bear', '🎈': 'balloon',
+  '🦉': 'owl', '🍂': 'leaf', '🌰': 'acorn', '🐿️': 'squirrel', '🍄': 'mushroom', '🪶': 'feather', '🪀': 'yo-yo', '🪁': 'kite', '🎲': 'dice',
+  '🧩': 'puzzle', '🚂': 'train', '🪆': 'doll', '🎨': 'paints', '🍀': 'clover', '🪙': 'coin', '🎩': 'top hat', '💎': 'gem', '🍯': 'honey',
+  '🔥': 'fire', '☀️': 'sun', '🌋': 'volcano', '🌅': 'sunrise', '💛': 'yellow heart', '🧡': 'orange heart', '🐙': 'octopus', '🐠': 'fish',
+  '🐚': 'shell', '🦀': 'crab', '🐡': 'puffer fish', '🪸': 'coral', '🐬': 'dolphin', '🦑': 'squid', '🌸': 'flower', '🍓': 'strawberry' };
+const MEM_BOARD = { x: 16, y: 66, w: 772, h: 466 }, MEM_TRAY = { x: 800, y: 66, w: 144, h: 466 };
+const MEM_PEEK = { x: 832, y: 424, w: 80, h: 100 };
+const MEM_SLOTS = ['head', 'neck', 'back', 'tail'];
+// where each accessory sits on a standing unicorn, in her own units (for the spot-the-difference taps and hint rings)
+const MEM_ANCHOR = { head: [92, -214], neck: [64, -112], back: [-6, -122], tail: [-70, -92] };
+const MEM_NOTES = [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568, 1760];
+const memIsLook = ch => typeof ch === 'object';
+const memLC = id => (ITEM[id]?.name || String(id)).toLowerCase();
+const memWith = id => (/s$/.test(memLC(id)) ? memLC(id) : `a ${memLC(id)}`);
+function memName(g, ch) {
+  if (memIsLook(ch)) {
+    const acc = ch.head || ch.neck || ch.back || ch.tail;
+    return `${ITEM[ch.mane]?.name || 'Cotton Candy'} mane${acc ? ` with ${memWith(acc)}` : ''}!`;
+  }
+  const n = g.skin.names?.[ch] || MEM_NAMES[ch] || '';
+  return n ? n[0].toUpperCase() + n.slice(1) + '!' : '';
+}
+function memThemeOf(g) {
+  const bg = String(g.loc?.bg || ''), k = g.skin.back || (g.loc?.id === 'library' ? 'book'
+    : /night|dusk|magic|cave|cloud|moon/.test(bg) ? 'night' : /pond|creek|beach|lake|sea|water/.test(bg) ? 'sea' : 'unicorn');
+  return MEM_THEMES[k] ? k : 'unicorn';
+}
+// a tiny seeded random so painted patterns stay put
+const memHash = i => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+// paint once into an offscreen canvas (2x for crispness); paint() draws around (ox, oy)
+const memCache = new Map(), memIds = new WeakMap();
+let memNextId = 1;
+const memKey = ch => (memIsLook(ch) ? (memIds.get(ch) || (memIds.set(ch, memNextId++), memIds.get(ch))) : ch);
+function memPaint(key, w, h, ox, oy, paint) {
+  let c = memCache.get(key);
+  if (c) return c;
+  if (memCache.size > 160) memCache.clear();
+  c = document.createElement('canvas'); c.width = Math.ceil(w * 2); c.height = Math.ceil(h * 2);
+  const main = ctx, mainInk = INK;
+  ctx = c.getContext('2d');
+  try { ctx.scale(2, 2); ctx.translate(ox, oy); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; paint(); } finally { ctx = main; INK = mainInk; }
+  memCache.set(key, c);
+  return c;
+}
+function memHorn(x, y, s, col = '#ffd36b') {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ink(P2('M-7,0 C-5,-10 -2,-20 0,-29 C2,-20 5,-10 7,0 C3,2.5 -3,2.5 -7,0 Z'), col, 1.3, OL);
+  ctx.strokeStyle = mix(col, '#a05a00', 0.45); ctx.lineWidth = 1.2;
+  for (const yy of [-5, -12, -19]) { const k = 1 + yy / 32; ctx.beginPath(); ctx.moveTo(-6 * k, yy + 2); ctx.lineTo(6 * k, yy - 2); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(255,255,255,.6)'; ellipse(-2, -9, 1.2, 5, 0.15);
+  ctx.restore();
+}
+function memOStar(x, y, r, col, pts = 5) { star(x, y, r + 1.6, OL, pts); star(x, y, r, col, pts); }
+// the patterned back of a card, centred on (0, 0)
+function memBackArt(th, w, h) {
+  const T = MEM_THEMES[th], x = -w / 2, y = -h / 2, r = Math.min(12, w * 0.12), m = Math.min(w, h / 1.3);
+  const gr = ctx.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, T.back[0]); gr.addColorStop(1, T.back[1]);
+  rrect(x, y, w, h, r, gr, OL, 2.6);
+  ctx.save(); ctx.beginPath(); ctx.roundRect(x + 1, y + 1, w - 2, h - 2, r); ctx.clip();
+  if (th === 'book') {
+    ctx.strokeStyle = 'rgba(255,215,140,.2)'; ctx.lineWidth = 1.2;
+    for (let d = -h; d < w + h; d += 11) { ctx.beginPath(); ctx.moveTo(x + d, y); ctx.lineTo(x + d - h, y + h); ctx.moveTo(x + d - h, y); ctx.lineTo(x + d, y + h); ctx.stroke(); }
+  } else if (th === 'sea') {
+    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2;
+    for (let yy = y + 8; yy < y + h; yy += 13) { ctx.beginPath(); for (let xx = x; xx <= x + w; xx += 4) ctx.lineTo(xx, yy + Math.sin(xx * 0.25) * 2.5); ctx.stroke(); }
+  } else {
+    for (let i = 0; i < 26; i++) {
+      const px = x + memHash(i) * w, py = y + memHash(i + 50) * h, s = 2 + memHash(i + 99) * 3;
+      if (th === 'night' && i % 3) { ctx.fillStyle = 'rgba(255,255,255,.55)'; circle(px, py, s * 0.4); } else star(px, py, s, 'rgba(255,255,255,.5)', 4);
+    }
+  }
+  const sh = ctx.createLinearGradient(x, y, x + w * 0.7, y + h * 0.5);
+  sh.addColorStop(0, 'rgba(255,255,255,.3)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sh; ctx.fillRect(x, y, w, h);
+  ctx.restore();
+  rrect(x + 5, y + 5, w - 10, h - 10, Math.max(3, r - 3), null, T.trim, 1.8);
+  for (const [cx, cy] of [[x + 11, y + 11], [x + w - 11, y + 11], [x + 11, y + h - 11], [x + w - 11, y + h - 11]]) star(cx, cy, 4.5, T.trim, 4);
+  // centre emblem
+  const k = m / 100;
+  ctx.save(); ctx.scale(k, k);
+  if (th === 'book') {
+    // a bookplate: cream oval, gold rim, an open book with a unicorn horn rising out of it
+    inkEllipse(0, 0, 30, 38, 0, '#fff4dc', 1.6, OL);
+    ctx.strokeStyle = '#d9a640'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, 0, 25, 33, 0, 0, Math.PI * 2); ctx.stroke();
+    ink(P2('M0,10 C-7,6 -14,6 -20,9 L-20,24 C-14,21 -7,21 0,25 Z'), '#ffffff', 1.2, OL);
+    ink(P2('M0,10 C7,6 14,6 20,9 L20,24 C14,21 7,21 0,25 Z'), '#fff8ea', 1.2, OL);
+    ctx.strokeStyle = 'rgba(91,63,115,.35)'; ctx.lineWidth = 1;
+    for (const yy of [13, 17]) { ctx.beginPath(); ctx.moveTo(-16, yy); ctx.lineTo(-4, yy + 1.5); ctx.moveTo(16, yy); ctx.lineTo(4, yy + 1.5); ctx.stroke(); }
+    memHorn(0, 6, 0.95);
+    memOStar(-15, -18, 4, '#ffd36b'); memOStar(15, -12, 3, '#ff9ec7');
+  } else if (th === 'night') {
+    inkCircle(0, 0, 32, '#3a3a96', 1.6, OL);
+    ctx.strokeStyle = T.trim; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, 27, 0, Math.PI * 2); ctx.stroke();
+    inkCircle(-3, 0, 17, '#ffe48a', 1.4, OL); ctx.fillStyle = '#3a3a96'; circle(5, -5, 15);
+    memOStar(12, 10, 5, '#ffffff'); memOStar(14, -14, 3, '#ffe48a');
+  } else if (th === 'sea') {
+    inkCircle(0, 0, 32, '#e8fbff', 1.6, OL);
+    ink(P2('M0,20 C-20,18 -26,-2 -16,-14 C-8,-22 8,-22 16,-14 C26,-2 20,18 0,20 Z'), '#ffc8b0', 1.4, OL);
+    ctx.strokeStyle = '#d9806a'; ctx.lineWidth = 1.4;
+    for (const a of [-0.9, -0.45, 0, 0.45, 0.9]) { ctx.beginPath(); ctx.moveTo(0, 18); ctx.lineTo(Math.sin(a) * 19, 16 - Math.cos(a) * 32); ctx.stroke(); }
+  } else {
+    // a sparkly medallion: rainbow arc and a golden horn
+    inkCircle(0, 0, 32, '#fff0fa', 1.6, OL);
+    ['#ff7fa8', '#ffc65a', '#7fe08a', '#7cc8ff', '#b892ff'].forEach((c, i) => {
+      ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 16, 24 - i * 3.2, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+    });
+    memHorn(0, 14, 1.05); memOStar(-17, -14, 4, '#fff6a8'); memOStar(17, -8, 3.2, '#ffffff');
+  }
+  ctx.restore();
+}
+// the face of a card: a framed picture with a little name band underneath
+function memFrontArt(g, ch, w, h, th) {
+  const T = MEM_THEMES[th], x = -w / 2, y = -h / 2, r = Math.min(12, w * 0.12);
+  rrect(x, y, w, h, r, '#fffaf3', OL, 2.6);
+  rrect(x + 3.5, y + 3.5, w - 7, h - 7, Math.max(3, r - 2), null, mix(T.trim, '#c08a20', 0.35), 1.4);
+  const wx = x + 7, wy = y + 7, ww = w - 14, wh = h - 14 - Math.round(h * 0.15);
+  ctx.save(); ctx.beginPath(); ctx.roundRect(wx, wy, ww, wh, 8); ctx.clip();
+  const bg = memIsLook(ch) ? (ch.bg || '#ffe0f0') : mix(T.back[0], '#ffffff', 0.8);
+  const rg = ctx.createRadialGradient(0, wy + wh / 2, 4, 0, wy + wh / 2, wh * 0.75);
+  rg.addColorStop(0, mix(bg, '#ffffff', 0.6)); rg.addColorStop(1, bg);
+  ctx.fillStyle = rg; ctx.fillRect(wx, wy, ww, wh);
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.moveTo(0, wy + wh / 2); ctx.arc(0, wy + wh / 2, wh, i * 0.785, i * 0.785 + 0.3); ctx.fill(); }
+  if (memIsLook(ch)) {
+    const f = ch.facing || 1;
+    const [div, cx, cy] = { head: [130, 92, -182], full: [330, 15, -105], sit: [290, 20, -95] }[ch.frame || 'head'];
+    const s = ww / div;
+    ctx.translate(0, wy + wh / 2);
+    drawUnicorn(-cx * s * f, -cy * s, s, { shine: 100, ...ch }, { facing: f, pose: ch.frame === 'sit' ? 'sit' : 'stand', mood: ch.mood, t: 0 });
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; circle(0, wy + wh / 2, ww * 0.36);
+    emoji(ch, 0, wy + wh / 2 + 1, Math.min(ww, wh) * 0.62);
+  }
+  ctx.restore();
+  rrect(wx, wy, ww, wh, 8, null, OL, 1.6);
+  const by = (wy + wh + y + h - 4) / 2;
+  if (memIsLook(ch)) {
+    const icons = MEM_SLOTS.map(s => ch[s] && ITEM[ch[s]]?.icon).filter(Boolean).slice(0, 3);
+    const pal = MANES[ch.mane] || MANES.natural;
+    inkCircle(x + 14, by, 4.5, pal[0], 0.8, OL);
+    icons.forEach((ic, i) => emoji(ic, x + 30 + i * 15, by, 11));
+  } else {
+    const n = (g.skin.names?.[ch] || MEM_NAMES[ch] || '');
+    if (n) { let fs = Math.min(14, h * 0.11); ctx.font = `700 ${fs}px ${FONT}`; while (fs > 8 && ctx.measureText(n).width > w - 14) { fs -= 1; ctx.font = `700 ${fs}px ${FONT}`; } text(n, 0, by, fs, '#6a3a7e', 'center', 700); } else for (const dx of [-12, 0, 12]) heart(dx, by - 4, 9, T.back[0]);
+  }
+}
+function memMagnifier(x, y, s, on = true) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.save(); ctx.rotate(0.78); ink(P2('M-4.5,16 L4.5,16 L4.5,40 C4.5,44 -4.5,44 -4.5,40 Z'), on ? '#a0623a' : '#a89aa8', 1.4, OL); ctx.restore();
+  inkCircle(0, 0, 18, on ? '#ffd36b' : '#cfc4d4', 1.5, OL);
+  inkCircle(0, 0, 13, on ? '#d8f4ff' : '#eae6ee', 1.1, OL);
+  ctx.fillStyle = 'rgba(255,255,255,.9)'; ellipse(-5, -5, 4, 2.4, -0.7);
+  ctx.restore();
+}
+// a little 4-point twinkle with an ink rim
+function memTwinkle(x, y, r, col) { star(x, y, r + 1.4, 'rgba(91,63,115,.6)', 4); star(x, y, r, col, 4); }
+
 MG.memory = {
   kind: 'learn', title: () => 'Memory Match', icon: g => (typeof g.skin.set[0] === 'string' ? g.skin.set[0] : '🦄'),
-  how: () => 'Flip two cards at a time. Find all the matching pairs!',
+  how: g => `Tap two cards to flip them. Find all the matching pairs! Your magnifying glass can peek at one card.${g.tier >= 3 ? ' Watch out: swirly cards swap places!' : ''}`,
   init(g) {
-    const pairs = [4, 6, 8][g.tier - 1];
-    const faces = g.skin.set.slice(0, pairs);
-    const cards = [...faces, ...faces].sort(() => Math.random() - 0.5).map(ch => ({ ch, up: false, done: false, flip: 0 }));
-    Object.assign(g, { cards, pairs, open: [], moves: 0, found: 0, wait: 0, cols: 4, rows: pairs * 2 / 4 });
+    const pairs = Math.min(g.skin.set.length, [6, 7, 8][g.tier - 1]);
+    const faces = shuffle(g.skin.set).slice(0, pairs);
+    const cards = shuffle([...faces, ...faces]).map((ch, i) => ({ ch, slot: i, up: false, done: false, gone: false, flip: 0, hov: 0, peek: 0 }));
+    const N = cards.length, gap = 14;
+    // the biggest cards that fit the felt, rows centred
+    let best = null;
+    for (let cols = 3; cols <= 8; cols++) {
+      const rows = Math.ceil(N / cols), w = Math.min(118, (712 - (cols - 1) * gap) / cols, (410 - (rows - 1) * gap) / rows / 1.3);
+      if (!best || w > best.raw + 0.5) best = { cols, rows, raw: w, w: Math.floor(w), h: Math.floor(w * 1.3), gap };
+    }
+    Object.assign(g, { cards, pairs, open: [], moves: 0, found: 0, wait: 0, mmGrid: best, mmTheme: memThemeOf(g), mmLooks: faces.some(memIsLook),
+      mmFx: [], mmTray: [], mmStreak: 0, mmBest: 0, mmPeeks: 1, mmArm: false, mmPrev: 0, mmSwap: null, mmSwaps: 0, mmSwapIn: 6,
+      mmBonus: null, mmBonusLeft: 0, mmBonusOk: 0, mmEnd: 0, mmT: 0, mmTrail: 0 });
+    g.mmBonusRounds = g.mmLooks && g.skin.set.every(memIsLook) ? (g.tier >= 3 ? 2 : 1) : 0;
+    g.mmBonusLeft = g.mmBonusRounds;
+    g.say = 'Find the matching pairs!';
   },
-  layout(g, i) {
-    const size = g.rows > 3 ? 84 : 96, gap = 14;
-    const totalW = g.cols * size + (g.cols - 1) * gap, totalH = g.rows * size + (g.rows - 1) * gap;
-    const x0 = W / 2 - totalW / 2, y0 = 75 + (465 - totalH) / 2;
-    return { x: x0 + (i % g.cols) * (size + gap), y: y0 + Math.floor(i / g.cols) * (size + gap), w: size, h: size };
+  start(g) {
+    g.mmPrev = [2.6, 1.6, 0][g.tier - 1];
+    if (g.mmPrev) speak('Look carefully! Remember where they are.');
   },
-  update(g, dt) {
-    for (const c of g.cards) c.flip = clamp(c.flip + (c.up || c.done ? dt : -dt) * 6, 0, 1);
-    if (g.wait > 0) {
-      g.wait -= dt;
-      if (g.wait <= 0) { for (const i of g.open) g.cards[i].up = false; g.open = []; }
+  layout(g, slot) {
+    const { cols, rows, w, h, gap } = g.mmGrid, N = g.cards.length, row = Math.floor(slot / cols);
+    const cnt = row === rows - 1 ? N - cols * (rows - 1) : cols;
+    const x0 = 402 - (cnt * w + (cnt - 1) * gap) / 2, y0 = 301 - (rows * h + (rows - 1) * gap) / 2;
+    return { x: x0 + (slot % cols) * (w + gap), y: y0 + row * (h + gap), w, h };
+  },
+  traySlot(i) { return { x: 843 + (i % 2) * 62, y: 142 + Math.floor(i / 2) * 72 }; },
+  // where a card is drawn right now (it moves while swapping)
+  cardPos(g, c) {
+    const r = this.layout(g, c.slot);
+    let x = r.x + r.w / 2, y = r.y + r.h / 2, rot = 0, glow = 0;
+    const sw = g.mmSwap;
+    if (sw && (sw.a === c || sw.b === c)) {
+      const other = this.layout(g, (sw.a === c ? sw.b : sw.a).slot), ox = other.x + other.w / 2, oy = other.y + other.h / 2;
+      if (sw.t < 1.3) { rot = Math.sin(sw.t * 24) * 0.07 * Math.min(1, sw.t * 2); glow = 0.6 + 0.4 * Math.sin(sw.t * 10); } else {
+        const k = clamp((sw.t - 1.3) / 0.9, 0, 1), e = k * k * (3 - 2 * k), side = sw.a === c ? 1 : -1;
+        const dx = ox - x, dy = oy - y, len = Math.hypot(dx, dy) || 1, bulge = Math.sin(e * Math.PI) * 60 * side;
+        x = lerp(x, ox, e) - dy / len * bulge; y = lerp(y, oy, e) + dx / len * bulge;
+        rot = Math.sin(e * Math.PI) * 0.5 * side; glow = 1;
+      }
+    }
+    return { x, y, w: r.w, h: r.h, rot, glow };
+  },
+  clickable(g, c) {
+    const sw = g.mmSwap;
+    return !c.up && !c.done && !c.gone && c.peek <= 0 && !(sw && (sw.a === c || sw.b === c));
+  },
+  closeOpen(g) { for (const i of g.open) g.cards[i].up = false; g.open = []; g.wait = 0; },
+  update(g, dt, id) {
+    g.mmT += dt;
+    const lookingAll = g.mmPrev > 0;
+    for (const c of g.cards) {
+      const target = c.up || c.done || c.peek > 0 || lookingAll ? 1 : 0;
+      c.flip = clamp(c.flip + (target ? dt : -dt) * 4.5, 0, 1);
+      if (c.peek > 0) c.peek -= dt;
+      const r = this.layout(g, c.slot);
+      c.hov = clamp(c.hov + (inRect(r) && this.clickable(g, c) && !lookingAll && !g.mmBonus ? dt : -dt) * 8, 0, 1);
+    }
+    this.updateFx(g, dt);
+    if (g.mmSwap) {
+      const sw = g.mmSwap; sw.t += dt;
+      if (sw.t >= 1.3 && !sw.moved) { sw.moved = true; tone(300, 0.7, 'sine', 0.06, 0, 900); tone(450, 0.7, 'triangle', 0.03, 0.05, 1200); }
+      if (sw.t > 1.3 && (g.mmTrail -= dt) <= 0) {
+        g.mmTrail = 0.04;
+        for (const c of [sw.a, sw.b]) { const p = this.cardPos(g, c); burst(p.x, p.y, 1, { colors: ['#e0c8ff', '#ffffff', '#ffb3e0'], spread: 30, up: 10, size: [2, 4] }); }
+      }
+      if (sw.t >= 2.2) { [sw.a.slot, sw.b.slot] = [sw.b.slot, sw.a.slot]; g.mmSwap = null; g.mmSwaps++; SFX.blip(); }
+    }
+    if (g.mmPrev > 0) {
+      g.mmPrev -= dt;
+      if (g.mmPrev <= 0) { SFX.sparkle(); speak('Now find the pairs!'); }
+      this.status(g);
       return;
     }
-    if (pointer.clicked) {
-      const i = g.cards.findIndex((c, i) => !c.up && !c.done && inRect(this.layout(g, i)));
-      if (i >= 0) {
-        g.cards[i].up = true; g.open.push(i); SFX.click();
-        if (g.open.length === 2) {
-          g.moves++;
-          const [a, b] = g.open.map(j => g.cards[j]);
-          if (a.ch === b.ch) {
-            a.done = b.done = true; g.found++; g.open = []; SFX.hit();
-            const r = this.layout(g, i); burst(r.x + r.w / 2, r.y + r.h / 2, 12);
-            if (g.found === g.pairs) g.done = true;
-          } else g.wait = 0.9;
-        }
+    if (g.mmBonus) { this.updateBonus(g, dt, id); this.status(g); return; }
+    if (g.wait > 0) { g.wait -= dt; if (g.wait <= 0) this.closeOpen(g); }
+
+    const allFound = g.found === g.pairs;
+    if (!allFound && g.mmPeeks > 0 && (id === 'mmpeek' || pressed.p)) {
+      g.mmArm = !g.mmArm;
+      if (g.mmArm) { speak('Tap a card to peek at it!'); tone(660, 0.12, 'triangle', 0.07); tone(990, 0.16, 'triangle', 0.06, 0.08); }
+    } else if (pointer.clicked && !allFound) {
+      const c = g.cards.find(c => this.clickable(g, c) && inRect(this.layout(g, c.slot)));
+      if (c) this.tapCard(g, c);
+      else if (g.mmArm && !inRect(MEM_PEEK)) g.mmArm = false;
+    }
+    // the swap twist: two face-down cards wobble, then swirl into each other's places
+    if (g.tier >= 3 && !g.mmSwap && g.moves > 0 && g.mmSwaps < 3 && !allFound) {
+      g.mmSwapIn -= dt;
+      if (g.mmSwapIn <= 0 && !g.open.length && g.wait <= 0) {
+        const pool = g.cards.filter(c => this.clickable(g, c) && c.flip < 0.05);
+        if (pool.length >= 4) {
+          const a = pick(pool), b = pick(pool.filter(c => c.ch !== a.ch));
+          g.mmSwap = { a, b, t: 0 }; g.mmSwapIn = rand(9, 12);
+          SFX.alert();
+          if (!g.mmSwaps) speak('Whoa! Those two cards are swirling. Watch where they go!');
+        } else g.mmSwapIn = 2;
       }
     }
-    g.progress = `Pairs: ${g.found} / ${g.pairs}`;
-    g.score = clamp(1 - (g.moves - g.pairs) / (g.pairs * 1.6), 0.25, 1);
+    if (allFound && !g.mmFx.length && !g.mmSwap) {
+      if (g.mmBonusLeft > 0) this.startBonus(g);
+      else if ((g.mmEnd += dt) > 0.8) g.done = true;
+    }
+    this.status(g);
+  },
+  status(g) {
+    g.progress = g.mmBonus ? `Bonus ${g.mmBonusRounds - g.mmBonusLeft + 1} / ${g.mmBonusRounds}` : `Pairs: ${g.found} / ${g.pairs}`;
+    // a few extra flips are free, and so is one for every swap twist
+    const free = Math.ceil(g.pairs / 3) + g.mmSwaps;
+    const base = clamp(1 - Math.max(0, g.moves - g.pairs - free) / (g.pairs * 1.6), 0.25, 1);
+    g.score = clamp(base + (g.mmBonusRounds ? 0.12 * g.mmBonusOk / g.mmBonusRounds : 0), 0, 1);
+  },
+  tapCard(g, c) {
+    const i = g.cards.indexOf(c), name = memName(g, c.ch);
+    if (g.mmArm) {
+      g.mmArm = false; g.mmPeeks--; c.peek = 1.5;
+      SFX.sparkle(); if (name) speak(name);
+      const p = this.cardPos(g, c); burst(p.x, p.y, 8, { colors: ['#d8f4ff', '#ffffff', '#ffd36b'], spread: 70, up: 30 });
+      return;
+    }
+    if (g.wait > 0) this.closeOpen(g);
+    c.up = true; g.open.push(i);
+    tone(500, 0.09, 'triangle', 0.06, 0, 820); noise(0.05, 0.015);
+    if (g.open.length < 2) { if (name) speak(name); return; }
+    g.moves++;
+    const [a, b] = g.open.map(j => g.cards[j]);
+    if (a.ch === b.ch) {
+      a.done = b.done = true; g.found++; g.open = [];
+      g.mmStreak++; g.mmBest = Math.max(g.mmBest, g.mmStreak);
+      const n = MEM_NOTES[Math.min(MEM_NOTES.length - 3, g.mmStreak - 1)];
+      tone(n, 0.25, 'triangle', 0.09); tone(n * 1.25, 0.25, 'triangle', 0.07, 0.09); tone(n * 1.5, 0.4, 'sine', 0.07, 0.18);
+      const pa = this.cardPos(g, a), pb = this.cardPos(g, b);
+      g.mmFx.push({ kind: memIsLook(a.ch) ? 'prance' : 'pop', a, b, pa, pb, t: 0, tray: g.mmTray.length, ch: a.ch,
+        dir: (pa.x + pb.x) / 2 < 402 ? 1 : -1 });
+      g.mmTray.push(null);
+      if (g.mmStreak >= 2) floatText((pa.x + pb.x) / 2, Math.min(pa.y, pb.y) - 40, `${g.mmStreak} in a row!`, '#fff6a8', false, 24);
+      speak(g.mmStreak >= 3 ? `Wow, ${g.mmStreak} in a row! ${name}` : `A match! ${name}`);
+    } else {
+      g.mmStreak = 0; g.wait = 1.2;
+      if (name) speak(name);
+      tone(330, 0.16, 'sine', 0.05, 0.35, 250);
+    }
+  },
+  // matched pairs: unicorn looks merge and the unicorn prances off to the shelf; emoji pop and fly there
+  updateFx(g, dt) {
+    const T = MEM_THEMES[g.mmTheme];
+    for (let i = g.mmFx.length - 1; i >= 0; i--) {
+      const f = g.mmFx[i], t0 = f.t; f.t += dt;
+      const mx = (f.pa.x + f.pb.x) / 2, my = (f.pa.y + f.pb.y) / 2, crossed = s => t0 < s && f.t >= s;
+      if (f.kind === 'prance') {
+        if (crossed(0.45)) { f.a.gone = f.b.gone = true; burst(mx, my, 22, { colors: T.fx }); SFX.sparkle(); }
+        if (f.t > 0.45 && f.t < 3.1 && (f.trail = (f.trail || 0) - dt) <= 0) {
+          f.trail = 0.05; const p = this.prancePos(g, f);
+          burst(p.x - 20 * p.face, p.y - 30, 1, { colors: T.fx, spread: 30, up: 20, size: [2, 5] });
+        }
+        for (const s of [0.95, 1.35, 1.75]) if (crossed(s)) tone(700 + s * 300, 0.1, 'triangle', 0.05, 0, 1000 + s * 300);
+        if (crossed(2.05)) { tone(880, 0.5, 'sine', 0.06, 0, 1760); const p = this.prancePos(g, f); burst(p.x, p.y - 50, 16, { colors: T.fx, spread: 110, up: 40 }); }
+        if (f.t >= 3.15) { g.mmTray[f.tray] = f.ch; const s = this.traySlot(f.tray); burst(s.x, s.y, 10, { colors: T.fx, spread: 60, up: 30 }); SFX.pop(); g.mmFx.splice(i, 1); }
+      } else {
+        if (crossed(0.12)) {
+          for (const p of [f.pa, f.pb]) { burst(p.x, p.y, 12, { colors: T.fx }); burst(p.x, p.y, 3, { colors: [f.ch], kind: 'emoji', spread: 90, up: 60, size: [3, 4] }); }
+          SFX.pop();
+        }
+        if (crossed(0.35)) f.a.gone = f.b.gone = true;
+        if (f.t >= 1.05) { g.mmTray[f.tray] = f.ch; const s = this.traySlot(f.tray); burst(s.x, s.y, 8, { colors: T.fx, spread: 50, up: 30 }); tone(1320, 0.12, 'sine', 0.06); g.mmFx.splice(i, 1); }
+      }
+    }
+  },
+  // the matched unicorn's path: pop out, hop across the felt, twirl, then float onto the shelf
+  prancePos(g, f) {
+    const mx = (f.pa.x + f.pb.x) / 2, my = (f.pa.y + f.pb.y) / 2 + f.pa.h * 0.35, t = f.t;
+    const tx = clamp(mx + f.dir * 270, 110, 700), ty = clamp(my, 200, 470);
+    if (t < 0.75) { const k = clamp((t - 0.45) / 0.3, 0, 1); return { x: mx, y: my - Math.sin(k * Math.PI) * 30, s: 0.12 + 0.3 * easeOut(k), face: f.dir, spin: 1, a: 1 }; }
+    if (t < 2.05) {
+      const k = (t - 0.75) / 1.3;
+      return { x: lerp(mx, tx, k), y: lerp(my, ty, k) - Math.abs(Math.sin(k * Math.PI * 3)) * 38, s: 0.42, face: f.dir, spin: 1, a: 1, moving: true };
+    }
+    if (t < 2.55) { const k = (t - 2.05) / 0.5; return { x: tx, y: ty - Math.sin(k * Math.PI) * 26, s: 0.42, face: f.dir, spin: Math.cos(k * Math.PI * 2), a: 1 }; }
+    const k = clamp((t - 2.55) / 0.6, 0, 1), e = k * k, sl = this.traySlot(f.tray);
+    return { x: lerp(tx, sl.x, e), y: lerp(ty, sl.y + 26, e) - Math.sin(k * Math.PI) * 80, s: lerp(0.42, 0.14, e), face: 1, spin: 1, a: 1 - k * 0.5, moving: true };
+  },
+  startBonus(g) {
+    const looks = g.skin.set.filter(memIsLook), of = s => WARDROBE.filter(i => i.slot === s).map(i => i.id);
+    const base = { ...pick(looks), frame: 'full', facing: 1, mood: 'joy' };
+    for (const s of shuffle(MEM_SLOTS)) if (!base[s] && MEM_SLOTS.filter(k => base[k]).length < 3) base[s] = pick(of(s));
+    const used = MEM_SLOTS.filter(k => base[k]);
+    const prev = g.mmBonusPrev, slot = pick(used.filter(s => s !== prev).length ? used.filter(s => s !== prev) : used);
+    const right = { ...base, [slot]: pick(of(slot).filter(id => id !== base[slot])) };
+    g.mmBonusPrev = slot;
+    g.mmBonus = { left: base, right, slot, opts: shuffle(used), picked: null, t: 0, after: 0 };
+    g.say = 'One thing is different on the second unicorn. Tap what is different!';
+    SFX.sparkle();
+    speak(`Bonus! Look at the two unicorns. ${g.say}`);
+  },
+  bonusSpot(i) { return { x: [220, 564][i], y: 394, s: 0.72 }; },
+  updateBonus(g, dt, id) {
+    const b = g.mmBonus; b.t += dt;
+    if (b.picked == null) {
+      let pickSlot = null;
+      b.opts.forEach((s, i) => { if (id === `mmopt${i}`) pickSlot = s; });
+      if (!pickSlot && pointer.clicked) {
+        // tapping the accessory on either unicorn counts too
+        for (let u = 0; u < 2 && !pickSlot; u++) {
+          const sp = this.bonusSpot(u);
+          for (const s of b.opts) { const [ax, ay] = MEM_ANCHOR[s]; if (Math.hypot(pointer.x - (sp.x + ax * sp.s), pointer.y - (sp.y + ay * sp.s)) < 34) { pickSlot = s; break; } }
+        }
+      }
+      if (pickSlot) {
+        b.picked = pickSlot; b.after = 2.6;
+        const nm = ITEM[b.right[b.slot]].name, sp = this.bonusSpot(1), [ax, ay] = MEM_ANCHOR[b.slot];
+        if (pickSlot === b.slot) {
+          g.mmBonusOk++; SFX.sparkle(); burst(sp.x + ax * sp.s, sp.y + ay * sp.s, 24, { colors: MEM_THEMES[g.mmTheme].fx });
+          speak(`Yes! The ${nm} is different! Sharp eyes!`);
+        } else { SFX.miss(); speak(`Good looking! It was the ${nm}.`); }
+      }
+    } else if ((b.after -= dt) <= 0) { g.mmBonus = null; g.mmBonusLeft--; g.say = 'Find the matching pairs!'; }
   },
   draw(g) {
-    g.cards.forEach((c, i) => {
-      const r = this.layout(g, i), k = c.flip, sx = Math.abs(Math.cos(k * Math.PI));
-      ctx.save(); ctx.translate(r.x + r.w / 2, r.y + r.h / 2); ctx.scale(Math.max(0.05, sx), 1);
-      if (k < 0.5) {
-        rrect(-r.w / 2, -r.h / 2, r.w, r.h, 14, inRect(r) && !c.done ? '#ff8fc8' : '#ff6fb5', '#fff', 3);
-        star(0, 0, 18, 'rgba(255,255,255,.8)', 5);
-      } else {
-        rrect(-r.w / 2, -r.h / 2, r.w, r.h, 14, c.done ? '#e8ffe8' : '#fff', c.done ? '#5fc87a' : '#e2c6f5', 3);
-        // a skin set entry can be a unicorn look instead of an emoji, with its own card colour, framing, facing and mood
-        if (typeof c.ch === 'object') {
-          const u = c.ch, f = u.facing || 1;
-          ctx.save(); ctx.beginPath(); ctx.roundRect(-r.w / 2 + 3, -r.h / 2 + 3, r.w - 6, r.h - 6, 11); ctx.clip();
-          if (u.bg) { ctx.fillStyle = u.bg; ctx.fillRect(-r.w / 2, -r.h / 2, r.w, r.h); }
-          // [scale divisor, x of the point to centre, y of the point to centre] in the unicorn's own units
-          const [div, cx, cy] = { head: [130, 92, -182], full: [330, 15, -105], sit: [290, 20, -95] }[u.frame || 'head'];
-          const s = r.w / div;
-          drawUnicorn(-cx * s * f, -cy * s, s, { shine: 100, ...u }, { facing: f, pose: u.frame === 'sit' ? 'sit' : 'stand', mood: u.mood, t: 0 });
-          ctx.restore();
-        } else emoji(c.ch, 0, 2, r.w * 0.55);
+    const th = g.mmTheme, T = MEM_THEMES[th], { w, h } = g.mmGrid;
+    // the table: wood rim, felt, stitching (painted once)
+    ctx.save(); ctx.fillStyle = 'rgba(30,12,40,.3)'; ctx.beginPath(); ctx.roundRect(MEM_BOARD.x + 5, MEM_BOARD.y + 9, MEM_BOARD.w, MEM_BOARD.h, 26); ctx.fill(); ctx.restore();
+    ctx.drawImage(memPaint(`table:${th}`, MEM_BOARD.w, MEM_BOARD.h, 0, 0, () => this.paintTable(th, MEM_BOARD.w, MEM_BOARD.h)), MEM_BOARD.x, MEM_BOARD.y, MEM_BOARD.w, MEM_BOARD.h);
+    ctx.save(); ctx.fillStyle = 'rgba(30,12,40,.3)'; ctx.beginPath(); ctx.roundRect(MEM_TRAY.x + 4, MEM_TRAY.y + 8, MEM_TRAY.w, MEM_TRAY.h, 22); ctx.fill(); ctx.restore();
+    ctx.drawImage(memPaint(`tray:${th}`, MEM_TRAY.w, MEM_TRAY.h, 0, 0, () => this.paintTray(th, MEM_TRAY.w, MEM_TRAY.h)), MEM_TRAY.x, MEM_TRAY.y, MEM_TRAY.w, MEM_TRAY.h);
+    // empty places where pairs used to lie
+    for (const c of g.cards) if (c.gone) {
+      const r = this.layout(g, c.slot);
+      ctx.setLineDash([6, 6]); rrect(r.x + 4, r.y + 4, r.w - 8, r.h - 8, 10, 'rgba(255,255,255,.06)', 'rgba(255,255,255,.28)', 2); ctx.setLineDash([]);
+      memTwinkle(r.x + r.w / 2, r.y + r.h / 2, 5 + Math.sin(g.mmT * 3 + c.slot) * 1.5, 'rgba(255,255,255,.55)');
+    }
+    // cards: still ones first, moving or lifted ones on top
+    const fxCards = new Set(g.mmFx.flatMap(f => [f.a, f.b]));
+    const live = g.cards.filter(c => !c.gone && !fxCards.has(c));
+    const busy = c => c.hov + Math.sin(c.flip * Math.PI) + (g.mmSwap && (g.mmSwap.a === c || g.mmSwap.b === c) ? 3 : 0);
+    live.sort((a, b) => busy(a) - busy(b));
+    for (const c of live) {
+      const p = this.cardPos(g, c);
+      let dx = 0;
+      if (g.wait > 0 && g.wait < 0.8 && c.up && !c.done) dx = Math.sin(g.mmT * 40) * 3 * (g.wait / 0.8);
+      this.drawCard(g, c.ch, p.x + dx, p.y, p.w, p.h, c.flip, { lift: c.hov, rot: p.rot, glow: p.glow || (c.peek > 0 ? 0.8 : 0) });
+    }
+    // the swirl telegraph between the two cards about to swap
+    if (g.mmSwap) {
+      const sw = g.mmSwap, pa = this.cardPos(g, sw.a), pb = this.cardPos(g, sw.b);
+      if (sw.t < 1.3) {
+        ctx.save(); ctx.globalAlpha = Math.min(1, sw.t * 3) * 0.9; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.setLineDash([8, 8]); ctx.lineDashOffset = -g.mmT * 40;
+        const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2, dx = pb.x - pa.x, dy = pb.y - pa.y, L = Math.hypot(dx, dy) || 1;
+        ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.quadraticCurveTo(mx - dy / L * 60, my + dx / L * 60, pb.x, pb.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pb.x, pb.y); ctx.quadraticCurveTo(mx + dy / L * 60, my - dx / L * 60, pa.x, pa.y); ctx.stroke();
+        ctx.restore();
+        for (const p of [pa, pb]) emoji('🌀', p.x, p.y - p.h / 2 - 16, 26 + Math.sin(g.mmT * 12) * 3);
       }
+    }
+    // matched-pair animations
+    for (const f of g.mmFx) this.drawFx(g, f);
+    // the shelf of found pairs
+    for (let i = 0; i < g.pairs; i++) {
+      const s = this.traySlot(i), ch = g.mmTray[i];
+      if (ch == null) { ctx.setLineDash([4, 4]); rrect(s.x - 26, s.y - 32, 52, 64, 8, 'rgba(255,255,255,.12)', 'rgba(255,240,210,.55)', 1.6); ctx.setLineDash([]); text('?', s.x, s.y, 20, 'rgba(255,240,210,.6)', 'center', 700); } else this.drawCard(g, ch, s.x, s.y, 52, 64, 1, { src: [w, h] });
+    }
+    // peek: a magnifying glass, once per round
+    const pk = MEM_PEEK, on = g.mmPeeks > 0 && g.found < g.pairs && g.mmPrev <= 0 && !g.mmBonus;
+    if (on) buttons.push({ id: 'mmpeek', x: pk.x, y: pk.y, w: pk.w, h: pk.h, on: true, key: null });
+    const hovP = on && inRect(pk), bob = on ? Math.sin(g.mmT * 3) * 2 : 0;
+    rrect(pk.x + 6, pk.y + 2, pk.w - 12, 64, 32, g.mmArm ? '#fff6a8' : hovP ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.28)', on ? OL : 'rgba(91,63,115,.4)', 2);
+    memMagnifier(pk.x + pk.w / 2 - 4, pk.y + 30 + bob - (hovP ? 2 : 0), 0.8, on);
+    text(g.mmPeeks > 0 ? (g.mmArm ? 'Tap a card' : 'Peek') : 'Used', pk.x + pk.w / 2, pk.y + 82, 15, on ? '#fff' : 'rgba(255,255,255,.55)', 'center', 700);
+    if (g.mmArm) {
+      memMagnifier(pointer.x + 6, pointer.y + 6, 0.9, true);
+    }
+    // the look-first moment at the start
+    if (g.mmPrev > 0) {
+      const k = g.mmPrev / [2.6, 1.6, 1][g.tier - 1];
+      darkPanel(402 - 130, 76, 260, 40, 20);
+      text('Look carefully! 👀', 402, 92, 18, '#fff', 'center', 700);
+      rrect(402 - 100, 106, 200 * k, 5, 2.5, '#fff6a8');
+    }
+    if (g.mmStreak >= 2 && !g.mmBonus && !g.done) {
+      darkPanel(30, 498, 150, 26, 13);
+      text(`🔥 ${g.mmStreak} in a row!`, 105, 511, 14, '#fff6a8', 'center', 700);
+    }
+    if (g.mmBonus) this.drawBonus(g);
+  },
+  paintTable(th, w, h) {
+    const T = MEM_THEMES[th];
+    const wg = ctx.createLinearGradient(0, 0, 0, h); wg.addColorStop(0, mix(T.wood, '#ffffff', 0.2)); wg.addColorStop(1, mix(T.wood, '#2a1050', 0.22));
+    rrect(1.5, 1.5, w - 3, h - 3, 26, wg, OL, 3);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(2, 2, w - 4, h - 4, 26); ctx.clip();
+    ctx.strokeStyle = 'rgba(70,35,15,.22)'; ctx.lineWidth = 1.4;
+    for (let i = 0; i < 18; i++) {
+      const y = 5 + i * 26 + memHash(i) * 8;
+      ctx.beginPath(); for (let x = 0; x <= w; x += 20) ctx.lineTo(x, y + Math.sin(x * 0.012 + i) * 4); ctx.stroke();
+    }
+    ctx.restore();
+    // felt
+    const fx = 18, fy = 18, fw = w - 36, fh = h - 36;
+    const fg = ctx.createRadialGradient(w / 2, h * 0.42, 40, w / 2, h / 2, w * 0.6);
+    fg.addColorStop(0, mix(T.felt, '#ffffff', 0.16)); fg.addColorStop(1, mix(T.felt, '#1a0830', 0.3));
+    rrect(fx, fy, fw, fh, 16, fg, mix(T.wood, '#2a1050', 0.5), 3);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(fx, fy, fw, fh, 16); ctx.clip();
+    for (let i = 0; i < 500; i++) { ctx.fillStyle = i % 2 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'; ctx.fillRect(fx + memHash(i) * fw, fy + memHash(i + 777) * fh, 2, 2); }
+    // a warm lamp glow across the felt
+    const lg = ctx.createRadialGradient(fw * 0.25, 0, 10, fw * 0.25, 0, fw * 0.7);
+    lg.addColorStop(0, `${T.glow}55`); lg.addColorStop(1, `${T.glow}00`);
+    ctx.fillStyle = lg; ctx.fillRect(fx, fy, fw, fh);
+    ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.fillRect(fx, fy, fw, 5);
+    ctx.restore();
+    ctx.setLineDash([7, 6]); rrect(fx + 8, fy + 8, fw - 16, fh - 16, 10, null, 'rgba(255,240,200,.5)', 2); ctx.setLineDash([]);
+    for (const [x, y] of [[9, 9], [w - 9, 9], [9, h - 9], [w - 9, h - 9]]) { inkCircle(x, y, 4.5, T.trim, 1, OL); ctx.fillStyle = 'rgba(255,255,255,.8)'; circle(x - 1.5, y - 1.5, 1.4); }
+    // little corner charms on the rim
+    memTwinkle(w / 2 - 60, 9, 4, T.trim); memTwinkle(w / 2 + 60, 9, 4, T.trim); memTwinkle(w / 2, h - 9, 4, T.trim);
+  },
+  paintTray(th, w, h) {
+    const T = MEM_THEMES[th], wood = mix(T.wood, '#2a1050', 0.15);
+    const wg = ctx.createLinearGradient(0, 0, w, 0); wg.addColorStop(0, mix(wood, '#ffffff', 0.15)); wg.addColorStop(1, mix(wood, '#2a1050', 0.2));
+    rrect(1.5, 1.5, w - 3, h - 3, 22, wg, OL, 3);
+    rrect(10, 44, w - 20, 300, 12, mix(wood, '#1a0830', 0.35), mix(wood, '#2a1050', 0.5), 2);
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(12, 46, w - 24, 5);
+    for (let r = 0; r < 4; r++) { ctx.fillStyle = mix(wood, '#ffffff', 0.12); ctx.fillRect(12, 112 + r * 72 - 2, w - 24, 4); }
+    // a little banner with the title
+    ink(P2(`M14,10 L${w - 14},10 L${w - 22},24 L${w - 14},38 L14,38 L22,24 Z`), T.back[0], 1.3, OL);
+    ctx.save(); outlined('Found', w / 2, 24, 17, '#fff', 'center', 'rgba(52,26,72,.8)'); ctx.restore();
+    memTwinkle(26, 24, 4, T.trim); memTwinkle(w - 26, 24, 4, T.trim);
+  },
+  // one card. flip 0 = back up, 1 = face up; scale-x turn with lift, shadow and shading
+  drawCard(g, ch, cx, cy, w, h, flip, { lift = 0, rot = 0, glow = 0, alpha = 1, scale = 1, src = null } = {}) {
+    const th = g.mmTheme, e = flip * flip * (3 - 2 * flip), ang = e * Math.PI, sx = Math.abs(Math.cos(ang)), fl = Math.sin(ang);
+    const up = e > 0.5, sc = scale * (1 + 0.1 * fl + 0.04 * lift), yy = cy - lift * 6 - fl * 12;
+    const [pw, ph] = src || [w, h];
+    const img = up ? memPaint(`f:${memKey(ch)}:${pw}x${ph}:${th}`, pw + 6, ph + 6, (pw + 6) / 2, (ph + 6) / 2, () => memFrontArt(g, ch, pw, ph, th))
+      : memPaint(`b:${th}:${pw}x${ph}`, pw + 6, ph + 6, (pw + 6) / 2, (ph + 6) / 2, () => memBackArt(th, pw, ph));
+    ctx.save(); ctx.globalAlpha = alpha;
+    // shadow on the felt
+    ctx.fillStyle = `rgba(20,8,30,${0.28 - 0.08 * (lift + fl) / 2})`;
+    ctx.beginPath(); ctx.roundRect(cx - w * sc * Math.max(sx, 0.15) / 2 + 3 + (lift + fl) * 3, cy - h * sc / 2 + 5 + (lift + fl) * 7, w * sc * Math.max(sx, 0.15), h * sc, 10); ctx.fill();
+    ctx.translate(cx, yy); ctx.rotate(rot); ctx.scale(Math.max(0.03, sx) * sc, sc);
+    if (glow > 0) {
+      ctx.save(); ctx.shadowColor = MEM_THEMES[th].glow; ctx.shadowBlur = 22 * glow; ctx.fillStyle = MEM_THEMES[th].glow;
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 12); ctx.fill(); ctx.restore();
+    }
+    ctx.drawImage(img, -w / 2 - 3 * w / pw, -h / 2 - 3 * h / ph, w + 6 * w / pw, h + 6 * h / ph);
+    // turning shade, plus a gloss that sweeps across while it turns
+    if (fl > 0.02) {
+      ctx.fillStyle = `rgba(40,15,60,${(1 - sx) * 0.45})`; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 10); ctx.fill();
+      const gx = (e < 0.5 ? -1 : 1) * (1 - sx) * w * 0.4;
+      const gl = ctx.createLinearGradient(gx - w * 0.3, 0, gx + w * 0.3, 0);
+      gl.addColorStop(0, 'rgba(255,255,255,0)'); gl.addColorStop(0.5, `rgba(255,255,255,${0.35 * fl})`); gl.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 10); ctx.fill();
+    }
+    ctx.restore();
+  },
+  drawFx(g, f) {
+    const mx = (f.pa.x + f.pb.x) / 2, my = (f.pa.y + f.pb.y) / 2, { w, h } = f.pa;
+    if (f.kind === 'prance') {
+      if (f.t < 0.45) {
+        // the two cards glide together and merge
+        const k = easeOut(clamp(f.t / 0.45, 0, 1));
+        for (const p of [f.pa, f.pb]) this.drawCard(g, f.ch, lerp(p.x, mx, k), lerp(p.y, my, k) - Math.sin(k * Math.PI) * 20, w, h, 1, { glow: k, scale: 1 + 0.15 * k });
+        return;
+      }
+      if (f.t < 0.75) {
+        const k = (f.t - 0.45) / 0.3;
+        ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = '#ffffff'; circle(mx, my, w * (0.6 + k)); ctx.restore();
+      }
+      const p = this.prancePos(g, f);
+      ctx.save(); ctx.globalAlpha = p.a;
+      const gr = ctx.createRadialGradient(p.x, p.y - 260 * p.s * 0.5, 4, p.x, p.y - 260 * p.s * 0.5, 160 * p.s + 20);
+      gr.addColorStop(0, 'rgba(255,250,220,.55)'); gr.addColorStop(1, 'rgba(255,250,220,0)');
+      ctx.fillStyle = gr; ctx.fillRect(p.x - 200, p.y - 260, 400, 300);
+      ctx.translate(p.x, p.y); ctx.scale(p.spin, 1);
+      drawUnicorn(0, 0, p.s, { shine: 100, ...f.ch }, { facing: p.face, pose: 'stand', moving: p.moving, mood: 'joy', glow: 0.5, t: g.mmT });
       ctx.restore();
+      // a ring of twinkles while she twirls
+      if (f.t > 2.05 && f.t < 2.55) {
+        for (let i = 0; i < 6; i++) { const a = g.mmT * 6 + i * Math.PI / 3; memTwinkle(p.x + Math.cos(a) * 70, p.y - 55 + Math.sin(a) * 26, 6, MEM_THEMES[g.mmTheme].fx[i % 4]); }
+      }
+      return;
+    }
+    // emoji: pop up, then both cards fly to the shelf, shrinking into one
+    const sl = this.traySlot(f.tray);
+    for (const p of [f.pa, f.pb]) {
+      if (f.t < 0.35) {
+        const k = f.t / 0.35, s = 1 + 0.22 * Math.sin(k * Math.PI);
+        this.drawCard(g, f.ch, p.x, p.y, w, h, 1, { glow: 1, scale: s });
+      } else {
+        const k = clamp((f.t - 0.35) / 0.7, 0, 1), e = k * k;
+        const x = lerp(p.x, sl.x, e), y = lerp(p.y, sl.y, e) - Math.sin(k * Math.PI) * 90;
+        this.drawCard(g, f.ch, x, y, w, h, 1, { scale: lerp(1, 52 / w, e), rot: Math.sin(k * Math.PI) * 0.6 * (p === f.pa ? 1 : -1), glow: 0.5 });
+      }
+    }
+  },
+  drawBonus(g) {
+    const b = g.mmBonus, T = MEM_THEMES[g.mmTheme];
+    ctx.save(); ctx.fillStyle = 'rgba(20,8,30,.35)'; ctx.fillRect(MEM_BOARD.x + 18, MEM_BOARD.y + 18, MEM_BOARD.w - 36, MEM_BOARD.h - 36); ctx.restore();
+    panel(56, 82, 692, 438, 22);
+    outlined('Spot the difference!', 402, 112, 28, '#ff6fb5', 'center', '#fff');
+    if (b.picked == null) text('One thing is different on unicorn 2. Tap it!', 402, 142, 16, '#7a4a8e', 'center', 600);
+    for (let u = 0; u < 2; u++) {
+      const sp = this.bonusSpot(u), look = u ? b.right : b.left;
+      const fx = sp.x - 140, fy = 160;
+      rrect(fx + 3, fy + 5, 300, 248, 16, 'rgba(40,15,60,.18)');
+      rrect(fx, fy, 300, 248, 16, mix(look.bg || '#ffe0f0', '#ffffff', 0.3), OL, 2.6);
+      rrect(fx + 6, fy + 6, 288, 236, 12, null, T.trim, 2);
+      ctx.save(); ctx.beginPath(); ctx.roundRect(fx + 3, fy + 3, 294, 242, 14); ctx.clip();
+      drawUnicorn(sp.x, sp.y, sp.s, { shine: 100, ...look }, { facing: 1, pose: 'stand', mood: look.mood, t: g.mmT });
+      ctx.restore();
+      inkCircle(fx + 22, fy + 22, 15, u ? '#ff8fc8' : '#9a6ae0', 1.3, OL);
+      text(String(u + 1), fx + 22, fy + 23, 17, '#fff', 'center', 700);
+      // after a while, or once answered, a ring shows where to look
+      const [ax, ay] = MEM_ANCHOR[b.slot];
+      const hint = b.picked != null ? 1 : clamp((b.t - 9) / 2, 0, 0.6);
+      if (hint > 0) {
+        ctx.save(); ctx.globalAlpha = hint; ctx.strokeStyle = b.picked === b.slot || b.picked == null ? '#ffd23f' : '#ff6f9f'; ctx.lineWidth = 4;
+        ctx.setLineDash([7, 5]); ctx.lineDashOffset = -g.mmT * 30;
+        ctx.beginPath(); ctx.arc(sp.x + ax * sp.s, sp.y + ay * sp.s, 30 + Math.sin(g.mmT * 6) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      }
+    }
+    const bw = 196, gap = 16, x0 = 402 - (b.opts.length * bw + (b.opts.length - 1) * gap) / 2;
+    b.opts.forEach((s, i) => {
+      const it = ITEM[b.right[s]], right = b.picked != null && s === b.slot, wrong = b.picked === s && s !== b.slot;
+      button(`mmopt${i}`, x0 + i * (bw + gap), 432, bw, 64, it.name, { on: true, icon: it.icon, color: right ? '#5fb87a' : wrong ? '#e07a9a' : '#9a6ae0', size: 16, key: String(i + 1) });
     });
+    if (b.picked != null) outlined(b.picked === b.slot ? 'Sharp eyes! ✨' : `It was the ${ITEM[b.right[b.slot]].name}!`, 402, 143, 22, b.picked === b.slot ? '#fff6a8' : '#ffd0e0');
   },
 };
 
