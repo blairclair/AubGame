@@ -318,7 +318,7 @@
     kind: 'action',
     title: () => 'Picnic Drop',
     icon: () => '🍯',
-    how: () => 'Fly the hot-air balloon! Hold the mouse (or the up arrow) to fire the burner and go UP. Let go to sink. Each height has its own wind, so go up or down to steer! Tap DROP (or the down arrow) to drop honey on the picnic.',
+    how: () => 'Fly the hot-air balloon! Hold the mouse (or the up arrow) to fire the burner and go UP. Let go to sink. Each height has its own wind, so go up or down to steer! Tap DROP (or press SPACE) to drop honey on the picnic.',
     init(g) {
       const T = g.tier, s = Math.random() < 0.5 ? 1 : -1;
       const winds = [[75, -75], [80, -65, 55], [95, -80, 62]][T - 1];
@@ -337,9 +337,9 @@
       g.splats.forEach(s => (s.t += dt)); g.splats = g.splats.filter(s => s.t < 1.6);
       if (g.endT > 0) { g.endT -= dt; g.heat = Math.max(0, g.heat - dt); if (g.endT <= 0) g.done = true; return; }
       g.timeLeft -= dt;
-      // the burner: hold anywhere (except the DROP button) or hold up / space
+      // the burner: hold anywhere (except the DROP button) or hold the up arrow
       const overDrop = inRect(BP_DROP);
-      g.burning = !!(keys[' '] || keys.arrowup || keys.w || (pointer.down && !overDrop && pointer.y > 62));
+      g.burning = !!(keys.arrowup || keys.w || (pointer.down && !overDrop && pointer.y > 62));
       g.heat = clamp(g.heat + (g.burning ? dt * 4 : -dt * 3), 0, 1);
       if (g.burning) { g.roar -= dt; if (g.roar <= 0) { g.roar = 0.12; tone(rand(70, 90), 0.16, 'sawtooth', 0.03); } }
       const tv = g.burning ? -100 : 72;
@@ -350,7 +350,7 @@
       g.vx += (bpBand(g, g.y).v - g.vx) * Math.min(1, dt * 1.5);
       g.x = wrapX(g.x + g.vx * dt);
       // drop a jar
-      if ((id === 'bp_drop' || pressed.arrowdown || pressed.s || pressed.enter) && g.cool <= 0) {
+      if ((id === 'bp_drop' || pressed[' '] || pressed.enter) && g.cool <= 0) {
         if (g.jars > 0) {
           g.jars--; g.cool = 0.5; tone(520, 0.12, 'triangle', 0.07, 0, 300);
           g.falling.push({ x: g.x, y: g.y + RIG.bot * BP.r - 4, vx: g.vx * g.drift, t: 0 });
@@ -532,7 +532,7 @@
       emoji('🔥', hb.x + 28, hb.y + 28, g.burning ? 30 + Math.sin(t * 30) * 2 : 24);
       text(g.burning ? 'Going UP!' : 'Hold = UP', hb.x + 50, hb.y + 20, 16, '#fff', 'left', 800);
       text('let go = sink', hb.x + 50, hb.y + 40, 13, 'rgba(255,255,255,.85)', 'left', 600);
-      button('bp_drop', BP_DROP.x, BP_DROP.y, BP_DROP.w, BP_DROP.h, 'DROP', { icon: '🍯', color: g.jars > 0 ? '#ff8a2a' : '#b9aac4', size: 20 });
+      button('bp_drop', BP_DROP.x, BP_DROP.y, BP_DROP.w, BP_DROP.h, 'DROP', { icon: '🍯', color: g.jars > 0 ? '#ff8a2a' : '#b9aac4', size: 20, key: 'Space' });
       if (g.endT > 0 && g.fedN >= g.goal) outlined('All the picnics have honey!', W / 2, 100, 32, '#ffe36b', 'center', '#5a2a6e');
     },
   };
