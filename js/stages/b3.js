@@ -1418,84 +1418,416 @@
     },
   };
 
-  // --- Moon Phases: name the moon shapes, then say what comes next ----------------------------------
-  const PH_CYCLE = [0, 0.15, 0.25, 0.5, 0.75, 0.85];
-  const phName = p => (p === 0 ? 'new' : p === 0.5 ? 'full' : p === 0.25 || p === 0.75 ? 'half' : 'crescent');
-  const drawPhase = (x, y, r, p) => {
-    glow(x, y, r * 1.7, 'rgba(255,240,190,.35)', p === 0 ? 0.2 : 0.8);
-    inkCircle(x, y, r, '#3e3c70', 1.5, 'rgba(200,190,240,.8)');
-    const k = Math.cos(p * TAU), rx = r * Math.abs(k), waxing = p < 0.5;
-    if (p !== 0) {
-      const lit = new Path2D();
-      if (waxing) { lit.arc(x, y, r, -PI / 2, PI / 2); if (k > 0) lit.ellipse(x, y, rx, r, 0, PI / 2, -PI / 2, true); else lit.ellipse(x, y, rx, r, 0, PI / 2, 3 * PI / 2, false); }
-      else { lit.arc(x, y, r, PI / 2, 3 * PI / 2); if (k > 0) lit.ellipse(x, y, rx, r, 0, 3 * PI / 2, PI / 2, true); else lit.ellipse(x, y, rx, r, 0, -PI / 2, PI / 2, false); }
-      lit.closePath();
-      ctx.fillStyle = '#fff4c4'; ctx.fill(lit);
-      ctx.save(); ctx.clip(lit); ctx.fillStyle = 'rgba(220,200,150,.55)';
-      for (const [dx, dy, cr] of [[-0.3, -0.35, 0.18], [0.35, -0.1, 0.12], [-0.05, 0.3, 0.2], [0.4, 0.4, 0.1], [-0.5, 0.15, 0.09]]) circle(x + dx * r, y + dy * r, cr * r);
-      ctx.restore();
-    } else {
-      ctx.fillStyle = 'rgba(160,150,210,.35)'; for (const [dx, dy, cr] of [[-0.3, -0.35, 0.18], [-0.05, 0.3, 0.2]]) circle(x + dx * r, y + dy * r, cr * r);
+  // --- Moon Phases: drag the moon round the Earth to make each shape, then fill in the moon calendar ------
+  // a phase p runs 0..1 round the orbit: 0 new, .125 growing crescent, .25 growing half, .5 full, .75 shrinking half
+  const MOON_NAMES = ['new', 'crescent', 'half', 'full'];
+  const MOON_ZONES = { new: [0], crescent: [0.125, 0.875], half: [0.25, 0.75], full: [0.5] };
+  const MOON_WHY = {
+    new: 'The sunny side faces away from us, so the moon looks dark.',
+    crescent: 'We can see just a thin slice of the sunny side.',
+    half: 'We can see half of the sunny side.',
+    full: 'We can see all of the sunny side!',
+  };
+  const MOON_HINT = {
+    new: 'Try putting the moon between the Earth and the sun.',
+    crescent: 'Try a little way round from the sun.',
+    half: 'Try halfway round, so the sun shines on its side.',
+    full: 'Try the side far away from the sun.',
+  };
+  const MOON_CAL = [0, 0.125, 0.25, 0.5, 0.75, 0.875, 0]; // a week of nights: the moon grows, then shrinks
+  const pDist = (a, b) => { const d = (((a - b) % 1) + 1) % 1; return Math.min(d, 1 - d); };
+  const phName = p => MOON_NAMES.find(n => MOON_ZONES[n].some(z => pDist(p, z) <= 0.065)) || null;
+  // the sunlit part of the moon as seen from Earth (lit on the right while it grows, on the left as it shrinks)
+  const litPath = (x, y, r, p) => {
+    p = ((p % 1) + 1) % 1;
+    if ((1 - Math.cos(p * TAU)) / 2 < 0.004) return null;
+    const k = Math.cos(p * TAU), rx = r * Math.abs(k), lit = new Path2D();
+    if (p < 0.5) { lit.arc(x, y, r, -PI / 2, PI / 2); if (k > 0) lit.ellipse(x, y, rx, r, 0, PI / 2, -PI / 2, true); else lit.ellipse(x, y, rx, r, 0, PI / 2, 3 * PI / 2, false); }
+    else { lit.arc(x, y, r, PI / 2, 3 * PI / 2); if (k > 0) lit.ellipse(x, y, rx, r, 0, 3 * PI / 2, PI / 2, true); else lit.ellipse(x, y, rx, r, 0, -PI / 2, PI / 2, false); }
+    lit.closePath();
+    return lit;
+  };
+  const CRATERS = [[-0.32, -0.34, 0.17], [0.34, -0.12, 0.12], [-0.06, 0.32, 0.2], [0.42, 0.38, 0.1], [-0.52, 0.12, 0.09], [0.12, -0.56, 0.08], [0.6, -0.36, 0.07], [-0.36, 0.6, 0.07]];
+  const craters = (x, y, r, dark) => {
+    for (const [dx, dy, cr] of CRATERS) {
+      const cx = x + dx * r, cy = y + dy * r, rr = cr * r;
+      ctx.fillStyle = dark ? 'rgba(10,10,40,.3)' : 'rgba(196,160,96,.5)'; circle(cx, cy, rr);
+      ctx.fillStyle = dark ? 'rgba(90,90,160,.25)' : 'rgba(236,212,150,.75)'; circle(cx + rr * 0.18, cy + rr * 0.18, rr * 0.72);
     }
-    ctx.strokeStyle = 'rgba(255,250,220,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
   };
-  const nightCard = (x, y, w, h) => {
-    const gr = ctx.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, '#1e2466'); gr.addColorStop(1, '#4a3a8a');
-    ctx.fillStyle = gr; ctx.beginPath(); ctx.roundRect(x + 9, y + 9, w - 18, h - 18, 12); ctx.fill();
-    for (let s = 0; s < 6; s++) star(x + 22 + (s * 47) % (w - 44), y + 22 + (s * 31) % (h - 44), 2, 'rgba(255,255,230,.7)');
+  // a glowing moon with craters: halo grows with how much of it is lit
+  const drawPhase = (x, y, r, p, halo = 1) => {
+    const lit = (1 - Math.cos(p * TAU)) / 2;
+    if (halo) {
+      glow(x, y, r * 2.5, 'rgba(255,230,160,.5)', halo * (0.15 + 0.85 * lit));
+      glow(x, y, r * 1.45, 'rgba(255,250,225,.65)', halo * lit);
+    }
+    const dg = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+    dg.addColorStop(0, '#40428a'); dg.addColorStop(1, '#1e1f4e');
+    inkCircle(x, y, r, dg, Math.max(1, r / 45), '#12122e');
+    craters(x, y, r, true);
+    const path = litPath(x, y, r, p);
+    if (path) {
+      const lg = ctx.createRadialGradient(x - r * 0.25, y - r * 0.3, r * 0.1, x, y, r * 1.05);
+      lg.addColorStop(0, '#fffef4'); lg.addColorStop(0.6, '#fff1c4'); lg.addColorStop(1, '#efd48c');
+      ctx.fillStyle = lg; ctx.fill(path);
+      ctx.save(); ctx.clip(path); craters(x, y, r, false); ctx.restore();
+    }
+    ctx.strokeStyle = `rgba(255,250,220,${0.3 + 0.65 * lit})`; ctx.lineWidth = Math.max(1.5, r / 35);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
   };
-  MG.moonphases = quiz({
-    title: () => 'Moon Phases', icon: () => '🌗', unit: 'Moon',
-    how: g => (g.tier === 1 ? 'The moon changes shape! Listen to the name, then tap the right moon.'
-      : 'The moon changes shape every night: new, crescent, half and full. Name the moon, or pick the moon that comes next!'),
-    rounds: g => [5, 6, 7][g.tier - 1],
-    make(g) {
-      const type = g.tier === 1 ? 'id' : g.tier === 2 ? (g.round % 2 ? 'next' : 'id') : (g.round % 3 === 0 ? 'id' : 'next');
-      if (type === 'id') {
-        const opts = g.tier === 1 ? shuffle([0, 0.15, 0.5, 0.25]).slice(0, 3) : [0, pick([0.15, 0.85]), pick([0.25, 0.75]), 0.5];
-        const choices = shuffle(opts), answer = randInt(0, choices.length - 1);
-        return { type, choices, answer, say: `Which one is the ${phName(choices[answer])} moon?` };
+  // the night meadow the moon game plays in: deep sky, a band of stars, shooting stars, dark hills with glowing flowers
+  const moonNight = g => {
+    const gr = ctx.createLinearGradient(0, 0, 0, H);
+    gr.addColorStop(0, '#0a0e36'); gr.addColorStop(0.55, '#26205e'); gr.addColorStop(0.85, '#4e357e'); gr.addColorStop(1, '#2a2050');
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+    // the milky way: a soft diagonal band of tiny stars
+    ctx.save(); ctx.translate(W / 2, 250); ctx.rotate(-0.32);
+    const mw = ctx.createLinearGradient(0, -70, 0, 70);
+    mw.addColorStop(0, 'rgba(160,140,255,0)'); mw.addColorStop(0.5, 'rgba(190,170,255,.16)'); mw.addColorStop(1, 'rgba(160,140,255,0)');
+    ctx.fillStyle = mw; ctx.fillRect(-W, -70, W * 2, 140);
+    for (let i = 0; i < 140; i++) { ctx.fillStyle = `rgba(255,255,255,${0.2 + (i % 5) * 0.08})`; circle(((i * 151) % (W * 1.6)) - W * 0.8, ((i * 71) % 120) - 60 + Math.sin(i) * 10, 0.8 + (i % 3) * 0.4); }
+    ctx.restore();
+    twinkles(60, 60, 430);
+    // a shooting star now and then
+    const k = (S.t % 7) / 1.1;
+    if (k < 1) {
+      const sx = 120 + ((Math.floor(S.t / 7) * 337) % 600), sy = 70 + ((Math.floor(S.t / 7) * 53) % 60), ex = sx + 180 * k, ey = sy + 70 * k;
+      const sg = ctx.createLinearGradient(ex - 90, ey - 35, ex, ey); sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(1, `rgba(255,255,240,${1 - k})`);
+      ctx.strokeStyle = sg; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ex - 90, ey - 35); ctx.lineTo(ex, ey); ctx.stroke();
+    }
+    // rolling hills: a far purple ridge, then the meadow, then Aubrey's own little hill
+    ctx.fillStyle = '#3a2f6e'; ctx.beginPath(); ctx.moveTo(0, H);
+    for (let x = 0; x <= W; x += 20) ctx.lineTo(x, 430 - Math.sin(x * 0.008 + 1) * 18 - Math.sin(x * 0.021) * 6);
+    ctx.lineTo(W, H); ctx.fill();
+    ctx.fillStyle = '#2c4a5e'; ctx.beginPath(); ctx.moveTo(0, H);
+    for (let x = 0; x <= W; x += 20) ctx.lineTo(x, 478 - Math.sin(x * 0.011 + 2) * 10);
+    ctx.lineTo(W, H); ctx.fill();
+    ctx.fillStyle = '#35596a'; ctx.beginPath(); ctx.ellipse(110, 520, 190, 58, 0, 0, TAU); ctx.fill();
+    grassTufts(26, 486, 536, 'rgba(120,200,170,.5)');
+    // glowing night flowers and fireflies
+    for (let i = 0; i < 9; i++) {
+      const fx = 30 + i * 108 + (i % 2) * 30, fy = 494 + (i % 3) * 12, a = 0.55 + 0.45 * Math.sin(S.t * 2 + i);
+      glow(fx, fy, 16, 'rgba(160,240,255,.8)', a); flower(fx, fy, 6, '#bfe8ff', '#fff6b0', 0.6);
+    }
+    for (let i = 0; i < 7; i++) {
+      const fx = (i * 137 + S.t * 14 * (i % 2 ? 1 : -1) + 2000) % W, fy = 400 + Math.sin(S.t * 1.3 + i * 2) * 26 + (i % 3) * 12;
+      glow(fx, fy, 12, 'rgba(255,250,150,.9)', 0.4 + 0.6 * Math.abs(Math.sin(S.t * 2.5 + i)));
+    }
+  };
+  // Aubrey on her hill with a telescope on a tripod, aimed at (tx, ty)
+  const moonGazer = (g, tx, ty) => {
+    const px = 150, py = 452, ang = Math.atan2(ty - py, tx - px);
+    ctx.lineCap = 'round';
+    for (const [lx, w] of [[124, 5], [176, 5], [152, 5]]) { ctx.strokeStyle = OL; ctx.lineWidth = w + 3; ctx.beginPath(); ctx.moveTo(px, py + 6); ctx.lineTo(lx, 506); ctx.stroke(); ctx.strokeStyle = '#a07048'; ctx.lineWidth = w; ctx.stroke(); }
+    ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
+    ink(P2('M-34,-9 L50,-13 L50,13 L-34,9 Z'), '#5a7ad8', 1.5);
+    inkRect(46, -16, 14, 32, '#ffd45a', 1.5, 3);
+    inkRect(-44, -7, 12, 14, '#ffd45a', 1.2, 2);
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-30, -7, 74, 4);
+    ctx.restore();
+    inkCircle(px, py, 6, '#ffd45a', 1);
+    const yay = g.cheer > 0, lift = yay ? Math.abs(Math.sin(g.cheer * 7)) * 14 : 0;
+    drawAubrey(80, 508, yay ? 'twirl' : 'idle_front', 1, lift, 128 / IMG.idle_front.height);
+  };
+  const moonSparkles = (x, y, r, t) => {
+    for (let i = 0; i < 10; i++) {
+      const a = t * 1.6 + i * TAU / 10, rr = r + 18 + Math.sin(t * 5 + i) * 8;
+      star(x + Math.cos(a) * rr, y + Math.sin(a) * rr, 5 + (i % 3) * 3, i % 2 ? '#fff6b0' : '#ffc6f0');
+    }
+  };
+  // Round "make": drag the moon round its orbit in the space view; the big moon shows what we'd see from Earth.
+  // Round "cal": drag moon cards into the empty nights of the moon calendar, in order (grows, then shrinks).
+  const BIGM = { x: 300, y: 262, r: 102 }, SPV = { x: 712, y: 296, R: 164, orbit: 108, earth: 27, moon: 21 };
+  const phToAng = p => PI - p * TAU, angToPh = a => ((((PI - a) / TAU) % 1) + 1) % 1;
+  MG.moonphases = {
+    kind: 'learn', title: () => 'Moon Phases', icon: () => '🌗',
+    how: g => (g.tier === 1 ? 'Drag the moon around the Earth. The sun lights up half of it. Can you make a new, crescent, half and full moon?'
+      : 'Drag the moon around the Earth to make each moon shape. Then fill in the moon calendar: the moon grows, then shrinks!'),
+    init(g) {
+      const nA = [4, 3, 2][g.tier - 1];
+      const plan = shuffle(MOON_NAMES.slice()).slice(0, nA).map(want => ({ kind: 'make', want }));
+      if (g.tier === 2) {
+        plan.push({ kind: 'cal', vals: MOON_CAL.slice(0, 4), gaps: [2, 3], arrows: 'grow', decoy: 0.75 });
+        plan.push({ kind: 'cal', vals: MOON_CAL.slice(3, 7), gaps: [2, 3], arrows: 'shrink', decoy: 0.125 });
+      } else if (g.tier === 3) {
+        for (let k = 0; k < 2; k++) {
+          const gaps = shuffle([1, 2, 3, 4, 5]).slice(0, 3).sort((a, b) => a - b);
+          const used = gaps.map(i => MOON_CAL[i]);
+          plan.push({ kind: 'cal', vals: MOON_CAL.slice(), gaps, arrows: 'both', decoy: pick([0.125, 0.25, 0.5, 0.75, 0.875].filter(v => !used.includes(v))) });
+        }
       }
-      const s = randInt(0, 5), seq = [0, 1, 2].map(i => PH_CYCLE[(s + i) % 6]), ans = PH_CYCLE[(s + 3) % 6];
-      const names = new Set([phName(ans)]), wrong = [];
-      for (const p of shuffle(PH_CYCLE)) if (!names.has(phName(p))) { names.add(phName(p)); wrong.push(p); }
-      const choices = shuffle([ans, ...wrong.slice(0, 2)]);
-      return { type, seq, choices, answer: choices.indexOf(ans), say: `${seq.map(p => `${phName(p)} moon`).join(', ')}. What comes next?` };
+      Object.assign(g, { plan, round: 0, rounds: plan.length, total: 0, cheer: 0 });
+      this.setup(g);
     },
-    rect: (g, i) => (g.type === 'id' ? rowRect(g.choices.length, i, 220, g.choices.length === 3 ? 230 : 196, 250) : rowRect(3, i, 330, 196, 190)),
-    drawQ(g) {
-      if (g.type === 'id') {
-        qPanel(`Which one is the ${phName(g.choices[g.answer])} moon?`, 'Tap the moon that matches.');
+    start(g) { speak(g.say); },
+    setup(g) {
+      const r = g.plan[g.round];
+      Object.assign(g, { kindR: r.kind, state: 'play', t2: 0, misses: 0, shake: 0, held: -1, sel: -1 });
+      if (r.kind === 'make') {
+        let a;
+        do a = rand(0, 1); while (MOON_ZONES[r.want].some(z => pDist(a, z) < 0.2));
+        Object.assign(g, { want: r.want, ph: a, drag: false, hold: 0, lastName: phName(a), say: `Make a ${r.want} moon! Drag the moon around the Earth.` });
       } else {
-        panel(W / 2 - 400, 64, 800, 252, 22);
-        outlined('What comes next?', W / 2, 92, 28, '#ff6fb5', 'center', '#fff');
-        const x0 = W / 2 - 210;
-        g.seq.forEach((p, i) => {
-          nightCard(x0 + i * 140 - 64, 116, 128, 128); drawPhase(x0 + i * 140, 180, 40, p);
-          text(`${phName(p)}`, x0 + i * 140, 270, 17, '#5a2a6e', 'center', 700);
-          ctx.fillStyle = '#c06ae0'; tri(x0 + i * 140 + 72, 172, x0 + i * 140 + 72, 188, x0 + i * 140 + 84, 180);
-        });
-        const qx = x0 + 3 * 140;
-        rrect(qx - 64, 116, 128, 128, 16, g.state === 'pick' ? 'rgba(255,240,250,.9)' : 'rgba(30,30,90,.95)', '#ff9ae0', 3);
-        if (g.state === 'pick') outlined('?', qx, 180, 60, '#ff6fb5', 'center', '#fff');
-        else drawPhase(qx, 180, 40, g.choices[g.answer]);
+        g.slots = r.vals.map((p, i) => ({ p, gap: r.gaps.includes(i), filled: !r.gaps.includes(i), glow: 0 }));
+        g.arrows = r.arrows;
+        const ps = r.gaps.map(i => r.vals[i]);
+        if (r.decoy != null) ps.push(r.decoy);
+        g.cards = shuffle(ps).map((p, i) => ({ p, home: i, used: false, slot: -1, shake: 0 }));
+        g.cards.forEach((c, i) => { const h = this.cardHome(g, i); c.x = h.x; c.y = h.y; });
+        g.say = 'Fill in the moon calendar! Drag each moon to its night. The moon grows bigger, then smaller.';
+      }
+      if (g.phase === 'play') speak(g.say);
+    },
+    // geometry (the bots use these too)
+    slotRect(g, i) {
+      const n = g.slots.length, w = n > 5 ? 112 : 132, gap = n > 5 ? 11 : 24, tot = n * w + (n - 1) * gap;
+      return { x: W / 2 - tot / 2 + i * (w + gap), y: 134, w, h: 152 };
+    },
+    cardHome(g, i) {
+      const n = g.cards.length, w = 104, gap = 22, tot = n * w + (n - 1) * gap;
+      return { x: 560 - tot / 2 + i * (w + gap), y: 360, w, h: 122 };
+    },
+    moonPos(g) { const a = phToAng(g.ph); return { x: SPV.x + Math.cos(a) * SPV.orbit, y: SPV.y + Math.sin(a) * SPV.orbit }; },
+    update(g, dt) {
+      g.cheer = Math.max(0, g.cheer - dt); g.shake = Math.max(0, g.shake - dt);
+      if (g.state === 'yay') {
+        if ((g.t2 -= dt) <= 0) { g.round++; if (g.round >= g.rounds) g.done = true; else this.setup(g); }
+      } else if (g.kindR === 'make') this.updateMake(g, dt);
+      else this.updateCal(g, dt);
+      if (g.kindR === 'cal') for (const c of g.cards) {
+        c.shake = Math.max(0, c.shake - dt);
+        const t = c.used ? (() => { const s = this.slotRect(g, c.slot); return { x: s.x + s.w / 2 - 52, y: s.y + 14 }; })() : this.cardHome(g, c.home);
+        if (g.cards.indexOf(c) !== g.held) { const k = Math.min(1, dt * 12); c.x = lerp(c.x, t.x, k); c.y = lerp(c.y, t.y, k); }
+      }
+      g.progress = `Moon ${Math.min(g.round + 1, g.rounds)} of ${g.rounds}`;
+      g.score = g.total / g.rounds;
+    },
+    updateMake(g, dt) {
+      const dx = pointer.x - SPV.x, dy = pointer.y - SPV.y, d = Math.hypot(dx, dy);
+      if (pointer.clicked && d > SPV.earth + 6 && d < SPV.R) g.drag = true;
+      if (g.drag) {
+        if (pointer.down) g.ph = angToPh(Math.atan2(dy, dx));
+        else { g.drag = false; this.check(g); }
+      }
+      if (goRight()) g.ph = (g.ph + dt * 0.16) % 1;
+      if (goLeft()) g.ph = (g.ph + 1 - dt * 0.16) % 1;
+      if (g.state !== 'play') return;
+      if (pressed.enter || pressed[' ']) return this.check(g);
+      const name = phName(g.ph);
+      if (name !== g.lastName) { g.lastName = name; if (name) tone(660 + MOON_NAMES.indexOf(name) * 110, 0.12, 'sine', 0.06); }
+      // hold the moon on the right spot and it locks in
+      if (name === g.want && (g.drag || goLeft() || goRight())) { g.hold += dt; if (g.hold >= 1) this.lock(g); }
+      else if (name !== g.want) g.hold = 0;
+    },
+    check(g) {
+      if (g.state !== 'play') return;
+      const name = phName(g.ph);
+      if (name === g.want) return this.lock(g);
+      if (!name) { // somewhere in between: only a little nudge
+        g.misses += 0.5; g.shake = 0.3; SFX.blip();
+        return speak(`Almost! Keep moving the moon. ${MOON_HINT[g.want]}`);
+      }
+      g.misses++; g.shake = 0.5; SFX.miss();
+      const m = this.moonPos(g);
+      floatText(m.x, m.y - 30, `${name} moon`, '#ffd6f0', false, 18);
+      speak(`That's a ${name} moon. We need a ${g.want} moon. ${MOON_HINT[g.want]}`);
+    },
+    lock(g) {
+      // snap to the nearest exact spot for that shape
+      g.ph = MOON_ZONES[g.want].reduce((b, z) => (pDist(g.ph, z) < pDist(g.ph, b) ? z : b));
+      g.total += Math.max(0.1, 1 - 0.35 * g.misses);
+      Object.assign(g, { state: 'yay', t2: 3.4, cheer: 3.4, drag: false, hold: 0 });
+      SFX.sparkle(); burst(BIGM.x, BIGM.y, 30, { colors: ['#fff6a8', '#ffc6f0', '#b8e6ff'] });
+      speak(`${praise()} That's a ${g.want} moon! ${MOON_WHY[g.want]}`);
+    },
+    slotAt(g, x, y) {
+      for (let i = 0; i < g.slots.length; i++) { const r = this.slotRect(g, i); if (x > r.x - 10 && x < r.x + r.w + 10 && y > r.y - 10 && y < r.y + r.h + 30) return i; }
+      return -1;
+    },
+    updateCal(g) {
+      if (g.held >= 0) {
+        const c = g.cards[g.held];
+        c.x = pointer.x - g.grab[0]; c.y = pointer.y - g.grab[1];
+        if (!pointer.down) {
+          const moved = Math.hypot(pointer.x - g.downAt[0], pointer.y - g.downAt[1]) > 12, i = g.held;
+          g.held = -1;
+          if (!moved) g.sel = g.sel === i ? -1 : i; // a tap picks the card; then tap a night
+          else { const s = this.slotAt(g, c.x + 52, c.y + 61); if (s >= 0) this.place(g, i, s); }
+        }
+        return;
+      }
+      for (let k = 0; k < g.cards.length; k++) if (pressed[String(k + 1)] && !g.cards[k].used) { g.sel = k; SFX.pick(); }
+      if (!pointer.clicked) return;
+      const i = g.cards.findIndex(c => !c.used && inRect({ x: c.x, y: c.y, w: 104, h: 122 }));
+      if (i >= 0) { g.held = i; g.grab = [pointer.x - g.cards[i].x, pointer.y - g.cards[i].y]; g.downAt = [pointer.x, pointer.y]; SFX.pick(); return; }
+      const s = this.slotAt(g, pointer.x, pointer.y);
+      if (g.sel >= 0 && s >= 0) this.place(g, g.sel, s);
+    },
+    place(g, ci, si) {
+      const c = g.cards[ci], s = g.slots[si];
+      if (!s.gap || s.filled) return;
+      g.sel = -1;
+      if (pDist(c.p, s.p) < 0.001) {
+        s.filled = true; s.glow = 1; c.used = true; c.slot = si;
+        const r = this.slotRect(g, si);
+        SFX.hit(); burst(r.x + r.w / 2, r.y + 80, 18);
+        if (g.slots.every(t => t.filled)) {
+          g.total += Math.max(0, 1 - 0.25 * g.misses);
+          Object.assign(g, { state: 'yay', t2: 3.6, cheer: 3.6 });
+          SFX.sparkle();
+          speak(`${praise()} Night ${si + 1} is a ${phName(s.p)} moon. Look, the moon grows bigger, then smaller, night by night!`);
+        } else speak(`${praise()} Night ${si + 1} is a ${phName(s.p)} moon.`);
+      } else {
+        g.misses++; c.shake = 0.5; SFX.miss();
+        speak(phName(c.p) === phName(s.p) ? "So close! That moon is lit on the wrong side. Is the moon growing or shrinking there?"
+          : `Hmm, not on night ${si + 1}. Look at the moons on either side. It grows bigger, then smaller.`);
       }
     },
-    drawChoice(g, p, x, y, w, h, i, { wrong }) {
-      nightCard(x, y, w, h);
-      drawPhase(x + w / 2, y + h / 2 - 12, Math.min(w, h) * 0.27, p);
-      if (g.state !== 'pick' || wrong || g.type === 'next') text(`${phName(p)} moon`, x + w / 2, y + h - 30, 18, '#fff', 'center', 700);
-      if (wrong) { ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(x + 9, y + 9, w - 18, h - 18); }
+    draw(g) {
+      moonNight(g);
+      if (g.kindR === 'make') this.drawMake(g); else this.drawCal(g);
     },
-    right: g => (g.type === 'id' ? `${praise()} That's the ${phName(g.choices[g.answer])} moon.` : `${praise()} Next comes the ${phName(g.choices[g.answer])} moon.`),
-    wrong: (g, i) => (g.type === 'id' ? `That one is the ${phName(g.choices[i])} moon. Try again!` : 'Hmm, not that one. Look how the moon grows, then shrinks!'),
-  });
+    drawMake(g) {
+      const yay = g.state === 'yay', wob = g.shake ? Math.sin(g.shake * 40) * 5 : 0;
+      // the prompt
+      panel(W / 2 - 230, 66, 460, 48, 24);
+      outlined(`Make a ${g.want} moon!`, W / 2, 91, 27, '#ff6fb5', 'center', '#fff');
+      // the big moon, as seen from Earth
+      text('From Earth', BIGM.x, 131, 15, 'rgba(230,220,255,.8)', 'center', 700);
+      drawPhase(BIGM.x, BIGM.y, BIGM.r, g.ph);
+      if (g.hold > 0 && !yay) {
+        ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(BIGM.x, BIGM.y, BIGM.r + 12, -PI / 2, -PI / 2 + TAU * Math.min(1, g.hold)); ctx.stroke();
+      }
+      if (yay) moonSparkles(BIGM.x, BIGM.y, BIGM.r, g.t);
+      const name = phName(g.ph), show = yay || g.tier === 1;
+      const lab = show ? (name ? `${name} moon` : 'in between') : '?';
+      rrect(BIGM.x - 92, 382, 184, 40, 20, yay ? 'rgba(255,214,90,.95)' : 'rgba(30,20,70,.7)', 'rgba(255,255,255,.7)', 2);
+      text(lab, BIGM.x, 403, 22, yay ? '#5a2a6e' : '#fff', 'center', 800);
+      moonGazer(g, BIGM.x, BIGM.y);
+      // the space view: sun on the left, Earth in the middle, the moon on its orbit
+      const { x: cx, y: cy, R } = SPV;
+      ctx.save(); ctx.translate(wob, 0);
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU);
+      ctx.strokeStyle = OL; ctx.lineWidth = 8; ctx.stroke();
+      ctx.save(); ctx.clip();
+      const sg = ctx.createRadialGradient(cx, cy, 10, cx, cy, R); sg.addColorStop(0, '#1a2058'); sg.addColorStop(1, '#070a26');
+      ctx.fillStyle = sg; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+      for (let i = 0; i < 40; i++) { ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.4 * Math.abs(Math.sin(S.t + i))})`; circle(cx - R + (i * 97) % (R * 2), cy - R + (i * 61) % (R * 2), 1 + (i % 2) * 0.6); }
+      // sunlight streaming in from the left
+      ctx.setLineDash([14, 12]); ctx.lineDashOffset = -S.t * 40; ctx.lineWidth = 3;
+      for (let y = -140; y <= 140; y += 35) { ctx.strokeStyle = 'rgba(255,224,110,.28)'; ctx.beginPath(); ctx.moveTo(cx - R + 40, cy + y); ctx.lineTo(cx + R, cy + y); ctx.stroke(); }
+      ctx.setLineDash([]);
+      const sx = cx - R - 6;
+      glow(sx, cy, 120, 'rgba(255,214,90,.75)');
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + S.t * 0.3; ctx.strokeStyle = '#ffcf3a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(sx + Math.cos(a) * 54, cy + Math.sin(a) * 54); ctx.lineTo(sx + Math.cos(a) * 68, cy + Math.sin(a) * 68); ctx.stroke(); }
+      const sun = ctx.createRadialGradient(sx + 10, cy - 10, 4, sx, cy, 48); sun.addColorStop(0, '#fffbe0'); sun.addColorStop(0.5, '#ffe060'); sun.addColorStop(1, '#ffa830');
+      inkCircle(sx, cy, 48, sun, 1.5);
+      text('Sun', sx + 26, cy + 64, 15, '#ffe9a0', 'left', 800);
+      // the orbit
+      ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(220,210,255,.45)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, SPV.orbit, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      // orbit arrows show which way the moon goes
+      for (const a of [PI * 0.75, PI * 0.25, -PI * 0.25, -PI * 0.75]) {
+        const ax = cx + Math.cos(a) * SPV.orbit, ay = cy + Math.sin(a) * SPV.orbit, t = a - PI / 2;
+        ctx.fillStyle = 'rgba(220,210,255,.6)'; ctx.beginPath(); ctx.moveTo(ax + Math.cos(t) * 7, ay + Math.sin(t) * 7); ctx.lineTo(ax + Math.cos(t + 2.4) * 6, ay + Math.sin(t + 2.4) * 6); ctx.lineTo(ax + Math.cos(t - 2.4) * 6, ay + Math.sin(t - 2.4) * 6); ctx.fill();
+      }
+      // Earth: day side towards the sun, night side away
+      inkCircle(cx, cy, SPV.earth, '#3f8ee8', 1.5);
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, SPV.earth, 0, TAU); ctx.clip();
+      ctx.fillStyle = '#5cc86a'; ellipse(cx - 8, cy - 8, 11, 8, 0.4); ellipse(cx + 10, cy + 9, 9, 7, -0.3); ellipse(cx - 4, cy + 14, 5, 4);
+      ctx.fillStyle = 'rgba(5,8,40,.5)'; ctx.fillRect(cx, cy - SPV.earth, SPV.earth, SPV.earth * 2);
+      ctx.restore();
+      text('Earth', cx, cy + SPV.earth + 13, 13, '#cfe6ff', 'center', 700);
+      // the moon: the sun always lights its left half
+      const m = this.moonPos(g);
+      ctx.setLineDash([3, 6]); ctx.strokeStyle = 'rgba(255,170,220,.7)'; ctx.lineWidth = 2;
+      const ux = (m.x - cx) / SPV.orbit, uy = (m.y - cy) / SPV.orbit;
+      ctx.beginPath(); ctx.moveTo(cx + ux * (SPV.earth + 4), cy + uy * (SPV.earth + 4)); ctx.lineTo(m.x - ux * (SPV.moon + 4), m.y - uy * (SPV.moon + 4)); ctx.stroke(); ctx.setLineDash([]);
+      if (!yay) {
+        const pr = SPV.moon + 9 + (g.drag ? 3 : Math.sin(S.t * 5) * 3);
+        ctx.strokeStyle = g.drag ? '#ffd84a' : 'rgba(255,214,240,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(m.x, m.y, pr, 0, TAU); ctx.stroke();
+      }
+      inkCircle(m.x, m.y, SPV.moon, '#2a2c62', 1.5);
+      ctx.fillStyle = '#fff1c0'; ctx.beginPath(); ctx.arc(m.x, m.y, SPV.moon, PI / 2, 3 * PI / 2); ctx.fill();
+      ctx.fillStyle = 'rgba(200,170,110,.5)'; circle(m.x - 9, m.y - 6, 4); circle(m.x - 6, m.y + 8, 3);
+      if (yay) moonSparkles(m.x, m.y, SPV.moon - 8, g.t);
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.strokeStyle = '#ffd98a'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.restore();
+      // a hand nudging the very first try
+      if (g.round === 0 && g.misses === 0 && !g.drag && g.hold === 0 && !yay && g.t < 8) {
+        const a = phToAng(g.ph) + Math.sin(S.t * 2) * 0.35;
+        emoji('👆', cx + Math.cos(a) * (SPV.orbit + 40), cy + Math.sin(a) * (SPV.orbit + 40), 30);
+      }
+      darkPanel(cx - 118, cy + R + 6, 236, 30, 15);
+      text('Space view: drag the moon!', cx, cy + R + 21, 15, '#fff', 'center', 700);
+    },
+    drawCal(g) {
+      const n = g.slots.length, yay = g.state === 'yay';
+      panel(W / 2 - 250, 66, 500, 48, 24);
+      outlined('Fill in the moon calendar!', W / 2, 91, 26, '#ff6fb5', 'center', '#fff');
+      const r0 = this.slotRect(g, 0), rN = this.slotRect(g, n - 1);
+      // the calendar board
+      rrect(r0.x - 14, r0.y - 12, rN.x + rN.w - r0.x + 28, r0.h + 72, 20, 'rgba(26,18,64,.82)', '#ffd98a', 3);
+      const dragging = g.held >= 0 ? g.cards[g.held] : null, over = dragging ? this.slotAt(g, dragging.x + 52, dragging.y + 61) : -1;
+      g.slots.forEach((s, i) => {
+        const r = this.slotRect(g, i);
+        s.glow = Math.max(0, s.glow - 0.02);
+        const gr = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); gr.addColorStop(0, '#1c2470'); gr.addColorStop(1, '#3e2e86');
+        rrect(r.x, r.y, r.w, r.h, 14, gr, yay ? '#ffd84a' : 'rgba(200,190,255,.5)', 2);
+        for (let k = 0; k < 4; k++) star(r.x + 14 + (k * 37 + i * 13) % (r.w - 28), r.y + 34 + (k * 29) % 40, 2, 'rgba(255,255,230,.6)');
+        text(`Night ${i + 1}`, r.x + r.w / 2, r.y + 16, 14, '#d8ccff', 'center', 800);
+        if (s.gap && !s.filled) {
+          const hot = over === i || (g.sel >= 0 && !dragging);
+          ctx.setLineDash([7, 6]); rrect(r.x + 12, r.y + 30, r.w - 24, r.h - 42, 12, hot ? 'rgba(255,214,90,.18)' : 'rgba(255,255,255,.06)', hot ? '#ffd84a' : 'rgba(255,200,240,.8)', 3); ctx.setLineDash([]);
+          outlined('?', r.x + r.w / 2, r.y + 84 + Math.sin(S.t * 3 + i) * 3, 40, '#ffb0e0', 'center', 'rgba(40,20,80,.9)');
+        } else if (!s.gap) {
+          drawPhase(r.x + r.w / 2, r.y + 76, 34, s.p, 0.8);
+          text(`${phName(s.p)}`, r.x + r.w / 2, r.y + r.h - 16, 15, '#fff', 'center', 700);
+        }
+        if (s.glow > 0) glow(r.x + r.w / 2, r.y + 76, 70, 'rgba(255,240,170,.8)', s.glow);
+      });
+      // grows, then shrinks
+      const mid = g.slots.findIndex(s => s.p === 0.5), ay = r0.y + r0.h + 32;
+      const arrow = (i0, i1, col, label) => {
+        const a = this.slotRect(g, i0), b = this.slotRect(g, i1), x0 = a.x + a.w / 2, x1 = b.x + b.w / 2;
+        ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, ay); ctx.lineTo(x1 - 8, ay); ctx.stroke();
+        ctx.fillStyle = col; tri(x1 - 14, ay - 9, x1 - 14, ay + 9, x1 + 2, ay);
+        rrect((x0 + x1) / 2 - 60, ay - 13, 120, 26, 13, 'rgba(26,18,64,1)', col, 2);
+        text(label, (x0 + x1) / 2, ay, 15, col, 'center', 800);
+      };
+      if (g.arrows !== 'shrink') arrow(0, mid, '#ffd84a', 'growing');
+      if (g.arrows !== 'grow') arrow(mid, n - 1, '#8ad8ff', 'shrinking');
+      moonGazer(g, 420, 60);
+      // the cards: the picked card floats up and glows
+      const order = g.cards.map((c, i) => i).sort((a, b) => (a === g.held) - (b === g.held));
+      for (const i of order) {
+        const c = g.cards[i];
+        const x = c.x + (c.shake ? Math.sin(c.shake * 50) * 7 : 0), y = c.y - (g.sel === i ? 8 : 0);
+        if (c.used) { drawPhase(x + 52, y + 62, 34, c.p, 0.9); text(`${phName(c.p)}`, x + 52, y + 124, 15, '#fff', 'center', 700); continue; }
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = i === g.held ? 18 : 8; ctx.shadowOffsetY = 4;
+        const cg = ctx.createLinearGradient(0, y, 0, y + 122); cg.addColorStop(0, '#2a3290'); cg.addColorStop(1, '#5a3aa0');
+        rrect(x, y, 104, 122, 14, cg);
+        ctx.restore();
+        rrect(x, y, 104, 122, 14, null, g.sel === i ? '#ffd84a' : '#ffc6f0', g.sel === i ? 4 : 3);
+        drawPhase(x + 52, y + 52, 32, c.p, 0.9);
+        if (g.tier < 3) text(`${phName(c.p)}`, x + 52, y + 104, 15, '#fff', 'center', 700);
+        text(String(i + 1), x + 92, y + 14, 12, 'rgba(255,255,255,.55)', 'center', 800);
+      }
+      if (g.round === g.plan.findIndex(p => p.kind === 'cal') && g.misses === 0 && g.held < 0 && g.sel < 0 && g.cards.every(c => !c.used) && g.t % 4 < 2.5) {
+        const c = g.cards.find(q => g.slots.some(t => t.gap && t.p === q.p)), s = this.slotRect(g, g.slots.findIndex(t => t.gap && t.p === c.p)), k = (g.t % 4) / 2.5;
+        emoji('👆', lerp(c.x + 60, s.x + s.w / 2, k), lerp(c.y + 70, s.y + 90, k), 30);
+      }
+    },
+  };
 
   restage('mothmeadow', {
     bg: 'mothmeadow_bg',
     games: [['glowworm', 'silk', {}], ['moonphases', 'silk', {}]],
     intro: ['*:The big moon rises over the meadow. The flowers begin to glow.', "N:Oh, hello! My little glow worm wants to grow big and bright. Guide him to the light orbs, but don't let him bite his own tail!", 'A:laughing:A wiggly glow worm!'],
-    mid: ['N:Look up at the moon! It changes shape every night. Can you name the moon shapes, and say which comes next?', 'A:focused:New, crescent, half, full...'],
+    mid: ['N:Look up at the moon! The sun lights up half of it as it goes round the Earth. Can you make each moon shape, then fill in the moon calendar?', 'A:focused:New, crescent, half, full...'],
     outro: ['N:Moon-silk, for a moon-bright unicorn.', 'A:happy:It shines just like the moon!'],
   });
 
