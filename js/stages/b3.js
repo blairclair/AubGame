@@ -43,26 +43,68 @@
     ctx.fillStyle = 'rgba(255,255,255,.7)'; ellipse(x - 4 * s, y + 13 * s, 3 * s, 5 * s);
     inkRect(x - 7 * s, y + 28 * s, 14 * s, 4 * s, '#5a3a5a', 1.5, 2);
   };
+  // a firefly from the side: dark body, orange head shield, wing cases edged in yellow, see-through
+  // flapping wings, and a glowing lantern tail (s = 1 is about 30px long)
   const drawFirefly = (x, y, s, t = S.t) => {
-    glow(x - 4 * s, y + 5 * s, 22 * s, 'rgba(220,255,120,.9)', 0.6 + 0.4 * Math.sin(t * 6));
-    ctx.fillStyle = 'rgba(230,240,255,.75)'; ellipse(x - 2 * s, y - 6 * s, 7 * s, 4 * s, -0.5 + Math.sin(t * 40) * 0.3); ellipse(x + 4 * s, y - 6 * s, 7 * s, 4 * s, 0.5);
-    inkEllipse(x, y, 7 * s, 5 * s, 0.3, '#4a3a5a', 1);
-    inkCircle(x - 5 * s, y + 4 * s, 5 * s, '#e8ff7a', 1);
-    inkCircle(x + 6 * s, y - 3 * s, 3.5 * s, '#ff8a5a', 1);
+    const pulse = 0.55 + 0.45 * Math.sin(t * 5);
+    glow(x - 11 * s, y + 4 * s, 26 * s, 'rgba(220,255,120,.95)', 0.45 + 0.55 * pulse);
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // legs and feelers
+    ctx.strokeStyle = '#3a2a3a'; ctx.lineWidth = 1.1;
+    for (const lx of [-2, 3, 8]) { ctx.beginPath(); ctx.moveTo(lx, 4); ctx.lineTo(lx - 2, 9); ctx.lineTo(lx - 4, 10); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(14, -2); ctx.quadraticCurveTo(20, -10, 25, -9); ctx.moveTo(13, -1); ctx.quadraticCurveTo(21, -5, 26, -3); ctx.stroke();
+    // see-through hind wings, buzzing
+    const f = Math.sin(t * 46);
+    ctx.fillStyle = 'rgba(235,245,255,.8)'; ctx.strokeStyle = 'rgba(140,160,210,.9)'; ctx.lineWidth = 1;
+    for (const [rot, len] of [[-0.9 + f * 0.35, 15], [-0.55 + f * 0.3, 13]]) { ctx.save(); ctx.translate(2, -3); ctx.rotate(rot); ctx.beginPath(); ctx.ellipse(-len * 0.5, 0, len * 0.55, 4.2, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    // the lantern tail, then the body and wing case
+    const lg = ctx.createRadialGradient(-11, 3, 1, -11, 3, 8); lg.addColorStop(0, '#ffffe0'); lg.addColorStop(0.5, mix('#e8ff7a', '#ffffff', pulse * 0.4)); lg.addColorStop(1, '#b8e050');
+    ctx.fillStyle = lg; ctx.strokeStyle = OL; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(-11, 3, 7.5, 5.5, 0.15, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(140,170,40,.6)'; ctx.lineWidth = 0.9; for (const sx of [-14, -10]) { ctx.beginPath(); ctx.moveTo(sx, -1.5); ctx.lineTo(sx + 1, 7.5); ctx.stroke(); }
+    ink(P2('M-5,-4 C2,-8 10,-6 13,-2 C10,3 2,6 -5,5 C-8,2 -8,-2 -5,-4 Z'), '#3a2e44', 1.4);
+    ink(P2('M-6,-3 C0,-7 8,-6 11,-3 C6,-1 0,1 -6,1 Z'), '#4e3e5c', 1);
+    ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-5, 1); ctx.quadraticCurveTo(3, 0.5, 10, -2.5); ctx.stroke();
+    // orange head shield with its dark spot, and the little head with a shiny eye
+    ink(P2('M9,-6 C13,-8 17,-5 17,-1 C17,2 13,3 10,2 Z'), '#ff8a3a', 1.2);
+    ctx.fillStyle = '#c0402a'; ellipse(13, -3.5, 2, 1.4);
+    inkCircle(17, 1, 3, '#2a1e30', 1);
+    ctx.fillStyle = '#ffffff'; circle(18, 0.2, 1.1);
+    ctx.restore();
   };
+  // a fuzzy moth, wings flapping (flap is an angle), facing the viewer; col is the wing colour, spot the eyespot
   const drawMoth = (x, y, s, flap, col = '#d8f0e0', spot = '#ff9ac0') => {
-    const k = 0.45 + 0.55 * Math.abs(Math.cos(flap));
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    const up = P2('M0,-2 C-6,-22 -30,-28 -34,-12 C-36,-2 -18,4 0,2 Z'), lo = P2('M0,2 C-14,6 -26,16 -20,26 C-12,30 -4,18 0,6 Z');
+    const k = 0.4 + 0.6 * Math.abs(Math.cos(flap));
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const up = P2('M0,-3 C-8,-22 -26,-31 -38,-24 C-44,-19 -42,-12 -38,-9 C-40,-5 -36,-1 -32,-1 C-30,2 -20,3 0,2 Z');
+    const lo = P2('M0,2 C-10,4 -22,9 -25,17 C-27,23 -23,28 -17,27 C-14,30 -9,28 -7,24 C-4,18 -1,10 0,6 Z');
+    const dark = mix(col, '#5a3a6e', 0.35), light = mix(col, '#ffffff', 0.45);
     for (const d of [-1, 1]) {
       ctx.save(); ctx.scale(d * k, 1);
-      inkGroup([[up, col], [lo, mix(col, '#ffffff', 0.3)]], 1.2);
-      ctx.fillStyle = spot; circle(-18, -12, 4); ctx.fillStyle = '#fff'; circle(-18, -12, 1.6);
+      inkGroup([[up, col], [lo, light]], 1.3);
+      // wing markings: a darker band, a scalloped edge, an eyespot and a few freckles
+      ctx.save(); ctx.clip(up);
+      ctx.strokeStyle = dark; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-8, -18); ctx.quadraticCurveTo(-18, -8, -14, 2); ctx.stroke();
+      ctx.fillStyle = mix(col, '#ffffff', 0.6); for (let i = 0; i < 5; i++) circle(-38 + i * 1.5, -22 + i * 5, 2.2);
+      ctx.restore();
+      inkCircle(-24, -14, 5.5, spot, 1); inkCircle(-24, -14, 2.6, '#3a2050', 0.6); ctx.fillStyle = '#ffffff'; circle(-23.2, -14.8, 1);
+      ctx.fillStyle = dark; circle(-17, 18, 2.4); circle(-12, 22, 1.6);
       ctx.restore();
     }
-    inkEllipse(0, 2, 3.5, 11, 0, '#f4ead0', 1);
-    ctx.strokeStyle = '#8a6a5a'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(-1, -8); ctx.quadraticCurveTo(-6, -18, -10, -20); ctx.moveTo(1, -8); ctx.quadraticCurveTo(6, -18, 10, -20); ctx.stroke();
+    // fuzzy body and collar
+    const fur = '#f4e6c8';
+    ctx.fillStyle = OL; for (let i = 0; i < 5; i++) circle(0, -5 + i * 5, 5.2 - i * 0.6);
+    ctx.fillStyle = fur; for (let i = 0; i < 5; i++) circle(0, -5 + i * 5, 4.2 - i * 0.6);
+    ctx.strokeStyle = 'rgba(160,120,90,.5)'; ctx.lineWidth = 0.8; for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(-3.4 + i * 0.3, -3 + i * 5); ctx.lineTo(3.4 - i * 0.3, -3 + i * 5); ctx.stroke(); }
+    ctx.fillStyle = '#ffffff'; for (const [fx, fy] of [[-4, -8], [0, -9.5], [4, -8], [-2, -7], [2, -7]]) circle(fx, fy, 2.2);
+    // head with big eyes and a smile
+    inkCircle(0, -11, 4.6, fur, 1);
+    ctx.fillStyle = '#2a1a30'; circle(-2, -11.5, 1.5); circle(2, -11.5, 1.5); ctx.fillStyle = '#ffffff'; circle(-1.6, -12, 0.5); circle(2.4, -12, 0.5);
+    ctx.strokeStyle = '#8a5a5a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.arc(0, -10, 1.4, 0.3, PI - 0.3); ctx.stroke();
+    // feathery antennae
+    for (const d of [-1, 1]) {
+      ctx.strokeStyle = '#8a6a5a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(d * 1.5, -15); ctx.quadraticCurveTo(d * 6, -24, d * 11, -26); ctx.stroke();
+      ctx.lineWidth = 0.8; for (let i = 1; i <= 4; i++) { const u = i / 5, ax = d * (1.5 + 9.5 * u), ay = -15 - 11 * u + u * u * 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + d * 2.5, ay - 2.5); ctx.moveTo(ax, ay); ctx.lineTo(ax - d * 1.5, ay - 3); ctx.stroke(); }
+    }
     ctx.restore();
   };
   const drawSwan = (x, y, s, dir = 1, col = '#ffffff', neckBob = 0) => {
