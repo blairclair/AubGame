@@ -3,8 +3,8 @@
   // ===========================================================================
   // SKIPPING STONE CREEK (rebuilt): a babbling creek with stepping stones, lily pads,
   // cattails, a little wooden bridge and Tilly the Turtle.
-  //   game 1 (action, shell):  Busy Beaver Dam. Build Bucky the beaver's dam bottom-up
-  //     and patch the leaks while the pond fills (deep water pushes harder).
+  //   game 1 (action, shell):  Busy Beaver Dam. Swim Bucky the beaver to fetch stones (they
+  //     sink) and logs (they float), build the dam bottom-up and patch leaks with mud.
   //   game 2 (learn, berry):   Singing Stones. A creek xylophone: big stones sing low,
   //     little stones sing high. Play Tilly's songs and finish her patterns.
   // ===========================================================================
@@ -278,18 +278,20 @@
 
   // ===========================================================================
   // GAME 1 (action, shell): Busy Beaver Dam.
-  // A cut-away view of the creek. Tilly's friend Bucky the beaver builds a dam, and the
-  // player taps the glowing spots to place each piece, bottom row first: heavy stones, then
-  // logs, then sticks, then leafy branches on top. The creek keeps pouring in, so the pond
-  // behind the dam rises, but only as high as the finished rows. Leaks pop open in the
-  // dam (more often down low, where the water pushes hardest) and squirt out: the deeper
-  // the leak, the farther it squirts. Tap a leak and Bucky packs it with mud.
+  // A cut-away view of the creek. The player swims Bucky the beaver around the pond (keys,
+  // or lead him with a finger) to fetch what the dam needs, bottom row first: heavy stones
+  // (they tumble down the bank and SINK, so he dives for them), then logs, sticks and leafy
+  // branches (they ride the creek in and FLOAT). He carries each one to the dam. The creek
+  // keeps pouring in, so the pond rises, but only as high as the finished rows. Leaks swirl
+  // open on the pond side (more often down low, where the water pushes hardest) and squirt
+  // out the far side: the deeper, the farther. Bucky grabs mud from the mud pile to patch them.
   // Fill the pond to the line and fish, frogs and ducks move in.
   // Teaches: water flows downhill and pools behind a dam; deep water pushes harder;
-  //   beavers build with stones, logs, sticks and mud, and their ponds make homes.
+  //   heavy stones sink and wood floats; beavers build with stones, logs, sticks and mud,
+  //   and their ponds make homes.
   // ===========================================================================
-  const BED = 500, DCX = 470, PW = 60, RH = 50;
-  const DAM_ROWS = { 1: [5, 4, 3], 2: [5, 4, 3, 2], 3: [6, 5, 4, 3] };
+  const BED = 500, DCX = 600, PW = 60, RH = 50;
+  const DAM_ROWS = { 1: [4, 3, 2], 2: [4, 3, 3, 2], 3: [5, 4, 3, 2] };
   const damMats = n => (n === 3 ? ['stone', 'log', 'leafy'] : ['stone', 'log', 'stick', 'leafy']);
   const DAM_WORD = { stone: 'stones', log: 'logs', stick: 'sticks', leafy: 'leafy branches' };
   const DAM_FACT = {
@@ -391,51 +393,92 @@
   }
   const damRowY = r => BED - RH * (r + 0.5);
   const damRowW = (g, r) => g.rows[r] * PW;
-  const nextDamSlot = g => g.pieces.find(p => p.r === g.row && !p.placed);
+  // the upstream (pond-side) face of the dam at height y: Bucky can't swim past it
+  const damFace = (g, y) => DCX - damRowW(g, clamp(Math.floor((BED - y) / RH), 0, g.rows.length - 1)) / 2;
+  // the hill surface at x (the inverse of hillX), for stones tumbling down the bank
+  const hillY = x => 236 + 264 * Math.pow(clamp((x - 40) / 150, 0, 1), 4 / 3);
+  const FLOATS = { stone: false, log: true, stick: true, leafy: true };
+  const MUD = { x: 232, y: BED - 8 };
+  const damNeed = g => (g.row < g.rows.length ? g.mats[g.row] : null);
+  const buckyC = g => [g.bx, g.by - 24];
 
-  function damPlace(g, p) {
+  // a new piece of building stuff: floaters ride the creek down the hill, stones roll down the bank
+  function damSpawn(g, mat) {
+    const it = { mat, seed: Math.floor(rand(0, 11)), rot: rand(-0.3, 0.3), spin: 0, bonkT: 0, t: 0 };
+    if (FLOATS[mat]) Object.assign(it, { st: 'slide', x: -30, y: 232 });
+    else Object.assign(it, { st: 'roll', x: -20, y: 222 });
+    g.items.push(it);
+    return it;
+  }
+  function damPlace(g, mat) {
+    const p = g.pieces.find(q => q.r === g.row && !q.placed);
     p.placed = true; p.dropT = 0;
     tone(150, 0.14, 'triangle', 0.15, 0, 80); tone(420, 0.06, 'square', 0.03); noise(0.08, 0.03);
     burst(p.x, p.y + RH * 0.4, 6, { colors: ['#c8a880', '#e0d0b0', '#ffffff'], spread: 70, up: 40, size: [2, 4] });
-    g.tx = p.x + PW * 0.55; g.ty = p.y + RH * 0.5; g.bdir = -1; g.bIdle = 0; g.bAct = 0.3;
-    g.placedN++;
+    g.placedN++; g.bAct = 0.4;
     if (!g.pieces.some(q => q.r === g.row && !q.placed)) {
-      const mat = g.mats[g.row];
       g.row++;
       SFX.sparkle();
       burst(DCX, damRowY(g.row - 1), 18, { colors: ['#fff6a8', '#9fe07a', '#7fd0ff'], spread: 120 });
-      if (g.row >= g.rows.length) creekTalk(g, 'The dam is built! Fix the leaks while the pond fills up.');
-      else creekTalk(g, `${DAM_FACT[mat]} Now ${DAM_WORD[g.mats[g.row]]}!`);
-    }
+      if (g.row >= g.rows.length) creekTalk(g, 'The dam is built! Keep the leaks patched while the pond fills up.');
+      else creekTalk(g, `${DAM_FACT[mat]} Now bring ${DAM_WORD[g.mats[g.row]]}!`);
+      // stuff the new row can't use drifts off downstream
+      for (const it of g.items) if (it.st !== 'gone' && it.mat !== damNeed(g)) it.leave = true;
+    } else floatText(p.x, p.y - 30, pick(['Plonk!', 'Good!', 'In it goes!']), '#fff6a8', false, 20);
   }
   function damPatch(g, lk) {
     const p = lk.p;
     p.leak = null; p.patched = true; p.lx = lk.x; p.ly = lk.y;
     g.leaks.splice(g.leaks.indexOf(lk), 1);
-    g.patchedN++;
+    g.patchedN++; g.held = null; g.bAct = 0.5;
     tone(240, 0.1, 'sine', 0.14, 0, 120); tone(180, 0.12, 'triangle', 0.1, 0.06, 90); SFX.pop();
     burst(lk.x, lk.y, 10, { colors: ['#7a4e30', '#9a6a44', '#5f3a22'], spread: 90, up: 30, size: [3, 6] });
-    floatText(lk.x + 30, lk.y - 20, pick(['Splat!', 'Patched!', 'Mud!']), '#ffe0a0', false, 22);
-    g.tx = lk.x + 40; g.ty = lk.y + 26; g.bdir = -1; g.bIdle = 0; g.bAct = 0.5;
+    floatText(lk.x - 10, lk.y - 26, pick(['Splat!', 'Patched!', 'Mud!']), '#ffe0a0', false, 22);
   }
-  function damTap(g, x, y) {
-    let best = null, bd = 46;
-    for (const lk of g.leaks) { const d = Math.hypot(lk.x - x, lk.y - y); if (d < bd) { bd = d; best = lk; } }
-    if (best) return damPatch(g, best);
-    const slot = g.pieces.find(p => p.r === g.row && !p.placed && Math.abs(p.x - x) < PW * 0.62 && Math.abs(p.y - y) < RH * 0.72);
-    if (slot) return damPlace(g, slot);
-    const later = g.pieces.find(p => p.r > g.row && !p.placed && Math.abs(p.x - x) < PW * 0.6 && Math.abs(p.y - y) < RH * 0.6);
-    if (later) {
-      SFX.blip(); floatText(x, y - 20, 'Bottom first!', '#fff6a8', false, 20);
-      if (g.T - (g.bottomT ?? -9) > 4) { g.bottomT = g.T; creekTalk(g, 'Build from the bottom up! Tap a glowing spot.'); }
+  // Bucky bumps into things: grab what the dam needs, patch leaks with mud, deliver to the dam
+  function damTouch(g) {
+    const [cx, cy] = buckyC(g), need = damNeed(g);
+    if (g.held === 'mud') {
+      const lk = g.leaks.find(l => Math.hypot(l.x - cx, l.y - cy) < 58);
+      if (lk) damPatch(g, lk);
+      else if (!g.leaks.length) { g.held = null; floatText(cx, cy - 40, 'No leaks!', '#ffe0a0', false, 18); }
+      return;
     }
+    if (g.held) {
+      if (g.held === need && cx > damFace(g, cy) - 70) { g.held = null; damPlace(g, need); }
+      return;
+    }
+    if (g.leaks.length && Math.hypot(MUD.x - cx, MUD.y - cy) < 56) {
+      g.held = 'mud'; SFX.pop(); tone(200, 0.1, 'sine', 0.1, 0, 140);
+      floatText(MUD.x, MUD.y - 50, 'Mud!', '#ffe0a0', false, 20);
+      return;
+    }
+    for (const it of g.items) {
+      if (it.st === 'slide' || it.st === 'roll' || it.st === 'gone' || Math.hypot(it.x - cx, it.y - cy) > 48) continue;
+      if (it.mat === need) {
+        g.items.splice(g.items.indexOf(it), 1);
+        g.held = it.mat; g.heldSeed = it.seed; SFX.click(); tone(520, 0.08, 'sine', 0.1, 0, 700);
+        if (!g.said.carry) { g.said.carry = 1; creekTalk(g, 'Got it! Swim it over to the dam.'); }
+        return;
+      }
+      if (it.bonkT <= 0) {
+        it.bonkT = 1.5; SFX.blip();
+        floatText(it.x, it.y - 30, need ? `Need ${DAM_WORD[need]}!` : 'Not now!', '#fff6a8', false, 18);
+        if (need && g.T - (g.wrongT ?? -9) > 5) { g.wrongT = g.T; creekTalk(g, `Not ${DAM_WORD[it.mat]} yet. Build from the bottom up! This row needs ${DAM_WORD[need]}.`); }
+      }
+    }
+  }
+
+  function damSplash(x, y) {
+    burst(x, y, 8, { colors: ['#b8e6ff', '#ffffff'], spread: 60, up: 60, size: [2, 4] });
+    tone(300, 0.08, 'sine', 0.06, 0, 160); noise(0.1, 0.025);
   }
 
   MG.creekdam = {
     kind: 'action',
     title: () => 'Busy Beaver Dam',
     icon: () => '🦫',
-    how: () => 'Help Bucky the beaver build a dam! Tap the glowing spots, bottom row first. Tap any leaks to pack them with mud, and fill the pond up to the line.',
+    how: () => 'Swim Bucky the beaver around the creek with the arrow keys, or lead him with your finger. Grab what the dam needs, bottom row first: stones sink, so dive for them! Logs and sticks float. Carry each one to the dam. If a leak swirls, grab mud and pack it in.',
     init(g) {
       const rows = DAM_ROWS[g.tier] || DAM_ROWS[1], mats = damMats(rows.length);
       const pieces = [];
@@ -443,45 +486,50 @@
         for (let i = 0; i < n; i++) pieces.push({ r, i, mat: mats[r], x: DCX - n * PW / 2 + PW * (i + 0.5), y: damRowY(r), placed: false, dropT: 1, seed: (r * 7 + i * 13) % 11, patched: false, leak: null });
       });
       const target = rows.length * RH - 16;
-      const fillTime = [0, 22, 22, 21][g.tier] || 22;
+      const fillTime = [0, 26, 26, 25][g.tier] || 26;
       Object.assign(g, {
-        rows, mats, pieces, row: 0, L: 6, T: 0, inTotal: 0, lost: 0, leaks: [], leakT: 3,
+        rows, mats, pieces, row: 0, L: 6, T: 0, inTotal: 0, lost: 0, leaks: [], leakT: 6, items: [], spawnT: 0.4,
         target, inRate: target / fillTime, leakK: 0.45 * target / fillTime,
-        maxLeaks: [0, 2, 3, 4][g.tier] || 2, leakGap: [0, 3.4, 2.7, 2.1][g.tier] || 3.4,
-        timeLeft: [0, 60, 58, 56][g.tier] || 60,
-        bx: 720, by: BED - 2, tx: 720, ty: BED - 2, bdir: -1, bAct: 0, bIdle: 9,
+        maxLeaks: [0, 1, 2, 3][g.tier] || 1, leakGap: [0, 6, 4.6, 3.6][g.tier] || 6,
+        timeLeft: [0, 90, 95, 100][g.tier] || 90,
+        bx: 330, by: BED, vx: 0, vy: 0, bdir: 1, bAct: 0, held: null, heldSeed: 0,
         spill: 0, win: false, winT: 0, said: {}, msg: '', fill: 0, placedN: 0, patchedN: 0, leakN: 0,
       });
-      g.say = 'Tap the glowing spots to build the dam. Tap leaks to fix them!';
+      // a couple of stones are already waiting on the creek bed
+      for (const x of [280, 400]) Object.assign(damSpawn(g, 'stone'), { st: 'rest', x, y: BED - 14 });
+      g.say = 'Swim Bucky to the stones and carry them to the dam!';
       g.progress = 'Pond 0%';
     },
-    start(g) { creekTalk(g, 'Tap the glowing spots! Heavy stones go at the bottom.'); },
+    start(g) { creekTalk(g, 'Stones are heavy, so they sink to the bottom. Swim Bucky to a stone!'); },
     update(g, dt) {
       g.T += dt;
       for (const p of g.pieces) if (p.dropT < 1) p.dropT = Math.min(1, p.dropT + dt * 4.5);
       for (const lk of g.leaks) lk.t += dt;
-      g.bAct = Math.max(0, g.bAct - dt); g.bIdle += dt;
-      if (g.bIdle > 1.6) { g.tx = 720; g.ty = BED - 2; }
-      const k = Math.min(1, dt * 9);
-      if (Math.abs(g.tx - g.bx) > 2) g.bdir = g.tx < g.bx ? -1 : 1;
-      if (g.bIdle > 1.6 && Math.abs(g.tx - g.bx) < 4) g.bdir = -1;
-      g.bx = lerp(g.bx, g.tx, k); g.by = lerp(g.by, g.ty, k);
+      g.bAct = Math.max(0, g.bAct - dt);
       g.spill = Math.max(0, g.spill - dt * 2);
+      const sy = BED - g.L;
+      this.moveItems(g, dt, sy);
       if (g.win) {
         g.winT += dt;
-        if (Math.random() < 0.25) burst(rand(120, 420), BED - g.L - 10, 2, { colors: ['#fff6a8', '#ffb3e0', '#b8e6ff'], spread: 50 });
+        if (Math.random() < 0.25) burst(rand(220, 480), sy - 10, 2, { colors: ['#fff6a8', '#ffb3e0', '#b8e6ff'], spread: 50 });
         if (g.winT > 4.2) g.done = true;
         return;
       }
       g.timeLeft -= dt;
       if (g.timeLeft <= 0) { g.timeLeft = 0; g.done = true; return; }
-      // input: tap a leak or a glowing spot; space/enter does the next job
-      if (pointer.clicked) damTap(g, pointer.x, pointer.y);
-      if (pressed[' '] || pressed.enter) {
-        if (g.leaks.length) damPatch(g, g.leaks.reduce((a, b) => (b.y > a.y ? b : a)));
-        else { const p = nextDamSlot(g); if (p) damPlace(g, p); }
-      }
-      // the creek pours in and the pond rises
+      // swimming: keys push Bucky, the pointer leads him
+      const sp = 260;
+      const ax = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), ay = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+      if (ax || ay) { g.vx = lerp(g.vx, ax * sp, dt * 7); g.vy = lerp(g.vy, ay * sp, dt * 7); }
+      else if (pointerMoved(g) || g.usePointer) { g.vx = clamp((pointer.x - g.bx) * 4, -sp, sp); g.vy = clamp((pointer.y + 24 - g.by) * 4, -sp, sp); }
+      else { g.vx *= 1 - dt * 4; g.vy *= 1 - dt * 4; }
+      // he can poke his head out of the water but not leave it; on a shallow creek he paddles along the bed
+      const top = Math.min(BED, sy + 30);
+      g.by = clamp(g.by + g.vy * dt, top, BED);
+      g.bx = clamp(g.bx + g.vx * dt, hillX(g.by - 24) + 30, damFace(g, g.by - 24) - 34);
+      if (Math.abs(g.vx) > 25) g.bdir = Math.sign(g.vx);
+      damTouch(g);
+      // the creek pours in and the pond rises (only as high as the dam)
       const inflow = g.inRate * clamp(g.T / 2.5, 0, 1) * dt;
       g.inTotal += inflow; g.L += inflow;
       let out = 0;
@@ -493,32 +541,72 @@
       const cap = Math.max(6, g.row * RH - 4);
       if (g.L > cap) { g.L = cap; g.spill = 1; }
       g.L = Math.max(4, g.L);
-      // new leaks: only below the water, and more often deep down where it pushes hardest
+      // new building stuff, mostly what the dam needs now
+      const need = damNeed(g);
+      g.spawnT -= dt;
+      const live = g.items.filter(it => !it.leave);
+      if (need && (g.spawnT <= 0 || !live.some(it => it.mat === need) && g.spawnT < 1.6) && live.length < 5) {
+        g.spawnT = rand(2.2, 3);
+        const others = g.mats.filter(m => m !== need);
+        damSpawn(g, Math.random() < 0.7 || !others.length ? need : pick(others));
+      }
+      // leaks open in the finished rows, under the water, more often down deep where it pushes hardest
       g.leakT -= dt;
-      if (g.leakT <= 0) {
-        g.leakT = g.leakGap * rand(0.7, 1.3);
-        const cands = g.pieces.filter(p => p.placed && p.dropT >= 1 && !p.patched && !p.leak && (BED - p.y) < g.L - 16);
-        if (g.leaks.length < g.maxLeaks && cands.length) {
-          let tot = 0; for (const p of cands) tot += g.L - (BED - p.y);
-          let r = rand(0, tot), p = cands[0];
-          for (const c of cands) { r -= g.L - (BED - c.y); if (r <= 0) { p = c; break; } }
-          const lk = { p, x: p.x + rand(-12, 12), y: p.y + rand(-6, 8), t: 0, depth: g.L - (BED - p.y) };
+      if (g.leakT <= 0 && g.row > 0) {
+        g.leakT = g.leakGap * rand(0.8, 1.25);
+        const rowsOk = [];
+        for (let r = 0; r < g.row; r++) {
+          const p = g.pieces.find(q => q.r === r && q.i === 0);
+          if (!p.leak && !p.patched && p.dropT >= 1 && damRowY(r) > sy + 12) rowsOk.push(p);
+        }
+        if (g.leaks.length < g.maxLeaks && rowsOk.length) {
+          const p = Math.random() < 0.6 ? rowsOk[0] : pick(rowsOk);
+          const lk = { p, x: DCX - damRowW(g, p.r) / 2 + 12, y: p.y + rand(-6, 8), t: 0, depth: g.L - (BED - p.y) };
           p.leak = lk; g.leaks.push(lk); g.leakN++;
           tone(900, 0.25, 'sine', 0.05, 0, 1500); noise(0.35, 0.03);
-          if (!g.said.leak) { g.said.leak = 1; creekTalk(g, 'A leak! Tap it so Bucky can pack it with mud!'); }
-          else if (!g.said.deep && lk.depth > 60) { g.said.deep = 1; creekTalk(g, 'Look! Deep water pushes harder, so low leaks squirt farther!'); }
+          if (!g.said.leak) { g.said.leak = 1; creekTalk(g, 'A leak! Swim to the mud pile, grab some mud, and pack the swirly hole!'); }
+          else if (!g.said.deep && lk.depth > 60) { g.said.deep = 1; creekTalk(g, 'Deep water pushes harder, so low leaks squirt farther!'); }
         }
       }
       g.fill = clamp(g.L / g.target, 0, 1);
       const lf = g.inTotal > 0 ? g.lost / g.inTotal : 0;
-      g.score = g.fill * (1 - clamp(lf * 1.3 - 0.04, 0, 0.5));
+      // building counts for half, the full pond for the rest, and leaking water costs a little
+      g.score = (0.5 * g.placedN / g.pieces.length + 0.5 * g.fill) * (1 - clamp(lf * 1.3 - 0.04, 0, 0.4));
       g.progress = `Pond ${Math.round(g.fill * 100)}%`;
       if (g.row >= g.rows.length && g.L >= g.target) {
-        g.win = true; g.winT = 0; g.fill = 1; g.leaks.forEach(lk => { lk.p.leak = null; }); g.leaks = [];
+        g.win = true; g.winT = 0; g.fill = 1; g.leaks.forEach(lk => { lk.p.leak = null; }); g.leaks = []; g.held = null;
         g.progress = 'Pond 100%';
-        g.score = 1 - clamp(lf * 1.3 - 0.04, 0, 0.5);
-        SFX.fanfare(); burst(300, BED - g.L, 30);
+        // a quick, tidy dam is best: slow building and leaking water each cost a little
+        const par = [0, 45, 55, 65][g.tier] || 45;
+        g.score = 1 - clamp(lf * 1.3 - 0.04, 0, 0.4) - clamp((g.T - par) / 70, 0, 0.35);
+        SFX.fanfare(); burst(330, BED - g.L, 30);
         creekTalk(g, 'A beaver pond! Now fish, frogs and ducks have a calm new home.');
+      }
+    },
+    // floaters slide down the creek and drift on top; stones tumble down the bank and sink to the bed
+    moveItems(g, dt, sy) {
+      for (let i = g.items.length - 1; i >= 0; i--) {
+        const it = g.items[i];
+        it.t += dt; it.bonkT -= dt;
+        if (it.st === 'slide') {
+          it.x += 130 * dt;
+          const ex = Math.max(62, hillX(sy) - 4);
+          it.y = it.x < 40 ? 232 : it.x < 58 ? 232 + (it.x - 40) / 18 * 12 : 244 + clamp((it.x - 58) / (ex - 58), 0, 1) * (sy - 244);
+          it.rot = Math.sin(it.t * 6) * 0.25;
+          if (it.x >= ex) { it.st = 'float'; damSplash(it.x, sy); if (!g.said.float) { g.said.float = 1; creekTalk(g, `Look, ${DAM_WORD[it.mat]} float on top of the water!`); } }
+        } else if (it.st === 'roll') {
+          it.x += 110 * dt; it.y = hillY(it.x) - 14; it.rot += dt * 6;
+          if (it.y >= sy - 10 || it.x > 186) { it.st = 'sink'; it.tx = rand(hillX(BED) + 70, damFace(g, BED - 20) - 50); damSplash(it.x, sy); }
+        } else if (it.st === 'sink') {
+          it.y = Math.min(BED - 14, it.y + 150 * dt); it.x = lerp(it.x, it.tx, dt * 2); it.rot *= 1 - dt * 3;
+          if (it.y >= BED - 14) { it.st = 'rest'; noise(0.05, 0.03); if (!g.said.sink) { g.said.sink = 1; creekTalk(g, 'Plop! Heavy stones sink to the bottom. Dive down to grab them!'); } }
+        } else if (it.st === 'float') {
+          const stop = damFace(g, sy + 10) - 36;
+          it.y = sy - 4 + Math.sin(it.t * 2.5 + it.seed) * 2; it.rot = Math.sin(it.t * 1.7 + it.seed) * 0.12;
+          it.x = Math.min(stop, it.x + 16 * dt);
+        }
+        // things the new row can't use float or wash away
+        if (it.leave && it.st !== 'slide' && it.st !== 'roll') { it.fade = (it.fade ?? 1) - dt * 1.2; if (it.fade <= 0) g.items.splice(i, 1); }
       }
     },
     draw(g) {
@@ -596,18 +684,17 @@
       ctx.beginPath(); ctx.moveTo(dx0, BED); ctx.lineTo(dx0, BED - downW); for (let x = dx0; x <= 812; x += 12) ctx.lineTo(x, BED - downW + Math.sin(x * 0.1 + S.t * 4) * 1.5); ctx.lineTo(820, BED); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; ctx.setLineDash([12, 16]); ctx.lineDashOffset = -S.t * 70;
       ctx.beginPath(); ctx.moveTo(dx0 + 10, BED - downW * 0.5); ctx.lineTo(805, BED - downW * 0.5); ctx.stroke(); ctx.setLineDash([]);
-      // --- dam spots still to fill
+      // --- dam spots still to fill: the current row glows so you know where the next piece goes
       for (const p of g.pieces) {
         if (p.placed || p.r < g.row) continue;
         const cur = p.r === g.row, pulse = 0.5 + 0.5 * Math.sin(S.t * 6 + p.i);
         if (cur) {
-          ctx.globalAlpha = 0.3 + pulse * 0.15;
+          ctx.globalAlpha = 0.28 + pulse * 0.12;
           for (const [pp, c] of damParts(p, p.x, p.y)) { ctx.fillStyle = c; ctx.fill(pp); }
           ctx.globalAlpha = 1;
-          ctx.fillStyle = `rgba(255,246,170,${0.18 + pulse * 0.22})`; rrect(p.x - PW / 2 + 3, p.y - RH / 2 + 3, PW - 6, RH - 6, 12, ctx.fillStyle);
         }
         ctx.setLineDash([7, 6]); ctx.lineDashOffset = -S.t * 12;
-        rrect(p.x - PW / 2 + 3, p.y - RH / 2 + 3, PW - 6, RH - 6, 12, null, cur ? `rgba(255,255,255,${0.7 + pulse * 0.3})` : 'rgba(255,255,255,.3)', cur ? 3 : 2);
+        rrect(p.x - PW / 2 + 3, p.y - RH / 2 + 3, PW - 6, RH - 6, 12, null, cur ? `rgba(255,255,255,${0.6 + pulse * 0.3})` : 'rgba(255,255,255,.25)', cur ? 3 : 2);
         ctx.setLineDash([]);
       }
       // --- the dam itself: every placed piece outlined first, then filled, so it reads as one heap
@@ -620,48 +707,106 @@
       for (const q of live) for (const [pp, c] of q.parts) { ctx.fillStyle = c; ctx.fill(pp); }
       for (const q of live) damDetails(q.p, q.x, q.y);
       // water spilling over a dam that isn't tall enough yet
-      if (g.spill > 0.05 && !g.win) {
+      if (g.spill > 0.05 && !g.win && g.row > 0) {
         ctx.globalAlpha = Math.min(1, g.spill * 1.5);
-        const topY = BED - Math.max(0, g.row) * RH, xr = g.row > 0 ? DCX + damRowW(g, g.row - 1) / 2 : DCX;
-        const xl = g.row > 0 ? DCX - damRowW(g, g.row - 1) / 2 : DCX - 40;
+        const topY = BED - g.row * RH, xr = DCX + damRowW(g, g.row - 1) / 2, xl = DCX - damRowW(g, g.row - 1) / 2;
         const sheet = new Path2D(); sheet.moveTo(xl, topY - 2); sheet.lineTo(xr - 6, topY - 2); sheet.quadraticCurveTo(xr + 26, topY + 6, xr + 34, BED - 4);
         ctx.strokeStyle = 'rgba(160,225,255,.9)'; ctx.lineWidth = 12; ctx.stroke(sheet);
         ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 10]); ctx.lineDashOffset = -S.t * 90; ctx.stroke(sheet); ctx.setLineDash([]);
         ctx.globalAlpha = 1;
-        if (g.row > 0 && g.row < g.rows.length) outlined('Too short! Build higher!', Math.min(xr + 60, 700), Math.min(topY - 30, BED - 120), 17, '#ffffff');
       }
-      // --- leaks: a dark crack with a jet that squirts farther the deeper it is
+      // --- leaks: a swirl sucking in on the pond side, a jet squirting out the far side (farther when deeper)
       for (const lk of g.leaks) {
-        const depth = Math.max(0, lk.depth), grow = Math.min(1, lk.t * 3);
-        inkEllipse(lk.x, lk.y, 7, 5, 0.2, '#2a1a3a', 1);
+        const depth = Math.max(0, lk.depth), grow = Math.min(1, lk.t * 3), r = lk.p.r;
+        const ox = DCX + damRowW(g, r) / 2 - 6, oy = lk.y;
         if (depth > 0) {
-          const len = (26 + depth * 1.25) * grow, ex = lk.x + len, ey = BED - 6;
-          const jet = new Path2D(); jet.moveTo(lk.x + 4, lk.y); jet.quadraticCurveTo(lk.x + len * 0.6, lk.y - 6 - depth * 0.08, ex, ey);
+          const len = (26 + depth * 0.8) * grow, ex = Math.min(ox + len, 860), ey = BED - 6;
+          const jet = new Path2D(); jet.moveTo(ox, oy); jet.quadraticCurveTo(ox + len * 0.6, oy - 6 - depth * 0.08, ex, ey);
           ctx.strokeStyle = OL; ctx.lineWidth = 3 + Math.sqrt(depth) * 0.9 + 3; ctx.stroke(jet);
           ctx.strokeStyle = '#8fdcff'; ctx.lineWidth = 3 + Math.sqrt(depth) * 0.9; ctx.stroke(jet);
           ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.setLineDash([5, 9]); ctx.lineDashOffset = -S.t * 140; ctx.stroke(jet); ctx.setLineDash([]);
-          if (grow >= 1) { for (let i = 0; i < 3; i++) ripple(ex, ey + 2, (S.t * 2 + i / 3) % 1, 16, 4); if (Math.random() < 0.3) burst(ex, ey, 1, { colors: ['#b8e6ff', '#ffffff'], spread: 40, up: 60, size: [2, 3] }); }
+          if (grow >= 1) for (let i = 0; i < 3; i++) ripple(ex, ey + 2, (S.t * 2 + i / 3) % 1, 16, 4);
         }
+        inkEllipse(ox, oy, 6, 4, 0.2, '#2a1a3a', 1);
+        // the swirl
+        ctx.save(); ctx.translate(lk.x, lk.y); ctx.rotate(-S.t * 5);
+        ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2.5;
+        for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(0, 0, 6 + k * 6, k * 2.1, k * 2.1 + 2.4); ctx.stroke(); }
+        ctx.restore();
+        inkEllipse(lk.x, lk.y, 6, 5, 0, '#2a1a3a', 1);
         const pr = (S.t * 1.8 + lk.x) % 1;
         ctx.strokeStyle = `rgba(255,236,120,${1 - pr})`; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.arc(lk.x, lk.y, 12 + pr * 22, 0, TAU); ctx.stroke();
+        ctx.beginPath(); ctx.arc(lk.x, lk.y, 16 + pr * 22, 0, TAU); ctx.stroke();
+      }
+      // --- the mud pile on the creek bed (it glows when there's a leak to patch)
+      const want = g.leaks.length && g.held !== 'mud';
+      if (want) { ctx.fillStyle = `rgba(255,236,120,${0.25 + 0.2 * Math.sin(S.t * 6)})`; ellipse(MUD.x, MUD.y - 6, 50, 26); }
+      inkEllipse(MUD.x, MUD.y, 34, 13, 0, '#7a4e30', 1.4);
+      inkEllipse(MUD.x - 8, MUD.y - 9, 20, 10, 0, '#8e5c38', 1);
+      ctx.fillStyle = '#a8764e'; ellipse(MUD.x - 12, MUD.y - 13, 8, 3.5);
+      ctx.fillStyle = '#5f3a22'; circle(MUD.x + 14, MUD.y - 2, 2.5); circle(MUD.x - 20, MUD.y + 2, 2);
+      outlined('mud', MUD.x, MUD.y + 22, 14, want ? '#fff6a8' : '#ffffff');
+      // --- building stuff in the creek (the ones the dam needs now sparkle)
+      const need = damNeed(g);
+      for (const it of g.items) {
+        ctx.save(); ctx.globalAlpha = clamp(it.fade ?? 1, 0, 1);
+        if (it.mat === need && it.st !== 'slide' && it.st !== 'roll') {
+          ctx.fillStyle = `rgba(255,246,170,${0.35 + 0.2 * Math.sin(S.t * 5 + it.seed)})`; ellipse(it.x, it.y, 34, 22);
+        }
+        ctx.translate(it.x, it.y); ctx.rotate(it.rot); ctx.scale(0.62, 0.62);
+        const parts = damParts(it, 0, 0);
+        ctx.strokeStyle = OL; ctx.lineWidth = 6; for (const [pp] of parts) ctx.stroke(pp);
+        for (const [pp, c] of parts) { ctx.fillStyle = c; ctx.fill(pp); }
+        damDetails(it, 0, 0);
+        ctx.restore();
       }
       // --- the finished pond comes alive
       if (g.win) {
-        const e = Math.min(1, g.winT / 1.2);
-        for (const [x, r, f] of [[150, 20, '#ff8ac0'], [250, 16, null], [340, 22, '#ffffff']]) cPad(x, sy + 2, r * e, f, 0.1);
-        emoji('🐸', 252, sy - 10 - Math.abs(Math.sin(g.winT * 4)) * 10 * e, 24 * e);
-        pondFish(140 + Math.sin(g.winT * 0.9) * 60, sy + 60, 0.9, Math.cos(g.winT * 0.9) < 0, '#ffa03a');
-        pondFish(300 + Math.sin(g.winT * 1.2 + 2) * 70, sy + 110, 0.8, Math.cos(g.winT * 1.2 + 2) < 0, '#ff6fae');
-        pondFish(380 + Math.sin(g.winT * 0.7 + 1) * 40, sy + 30, 0.7, Math.cos(g.winT * 0.7 + 1) < 0, '#ffd84a');
-        const dk = hillX(sy) + 30 + g.winT * 34;
+        const e = Math.min(1, g.winT / 1.2), x0 = hillX(sy);
+        for (const [x, r, f] of [[x0 + 50, 20, '#ff8ac0'], [x0 + 140, 16, null], [x0 + 230, 22, '#ffffff']]) cPad(x, sy + 2, r * e, f, 0.1);
+        emoji('🐸', x0 + 140, sy - 10 - Math.abs(Math.sin(g.winT * 4)) * 10 * e, 24 * e);
+        pondFish(x0 + 80 + Math.sin(g.winT * 0.9) * 50, sy + 60, 0.9, Math.cos(g.winT * 0.9) < 0, '#ffa03a');
+        pondFish(x0 + 180 + Math.sin(g.winT * 1.2 + 2) * 60, sy + 110, 0.8, Math.cos(g.winT * 1.2 + 2) < 0, '#ff6fae');
+        const dk = x0 + 20 + g.winT * 30;
         pondDuck(dk + 80, sy + 2, 0.9, 1, '#ffffff'); pondDuck(dk + 40, sy + 2, 0.55, 1, '#ffe04a'); pondDuck(dk + 10, sy + 2, 0.55, 1, '#ffe04a');
-        outlined('A beaver pond!', 300, 150, 44, '#fff6a8');
+        outlined('A beaver pond!', 330, 150, 44, '#fff6a8');
       }
-      // --- Bucky and Tilly
-      drawBeaver(g.bx, g.by, 0.9, g.bdir, g.bAct);
-      text('Bucky', g.bx, g.by + 16, 13, '#ffffff', 'center', 700);
-      drawCritter('Tilly the Turtle', 905, 432, 0.55, -1);
+      // --- Bucky, with whatever he's carrying in his paws
+      const wet = g.by < BED - 2 || g.L > 40;
+      if (wet && Math.random() < 0.06 && !g.win) burst(g.bx + g.bdir * 26, g.by - 50, 1, { colors: ['#ffffff', '#b8e6ff'], spread: 10, up: 50, size: [2, 4] });
+      drawBeaver(g.bx, g.by, 0.72, g.bdir, g.bAct || (Math.hypot(g.vx, g.vy) > 40 ? 0.05 + (S.t % 0.3) : 0));
+      if (g.held) {
+        const hx = g.bx + g.bdir * 30, hy = g.by - 34;
+        if (g.held === 'mud') { inkCircle(hx, hy, 13, '#7a4e30', 1.2); ctx.fillStyle = '#9a6a44'; circle(hx - 4, hy - 4, 5); }
+        else {
+          ctx.save(); ctx.translate(hx, hy); ctx.scale(0.5, 0.5);
+          const fake = { mat: g.held, seed: g.heldSeed }, parts = damParts(fake, 0, 0);
+          ctx.strokeStyle = OL; ctx.lineWidth = 7; for (const [pp] of parts) ctx.stroke(pp);
+          for (const [pp, c] of parts) { ctx.fillStyle = c; ctx.fill(pp); }
+          damDetails(fake, 0, 0); ctx.restore();
+          // point him at the dam
+          const fx = damFace(g, damRowY(g.row)) - 14, fy = damRowY(g.row), bounce = Math.sin(S.t * 6) * 5;
+          ctx.fillStyle = '#fff6a8'; ctx.strokeStyle = OL; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(fx + bounce, fy); ctx.lineTo(fx - 22 + bounce, fy - 14); ctx.lineTo(fx - 22 + bounce, fy + 14); ctx.closePath(); ctx.stroke(); ctx.fill();
+        }
+      }
+      // --- what the dam needs right now
+      if (!g.win) {
+        darkPanel(16, 112, 200, 60, 18);
+        if (g.leaks.length) {
+          inkCircle(46, 142, 14, '#7a4e30', 1.2);
+          text(g.held === 'mud' ? 'Pack the leak!' : 'Get mud!', 70, 142, 19, '#ffe0a0', 'left', 800);
+        } else if (need) {
+          ctx.save(); ctx.translate(48, 146); ctx.scale(0.44, 0.44);
+          const parts = damParts({ mat: need, seed: 3 }, 0, 0);
+          ctx.strokeStyle = OL; ctx.lineWidth = 7; for (const [pp] of parts) ctx.stroke(pp);
+          for (const [pp, c] of parts) { ctx.fillStyle = c; ctx.fill(pp); }
+          ctx.restore();
+          text('Need:', 82, 128, 14, '#d8c8ff', 'left', 700);
+          text(DAM_WORD[need], 82, 152, 19, '#fff', 'left', 800);
+        } else text('Fill the pond!', 30, 142, 19, '#fff', 'left', 800);
+      }
+      if (g.phase === 'play') drawCritter('Tilly the Turtle', 905, 432, 0.55, -1);
       creekCaption(g.msg, 66);
     },
   };
@@ -678,13 +823,15 @@
   // ===========================================================================
   // a pentatonic set (C D E G A C), so any tap sounds sweet
   const CH_F = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25];
+  // the first place tunes its five stones E G A B C instead, so Happy Birthday (which needs B) fits
+  const CH_F1 = [329.63, 392.0, 440.0, 493.88, 523.25];
   const CH_COL = ['#7f8fe0', '#5fb0e8', '#4fc8b0', '#8fd060', '#ffb84a', '#ff7fae'];
   const CH_TONE = ['#b6aecb', '#c9b9a2', '#a8bccb', '#cdb0c4', '#b4c9a6', '#d9c7a8'];
   const CH_PLAN = {
     1: [{ k: 'meet' }, { k: 'ask', which: 'low' }, { k: 'ask', which: 'high' },
-      { k: 'song', name: 'Hot Cross Buns', notes: [2, 1, 0, 2, 1, 0], help: true },
+      { k: 'song', name: 'Happy Birthday', notes: [1, 1, 2, 1, 4, 3], help: true },
       { k: 'pattern', notes: [0, 3, 0, 3, 0, 3], ask: 1 },
-      { k: 'song', name: 'Rain, Rain, Go Away', notes: [3, 2, 3, 3, 2] }],
+      { k: 'song', name: 'Rain, Rain, Go Away', notes: [1, 0, 1, 1, 0] }],
     2: [{ k: 'meet' }, { k: 'ask', which: 'low' }, { k: 'ask', which: 'high' },
       { k: 'song', name: 'Mary Had a Little Lamb', notes: [2, 1, 0, 1, 2, 2, 2], help: true },
       { k: 'pattern', notes: [0, 2, 4, 0, 2, 4], ask: 1 },
@@ -886,7 +1033,7 @@
     icon: () => '🎶',
     how: () => 'Tap the creek stones to make them sing. Big stones sing low and little stones sing high! Play Tilly\'s songs and finish her patterns. Keys 1 to 6 work too.',
     init(g) {
-      const n = g.tier >= 3 ? 6 : g.tier === 2 ? 5 : 4;
+      const n = g.tier >= 3 ? 6 : 5;
       let order = [...Array(n).keys()];
       if (g.tier > 1) { do order = shuffle(order); while (order.every((p, i) => p === i) || order.every((p, i) => p === n - 1 - i)); }
       const rOf = p => 72 - p * (36 / (n - 1));
@@ -898,7 +1045,7 @@
         return s;
       });
       const plan = (CH_PLAN[g.tier] || CH_PLAN[1]).map(s => ({ ...s }));
-      Object.assign(g, { n, stones, plan, si: -1, step: null, mode: 'wait', timer: 1.2, drops: [], credit: 0, total: plan.reduce((a, s) => a + chWanted(s), 0),
+      Object.assign(g, { n, freq: g.tier === 1 ? CH_F1 : CH_F, stones, plan, si: -1, step: null, mode: 'wait', timer: 1.2, drops: [], credit: 0, total: plan.reduce((a, s) => a + chWanted(s), 0),
         tries: 0, help: -1, want: null, pos: 0, seq: [], di: 0, cardHi: -1, T: 0, hintT: -9, wrongN: 0, msg: '' });
       g.say = 'Tap the stones to make them sing!';
       g.progress = `Song card 0/${plan.length}`;
@@ -912,7 +1059,7 @@
         const d = g.drops[i]; d.t += dt;
         if (d.t >= 0.15) {
           g.drops.splice(i, 1);
-          const s = d.s; chime(CH_F[s.p]); s.sing = 1; s.rip = 0;
+          const s = d.s; chime(g.freq[s.p]); s.sing = 1; s.rip = 0;
           burst(s.x, s.base - s.ry * 2, 5, { colors: ['#b8e6ff', '#ffffff'], spread: 60, up: 50, size: [2, 4] });
           floatText(s.x + rand(-10, 10), s.base - s.ry * 2 - 14, pick(['♪', '♫']), CH_COL[s.p], false, 30);
         }
@@ -937,7 +1084,7 @@
           if (g.di < g.seq.length) {
             const p = g.seq[g.di];
             g.cardHi = g.di;
-            if (g.step.help) chStrike(g, chStoneFor(g, p)); else hum(CH_F[p]);
+            if (g.step.help) chStrike(g, chStoneFor(g, p)); else hum(g.freq[p]);
             floatText(868 + rand(-14, 14), 318, pick(['♪', '♫']), CH_COL[p], false, 26);
             g.di++; g.timer = 0.62;
           } else {
@@ -1006,7 +1153,7 @@
       }
       // Tilly on her rock, humming along
       mossyRock(880, 470, 1.15);
-      drawCritter('Tilly the Turtle', 880, 424, 0.58, -1);
+      if (g.phase === 'play') drawCritter('Tilly the Turtle', 880, 424, 0.58, -1);
       if (g.mode === 'demo' && g.di > 0) emoji('🎵', 840 + Math.sin(S.t * 4) * 6, 300, 22);
       chCard(g);
       creekCaption(g.msg, 492);

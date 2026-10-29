@@ -298,22 +298,23 @@
     const edges = [], out = {};
     const add = (from, to, ...wps) => { const pts = tsPath(...wps), e = { from, to, pts, len: pts[pts.length - 1].d }; edges.push(e); (out[from] ||= []).push(e); return e; };
     let plat, sws, levers;
-    const S0 = [200, 300];
+    // the first switch sits well past the tunnel, so there's a long straight run to decide which way to go
+    const S0 = [330, 300];
     if (g.tier === 1) {
-      const S2 = [450, 400];
+      const S2 = [570, 400];
       plat = [150, 320, 470];
       add('E', 'S0', [-110, 300], S0);
-      add('S0', 'P0', S0, [640, 150], [TS_STOP, 150]); add('S0', 'S2', S0, S2);
-      add('S2', 'P1', S2, [640, 320], [TS_STOP, 320]); add('S2', 'P2', S2, [640, 470], [TS_STOP, 470]);
-      sws = ['S0', 'S2']; levers = { S0: [120, 372], S2: [392, 470] };
+      add('S0', 'P0', S0, [730, 150], [TS_STOP, 150]); add('S0', 'S2', S0, S2);
+      add('S2', 'P1', S2, [730, 320], [TS_STOP, 320]); add('S2', 'P2', S2, [730, 470], [TS_STOP, 470]);
+      sws = ['S0', 'S2']; levers = { S0: [250, 372], S2: [512, 470] };
     } else {
-      const S1 = [450, 190], S2 = [450, 410];
+      const S1 = [570, 190], S2 = [570, 410];
       plat = [125, 245, 355, 475];
       add('E', 'S0', [-110, 300], S0);
       add('S0', 'S1', S0, S1); add('S0', 'S2', S0, S2);
-      add('S1', 'P0', S1, [640, 125], [TS_STOP, 125]); add('S1', 'P1', S1, [640, 245], [TS_STOP, 245]);
-      add('S2', 'P2', S2, [640, 355], [TS_STOP, 355]); add('S2', 'P3', S2, [640, 475], [TS_STOP, 475]);
-      sws = ['S0', 'S1', 'S2']; levers = { S0: [120, 372], S1: [394, 262], S2: [394, 478] };
+      add('S1', 'P0', S1, [730, 125], [TS_STOP, 125]); add('S1', 'P1', S1, [730, 245], [TS_STOP, 245]);
+      add('S2', 'P2', S2, [730, 355], [TS_STOP, 355]); add('S2', 'P3', S2, [730, 475], [TS_STOP, 475]);
+      sws = ['S0', 'S1', 'S2']; levers = { S0: [250, 372], S1: [514, 262], S2: [514, 478] };
     }
     // which way each switch must point for each stop
     const route = plat.map(() => ({}));

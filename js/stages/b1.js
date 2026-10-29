@@ -136,8 +136,8 @@
   // --- butterfly life cycle: live every stage of a monarch's life, then a chicken's, and close each circle ----
   const BC_TOP = 122;                       // the play area starts under the prompt strip
   const BC_CYC = [
-    { name: 'Butterfly', who: 'a monarch butterfly', steps: [['egg', 'Egg', '#f0a030'], ['eat', 'Caterpillar', '#4fb04a'], ['spin', 'Chrysalis', '#26a888'], ['emerge', 'Butterfly', '#ff7a1a']],
-      loop: 'Egg, caterpillar, chrysalis, butterfly. Then the butterfly lays a new egg, and round it goes again. That is a life cycle!' },
+    { name: 'Butterfly', who: 'a monarch butterfly', steps: [['egg', 'Egg', '#f0a030'], ['eat', 'Caterpillar', '#4fb04a'], ['spin', 'Cocoon', '#26a888'], ['emerge', 'Butterfly', '#ff7a1a']],
+      loop: 'Egg, caterpillar, cocoon, butterfly. Then the butterfly lays a new egg, and round it goes again. That is a life cycle!' },
     { name: 'Chicken', who: 'a chicken', steps: [['warm', 'Egg', '#d08a3a'], ['hatch', 'Hatching', '#f0a030'], ['chick', 'Chick', '#d8a800'], ['hen', 'Hen', '#e0503a']],
       loop: 'Egg, hatching, chick, hen. Then the hen lays a new egg, and round it goes again. That is a life cycle too!' },
   ];
@@ -249,7 +249,7 @@
     if (chew > 0) { ctx.fillStyle = '#ff9ab0'; circle(hx + Math.cos(a) * r * 0.85, hy + Math.sin(a) * r * 0.85, r * (0.14 + 0.12 * Math.abs(Math.sin(S.t * 30)))); }
     ctx.restore();
   }
-  // a chrysalis hanging from (x, top); clear 0..1 shows the folded orange wings, empty draws the split shell
+  // a cocoon hanging from (x, top); clear 0..1 shows the folded orange wings, empty draws the split shell
   const BC_CHRYS = P2('M0,10 C26,18 32,58 22,86 C16,104 6,112 0,114 C-6,112 -16,104 -22,86 C-32,58 -26,18 0,10 Z');
   function bcChrysalis(x, top, s, { col = '#5ad6a0', clear = 0, wob = 0, cracks = 0, gold = 1, empty = false } = {}) {
     ctx.save(); ctx.translate(x, top); ctx.rotate(wob); ctx.scale(s, s);
@@ -724,10 +724,10 @@
       text(`Munches: ${Math.min(s.bites, s.need)} / ${s.need}`, 480, 517, 13, '#fff', 'center', 800);
     },
 
-    // ---- 3. chrysalis: carry it up to the twig, it hangs in a J, then rub round and round to wrap it
+    // ---- 3. cocoon: carry it up to the twig, it hangs in a J, then rub round and round to wrap it
     in_spin(g, s) {
       Object.assign(s, { sub: 'climb', x: 300, y: 470, home: [300, 470], drag: false, j: 0, acc: 0, la: null, p: 0, q: 0, turns: bcT(g, [3, 4, 5]), sparks: [] });
-      g.say = 'Chrysalis! First the caterpillar hangs upside down in a J shape. Drag it up to the twig!';
+      g.say = 'Cocoon! First the caterpillar hangs upside down in a J shape. Drag it up to the twig!';
       g.tip = 'Drag the caterpillar up to the silk on the twig!';
     },
     jPts(jt) {
@@ -749,7 +749,7 @@
         if (pressed[' '] || pressed.enter || pressed.arrowup) this.attach(g, s);
       } else if (s.sub === 'j') {
         s.j = Math.min(1, s.j + dt / 1.3);
-        if (s.j >= 1) { s.sub = 'wrap'; this.tell(g, 'Now rub round and round, to wrap it up in a chrysalis!', 'Rub round and round the caterpillar!'); }
+        if (s.j >= 1) { s.sub = 'wrap'; this.tell(g, 'Now rub round and round, to wrap it up in a cocoon!', 'Rub round and round the caterpillar!'); }
       } else if (s.sub === 'wrap' && live) {
         const dx = pointer.x - 480, dy = pointer.y - 280, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
         const [lo, hi] = bcT(g, [[30, 270], [45, 230], [60, 200]]), inBand = d > lo && d < hi;
@@ -761,7 +761,7 @@
         if (q > s.q) { s.q = q; chime(q); }
         if (s.p >= 1) {
           s.sub = 'done'; SFX.sparkle(); burst(480, 280, 30, { colors: ['#ffd23a', '#5ad6a0', '#ffffff'] });
-          this.tell(g, 'A chrysalis! Inside it, the caterpillar is changing into a butterfly.', 'Shh... something amazing is happening inside!');
+          this.tell(g, 'A cocoon! Inside it, the caterpillar is changing into a butterfly.', 'Shh... something amazing is happening inside!');
           this.later(g, 3.6, () => this.next(g));
         }
       }
@@ -787,7 +787,7 @@
       const p = s.sub === 'j' ? 0 : s.p;
       if (p < 1) bcCaterpillar(this.jPts(s.sub === 'j' ? s.j : 1), 19 - p * 4, 0, 1 - p * 0.6);
       if (p > 0) {
-        // the chrysalis wraps up from the bottom, changing colour as it goes
+        // the cocoon wraps up from the bottom, changing colour as it goes
         const top = 172, h = 1.7 * 114, cut = top + h * (1 - p) + 4;
         ctx.save(); ctx.beginPath(); ctx.rect(380, cut, 200, 300); ctx.clip();
         bcChrysalis(480, top, 1.7, { col: mix('#d8e070', '#5ad6a0', p), gold: s.sub === 'done' ? 1 : 0 });
@@ -809,15 +809,15 @@
       ctx.globalAlpha = 1;
     },
 
-    // ---- 4. butterfly: cheer the wiggling chrysalis, pump the new wings, let them dry, fly to a flower
+    // ---- 4. butterfly: cheer the wiggling cocoon, pump the new wings, let them dry, fly to a flower
     in_emerge(g, s) {
       Object.assign(s, { sub: 'clear', clear: 0, wig: 0, wigT: 1.4, cracks: 0, need: bcT(g, [3, 4, 4]), out: 0, wing: 0.12, pumps: 0, pneed: bcT(g, [6, 8, 10]),
         last: 0, pulse: 0, padHit: [0, 0], dry: 0, bx: 480, by: 392, sip: 0, webCd: 0, flowerI: 0 });
       const far = shuffle([0, 3]);
       s.targets = g.tier === 1 ? [far[0]] : far;
       s.flowers = [[150, 418, '#ff6fae'], [360, 450, '#c6a2ff'], [600, 450, '#ffd23a'], [810, 418, '#ff9a5a']];
-      g.say = 'Butterfly! Days later, the chrysalis turns clear, and you can see orange wings inside! Tap it when it wiggles to cheer it on!';
-      g.tip = 'Tap the chrysalis when it wiggles!';
+      g.say = 'Butterfly! Days later, the cocoon turns clear, and you can see orange wings inside! Tap it when it wiggles to cheer it on!';
+      g.tip = 'Tap the cocoon when it wiggles!';
     },
     up_emerge(g, s, dt, live) {
       s.pulse = Math.max(0, s.pulse - dt * 2.5); s.webCd = Math.max(0, s.webCd - dt);
