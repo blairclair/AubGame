@@ -653,6 +653,16 @@
   };
 
   // --- Sunbeam Mirrors: tap mirrors to turn them, bounce the sunbeam into the nest --------------
+  // polyline helpers for the teeny Aubrey who walks along the sunbeam
+  const smLen = pts => { let t = 0; for (let i = 1; i < pts.length; i++) t += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return t; };
+  const smAt = (pts, d) => {
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, ay] = pts[i - 1], [bx, by] = pts[i], l = Math.hypot(bx - ax, by - ay);
+      if (d <= l || i === pts.length - 1) { const f = l ? clamp(d / l, 0, 1) : 0; return [lerp(ax, bx, f), lerp(ay, by, f), Math.sign(bx - ax), Math.sign(by - ay)]; }
+      d -= l;
+    }
+    return [...pts[0], 1, 0];
+  };
   MG.sunmirrors = {
     kind: 'learn', title: () => 'Sunbeam Mirrors', icon: () => '☀️',
     how: () => "Blaze's nest is cold! Tap a mirror to turn it, and bounce the sunbeam into the nest.",
@@ -702,6 +712,7 @@
       }
       for (const row of g.cells) for (const m of row) if (m) { m.tgt = ang(m.o); m.ang = m.tgt; }
       Object.assign(g, { taps: 0, state: 'play', t2: 0, hint: 0 });
+      g.walk = 48 + g.cs / 2; // teeny Aubrey starts on the first square of the beam
       g.say = g.round === 0 ? 'Tap the mirrors to turn them. Send the sunbeam into the nest!' : 'A new puzzle! Bounce the sunbeam into the nest.';
       if (g.phase === 'play') speak(g.say);
     },
@@ -723,7 +734,12 @@
     turn(g, c, r) {
       const m = g.cells[r]?.[c];
       if (!m || g.state !== 'play') return;
+      const before = this.trace(g).pts;
       m.o = m.o === '/' ? '\\' : '/'; m.tgt += Math.PI / 2; g.taps++;
+      // the beam changed from this mirror on: if she was past it, she hops back to where the new beam turns
+      const after = this.trace(g).pts; let k = 0;
+      while (k < before.length && k < after.length && before[k][0] === after[k][0] && before[k][1] === after[k][1]) k++;
+      g.walk = Math.max(48 + g.cs / 2, Math.min(g.walk, smLen(after.slice(0, k))));
       tone(880, 0.06, 'triangle', 0.06); tone(1320, 0.05, 'sine', 0.04, 0.04);
       if (this.trace(g).hit) {
         const extra = g.taps - g.need;
@@ -736,6 +752,11 @@
     },
     update(g, dt, id) {
       for (const row of g.cells) for (const m of row) if (m) m.ang = lerp(m.ang, m.tgt, Math.min(1, dt * 14));
+      // she walks along the light to wherever it ends: the nest, or the last square before it leaves the board
+      const bt = this.trace(g), end = smLen(bt.pts) - (bt.hit ? 0 : g.cs / 2 + 14);
+      g.walking = g.walk < end - 1;
+      const sp = g.state === 'yay' ? 420 : 150; // hurries once it's solved, so she reaches the nest before the next puzzle
+      g.walk = g.walk < end ? Math.min(end, g.walk + sp * dt) : Math.max(end, g.walk - sp * dt);
       if (g.state === 'play') {
         const { x0, y0 } = this.geom(g);
         if (pointer.clicked) {
@@ -809,6 +830,11 @@
         ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(-L * 0.6 + Math.sin(S.t * 2 + c) * L * 0.3, -4, 6, 8);
         ctx.restore();
       }
+      // teeny Aubrey on the beam: walking frames while she follows it, a twirl when she reaches the nest
+      const [ax, ay, mdx, mdy] = smAt(tr.pts, g.walk), as = g.cs * 0.0034;
+      const fr = yay && tr.hit ? 'twirl' : g.walking ? (mdy < 0 ? 'idle_back' : mdy > 0 ? 'idle_front' : `run${1 + Math.floor(S.t * 12) % 5}`) : 'idle_front';
+      ctx.fillStyle = 'rgba(90,40,10,.3)'; ellipse(ax, ay + cs * 0.3, cs * 0.16, cs * 0.05);
+      drawAubrey(ax, ay + cs * 0.3, fr, mdx < 0 ? -1 : 1, g.walking && mdy ? Math.abs(Math.sin(S.t * 12)) * 3 : 0, as);
       if (g.kb && !yay) { ctx.setLineDash([8, 6]); rrect(x0 + g.cur[0] * cs + 2, y0 + g.cur[1] * cs + 2, cs - 4, cs - 4, 12, null, '#ff6fb5', 4); ctx.setLineDash([]); }
       drawCritter('Blaze the Phoenix', 110, 520, 0.6, 1);
     },
