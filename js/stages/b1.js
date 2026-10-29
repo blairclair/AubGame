@@ -4641,6 +4641,98 @@
     ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 6, y + h / 2 - 4, 15, 4);
     text(str, x, y + 1, size, '#5a2a6e', 'center', 800);
   }
+  // --- walking through: after the first door, you stand INSIDE the room you just opened, and
+  // the next door is set into its back wall. The things you counted are still there.
+  const GK_WALL = { tea: ['#fff0d0', '#ffe0b0'], glow: ['#2c2a5e', '#1e1c44'], hog: ['#ffe2b8', '#f4c890'], dinner: ['#fff0dc', '#ffdcb8'], fly: ['#2a3870', '#1a2450'] };
+  const GK_FLOOR = { tea: '#d89a60', glow: '#3a3468', hog: '#c08450', dinner: '#c88a50', fly: '#34406e' };
+  // where the counted things sit in each room: rows of [x0, x1, y]
+  // (kept above the key ring, off the door, and clear of Gnorbert on the right)
+  const GK_SPOTS = {
+    tea: [[118, 290, 282], [50, 350, 318], [596, 716, 318]],
+    glow: [[60, 350, 318], [596, 716, 318], [80, 330, 288]],
+    hog: [[60, 330, 128], [60, 330, 196], [60, 330, 264]],
+    dinner: [[600, 700, 254], [60, 350, 318], [80, 330, 288]],
+    fly: [[60, 340, 150], [590, 716, 110], [70, 330, 236]],
+  };
+  function gkSpot(id, n, i) {
+    const rows = GK_SPOTS[id], per = Math.ceil(n / rows.length);
+    const r = Math.min(rows.length - 1, Math.floor(i / per)), c = i - r * per, inRow = Math.min(per, n - r * per), [x0, x1, y] = rows[r];
+    return [inRow > 1 ? lerp(x0, x1, c / (inRow - 1)) : (x0 + x1) / 2, y];
+  }
+  function gkInteriorStatic(id) {
+    const { x, top, base, hw } = GKD, dark = id === 'glow' || id === 'fly', [w0, w1] = GK_WALL[id];
+    ctx.fillStyle = vgrad(0, base, w0, w1); ctx.fillRect(0, 0, W, base + 4);
+    // wallpaper
+    if (id === 'tea') { ctx.fillStyle = 'rgba(255,130,170,.18)'; for (let i = 0; i < 24; i++) ctx.fillRect(i * 42, 0, 16, base); }
+    if (id === 'dinner') { ctx.fillStyle = 'rgba(200,100,80,.1)'; for (let i = 0; i < 24; i++) for (let j = 0; j < 9; j++) if ((i + j) % 2) ctx.fillRect(i * 40, j * 40, 40, 40); }
+    if (id === 'hog') { ctx.fillStyle = 'rgba(160,100,50,.12)'; for (let i = 0; i < 30; i++) for (let j = 0; j < 9; j++) circle(16 + i * 34 + (j % 2) * 17, 18 + j * 36, 4); }
+    if (dark) { ctx.fillStyle = 'rgba(255,255,255,.55)'; const R = rng(id === 'fly' ? 5 : 9); for (let i = 0; i < 60; i++) circle(R() * W, R() * (base - 20), 0.8 + R() * 1.4); }
+    // a wooden beam ceiling and a skirting board
+    ctx.fillStyle = dark ? '#4a4080' : '#b07a48'; ctx.fillRect(0, 0, W, 14);
+    for (let i = 0; i < 7; i++) inkRect(40 + i * 150, -6, 20, 24, dark ? '#5a50a0' : '#a06a3a', 2, 3);
+    ctx.fillStyle = dark ? '#4a4280' : '#a06a3a'; ctx.fillRect(0, base - 10, W, 12);
+    // the floor: planks running toward you, and a round rug in front of the door
+    ctx.fillStyle = vgrad(base, H, GK_FLOOR[id], mix(GK_FLOOR[id], '#000000', 0.25)); ctx.fillRect(0, base + 2, W, H - base);
+    ctx.strokeStyle = 'rgba(0,0,0,.14)'; ctx.lineWidth = 2;
+    for (let i = -12; i <= 12; i++) { ctx.beginPath(); ctx.moveTo(x + i * 46, base + 2); ctx.lineTo(x + i * 110, H); ctx.stroke(); }
+    ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, base + 2); ctx.lineTo(W, base + 2); ctx.stroke();
+    inkEllipse(x, base + 30, 150, 22, 0, { tea: '#ff9ac8', glow: '#7a6ae0', hog: '#8fd06a', dinner: '#ff8a5a', fly: '#5fa8e8' }[id], 2);
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, base + 30, 120, 15, 0, 0, TAU); ctx.stroke();
+    // the next door's frame: a wooden arch with a little garland
+    ink(gkDoorPath(16), dark ? '#6a5aa8' : '#a8703e', 3);
+    ctx.save(); ctx.clip(gkDoorPath(16)); ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 2; for (let i = 0; i < 10; i++) { ctx.beginPath(); ctx.arc(x, top + hw, hw + 4 + i * 1.3, Math.PI, TAU); ctx.stroke(); } ctx.restore();
+    ink(gkDoorPath(4), '#2a1828', 2);
+    for (let i = 0; i <= 8; i++) { const a = Math.PI + 0.25 + i * (Math.PI - 0.5) / 8; tinyFlower(x + Math.cos(a) * (hw + 12), top + hw + Math.sin(a) * (hw + 12), 5, ['#ff6fae', '#ffd23a', '#ffffff', '#c6a2ff'][i % 4]); }
+    inkRect(x - 96, base - 2, 192, 12, dark ? '#8a7ac8' : '#c8c0d4', 2.4, 5);
+    // furniture for each room
+    if (id === 'tea') {
+      inkRect(196, 300, 14, 40, '#c88a50', 2, 3); inkRect(150, 334, 106, 8, '#c88a50', 2, 3);
+      inkEllipse(203, 298, 112, 16, 0, '#ffffff', 2.4); ctx.fillStyle = '#ff9ac8'; for (let i = -9; i <= 9; i++) circle(203 + i * 11.5, 310, 4);
+      // bunting across the wall
+      ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 40); ctx.quadraticCurveTo(200, 80, 380, 40); ctx.moveTo(580, 40); ctx.quadraticCurveTo(760, 80, 960, 40); ctx.stroke();
+      for (let i = 0; i < 16; i++) { const L = i < 8, u = (i % 8 + 0.5) / 8, bx = L ? u * 380 : 580 + u * 380, by = 40 + 4 * 40 * u * (1 - u) * 0.5 * 2; ink(P2(`M${bx - 12},${by} L${bx + 12},${by} L${bx},${by + 22} Z`), ['#ff6fae', '#ffd23a', '#7ad0ff', '#8fdc66'][i % 4], 1.4); }
+      inkRect(640, 120, 110, 84, '#ffd23a', 2.4, 6); inkRect(650, 130, 90, 64, '#bfe8ff', 1.6, 3); inkCircle(695, 166, 16, '#ff3a3a', 1.4); ctx.fillStyle = '#2a1a2a'; circle(695, 150, 7); circle(689, 166, 3); circle(701, 170, 3);
+    } else if (id === 'glow') {
+      for (const [mx, my, s, c] of [[30, 322, 3.6, '#7af0ff'], [370, 324, 1.6, '#ff8af0'], [740, 322, 2.2, '#ffd86a'], [590, 324, 1.6, '#b6ff6a']]) tinyShroom(mx, my, s, c);
+      inkCircle(700, 110, 30, '#e8e8ff', 2); ctx.fillStyle = '#2c2a5e'; circle(712, 102, 26);
+    } else if (id === 'hog') {
+      for (const y of [146, 214, 282]) { inkRect(40, y, 310, 12, '#a0683a', 2, 3); for (const bx of [70, 320]) { ink(P2(`M${bx},${y + 12} L${bx},${y + 30} L${bx + 14},${y + 12} Z`), '#8a5a30', 1.4); } }
+      inkRect(610, 270, 190, 40, '#8a5a3a', 2.4, 8); inkRect(618, 250, 174, 30, '#7ab8f0', 2, 12); inkEllipse(646, 252, 24, 12, 0, '#ffffff', 1.8);
+      ctx.save(); ctx.translate(712, 250); ctx.scale(2, 2);
+      ink(P2('M-26,4 C-28,-14 -10,-22 6,-18 C14,-16 22,-8 22,4 Z'), '#8a6040', 1.6);
+      ctx.strokeStyle = '#5a3a20'; ctx.lineWidth = 1.5; for (let i = 0; i < 7; i++) { const a = Math.PI + 0.3 + i * 0.36; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 14, Math.sin(a) * 12); ctx.lineTo(Math.cos(a) * 22, Math.sin(a) * 19); ctx.stroke(); }
+      inkEllipse(24, 0, 8, 6, 0.2, '#e8c8a0', 1.3); ctx.fillStyle = '#2a1a1a'; circle(31, -1, 2); ctx.strokeStyle = '#2a1a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(22, -2, 2.5, 0.2, Math.PI - 0.2); ctx.stroke();
+      ctx.restore();
+    } else if (id === 'dinner') {
+      inkRect(590, 270, 210, 14, '#a0683a', 2.4, 4); inkRect(604, 284, 10, 46, '#8a5a3a', 2, 2); inkRect(776, 284, 10, 46, '#8a5a3a', 2, 2);
+      inkEllipse(695, 268, 26, 8, 0, '#ffffff', 1.8); ctx.fillStyle = '#ff8a3a'; ellipse(695, 265, 18, 4);
+      // a window with curtains
+      inkRect(120, 70, 180, 150, '#bfe8ff', 2.6, 8); ctx.strokeStyle = '#a0683a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(210, 70); ctx.lineTo(210, 220); ctx.moveTo(120, 145); ctx.lineTo(300, 145); ctx.stroke();
+      ink(P2('M110,60 C150,120 130,180 150,232 L104,232 L104,60 Z'), '#ff6f7a', 2); ink(P2('M310,60 C270,120 290,180 270,232 L316,232 L316,60 Z'), '#ff6f7a', 2);
+      inkRect(100, 52, 220, 12, '#a0683a', 2, 4);
+    } else {
+      inkCircle(200, 150, 96, '#7a5a9a', 3); inkCircle(200, 150, 82, '#1a2450', 2);
+      ctx.save(); ctx.beginPath(); ctx.arc(200, 150, 82, 0, TAU); ctx.clip();
+      inkCircle(232, 116, 26, '#fff6c0', 1.6); ctx.fillStyle = '#1a2450'; circle(220, 108, 22);
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; for (const [sx, sy] of [[150, 100], [170, 190], [250, 200], [130, 160]]) circle(sx, sy, 1.6);
+      ctx.restore();
+      ctx.strokeStyle = '#7a5a9a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(118, 150); ctx.lineTo(282, 150); ctx.moveTo(200, 68); ctx.lineTo(200, 232); ctx.stroke();
+      inkRect(600, 260, 200, 50, '#8a6aa8', 2.4, 14); inkRect(600, 228, 200, 40, '#9a7ab8', 2.4, 14); inkRect(590, 250, 26, 60, '#7a5a98', 2, 10); inkRect(784, 250, 26, 60, '#7a5a98', 2, 10);
+    }
+  }
+  function gkInterior(here, t) {
+    const id = here.room.id;
+    still('gk_in_' + id, () => gkInteriorStatic(id));
+    if (id === 'hog') for (let i = 0; i < 3; i++) { const z = (t * 0.5 + i / 3) % 1; ctx.globalAlpha = 1 - z; text('z', 750 + z * 30, 210 - z * 60, 16 + z * 12, '#5a6ab0', 'center', 800); ctx.globalAlpha = 1; }
+    if (id === 'dinner') for (let i = 0; i < 3; i++) { const z = (t * 0.6 + i / 3) % 1; ctx.fillStyle = `rgba(255,255,255,${0.6 * (1 - z)})`; circle(690 + i * 6 + Math.sin(t * 2 + i) * 4, 258 - z * 40, 3 + z * 5); }
+    // the things counted in this room are still here
+    for (let i = 0; i < here.n; i++) {
+      let [ix, iy] = gkSpot(id, here.n, i);
+      if (id === 'fly') { ix += Math.sin(t * 0.9 + i * 2.3) * 16; iy += Math.cos(t * 1.1 + i * 1.7) * 12; }
+      gkItem(id, ix, iy + Math.sin(t * 3 + i) * 1.5, 1.5, t, i);
+    }
+  }
+
   MG.gnomekeys = {
     kind: 'learn', title: () => 'Gnome Door Keys', icon: () => '🗝️',
     how: g => (g.tier === 1
@@ -4659,6 +4751,8 @@
       const k = g.gk, [lo, hi] = [[1, 5], [1, 10], [4, 15]][g.tier - 1];
       let n; do n = randInt(lo, hi); while (k.used.includes(n) && k.used.length < hi - lo + 1);
       k.used.push(n);
+      // from the second door on, we're standing inside the room the last door opened
+      if (k.room) k.here = { room: k.room, n: k.n };
       const vals = new Set([n]), top = [6, 10, 15][g.tier - 1];
       for (const c of shuffle([n - 1, n + 1, n - 2, n + 2, n + 3, n - 3, n + 4, n - 4])) { if (vals.size >= 4) break; if (c >= 1 && c <= top) vals.add(c); }
       k.keys = shuffle([...vals]).map((v, i) => ({ v, rep: gkRep(v, g.tier), a: rand(-0.5, 0.5), va: rand(-2, 2), tried: false, pal: i }));
@@ -4782,9 +4876,12 @@
         if (k.st_t > 0.2 + k.n * iv + 0.6) { this.gkSet(k, 'cheer'); this.gkMood(k, 'cheer'); SFX.sparkle(); burst(GKD.x, 200, 30); burst(GKD.gx, GKD.gy - 120, 14, { kind: 'heart', colors: ['#ff6fb5', '#ff9ac8'] }); }
       } else if (k.st === 'cheer') {
         if (id === 'gknext' || pressed.enter || pressed[' '] || k.st_t > 3.6) {
-          k.round++;
-          if (k.round >= k.rounds) g.done = true; else this.gkRound(g);
+          if (k.round + 1 >= k.rounds) { k.round++; g.done = true; } else { this.gkSet(k, 'enter'); gkCreak(); }
         }
+      } else if (k.st === 'enter') {
+        // walk through the open door: zoom into the room, then its back wall has the next door
+        k.slide = gkEase(clamp(k.st_t / 0.9, 0, 1));
+        if (k.st_t >= 0.9) { k.round++; this.gkRound(g); }
       }
       g.progress = `Door ${Math.min(k.round + 1, k.rounds)} of ${k.rounds}`;
       g.score = k.total / k.rounds;
@@ -4792,21 +4889,26 @@
     draw(g) {
       const k = g.gk, t = k.t, { x, base } = GKD;
       const shake = k.st === 'jam' && k.st_t < 0.6 ? Math.sin(k.st_t * 46) * 5 * (1 - k.st_t / 0.6) : 0;
-      still('gk_ground', gkGroundStatic);
-      ctx.save(); ctx.translate(k.slide * 760, 0);
-      still('gk_tree', gkTreeStatic);
-      // a warm flickering window (someone moving about inside), an attic window, ivy, chimney smoke and a lantern
-      const f = 0.8 + 0.1 * Math.sin(t * 5) + 0.08 * Math.sin(t * 13);
-      for (const [wx, wy, r] of [[318, 176, 22], [632, 150, 12]]) {
-        const gl = ctx.createRadialGradient(wx, wy, 2, wx, wy, r * 2.6); gl.addColorStop(0, `rgba(255,210,110,${0.45 * f})`); gl.addColorStop(1, 'rgba(255,210,110,0)'); ctx.fillStyle = gl; circle(wx, wy, r * 2.6);
-        inkCircle(wx, wy, r, mix('#ffb04a', '#fff2a0', f - 0.55), 1.4);
-        if (r > 15) { ctx.fillStyle = 'rgba(90,50,40,.5)'; const sx = wx + Math.sin(t * 0.7) * 8; ellipse(sx, wy + 10, 6, 9); circle(sx, wy - 2, 5); }
-        ctx.strokeStyle = '#7a4a2a'; ctx.lineWidth = r > 15 ? 4 : 3; ctx.beginPath(); ctx.moveTo(wx - r, wy); ctx.lineTo(wx + r, wy); ctx.moveTo(wx, wy - r); ctx.lineTo(wx, wy + r); ctx.stroke();
+      const zoom = k.st === 'enter' ? 1 + 5 * gkEase(clamp(k.st_t / 0.9, 0, 1)) ** 2 : 1;
+      ctx.save();
+      if (zoom > 1) { ctx.translate(x, 215); ctx.scale(zoom, zoom); ctx.translate(-x, -215); }
+      if (k.here) gkInterior(k.here, t);
+      else {
+        still('gk_ground', gkGroundStatic);
+        still('gk_tree', gkTreeStatic);
+        // a warm flickering window (someone moving about inside), an attic window, ivy, chimney smoke and a lantern
+        const f = 0.8 + 0.1 * Math.sin(t * 5) + 0.08 * Math.sin(t * 13);
+        for (const [wx, wy, r] of [[318, 176, 22], [632, 150, 12]]) {
+          const gl = ctx.createRadialGradient(wx, wy, 2, wx, wy, r * 2.6); gl.addColorStop(0, `rgba(255,210,110,${0.45 * f})`); gl.addColorStop(1, 'rgba(255,210,110,0)'); ctx.fillStyle = gl; circle(wx, wy, r * 2.6);
+          inkCircle(wx, wy, r, mix('#ffb04a', '#fff2a0', f - 0.55), 1.4);
+          if (r > 15) { ctx.fillStyle = 'rgba(90,50,40,.5)'; const sx = wx + Math.sin(t * 0.7) * 8; ellipse(sx, wy + 10, 6, 9); circle(sx, wy - 2, 5); }
+          ctx.strokeStyle = '#7a4a2a'; ctx.lineWidth = r > 15 ? 4 : 3; ctx.beginPath(); ctx.moveTo(wx - r, wy); ctx.lineTo(wx + r, wy); ctx.moveTo(wx, wy - r); ctx.lineTo(wx, wy + r); ctx.stroke();
+        }
+        for (const [ix, len, ph] of [[270, 130, 0], [292, 84, 2], [668, 150, 1], [690, 96, 3]]) gkIvy(ix, 0, len, t, ph);
+        for (let i = 0; i < 4; i++) { const z = (t * 0.32 + i / 4) % 1; ctx.fillStyle = `rgba(255,255,255,${0.55 * (1 - z)})`; circle(744 + Math.sin(t * 1.2 + i * 2) * 6 + z * 18, 190 - z * 110, 6 + z * 12); }
+        lantern(380, 226, t, 1, '#ffb03a');
+        gkAwning(k.cap);
       }
-      for (const [ix, len, ph] of [[270, 130, 0], [292, 84, 2], [668, 150, 1], [690, 96, 3]]) gkIvy(ix, 0, len, t, ph);
-      for (let i = 0; i < 4; i++) { const z = (t * 0.32 + i / 4) % 1; ctx.fillStyle = `rgba(255,255,255,${0.55 * (1 - z)})`; circle(744 + Math.sin(t * 1.2 + i * 2) * 6 + z * 18, 190 - z * 110, 6 + z * 12); }
-      lantern(380, 226, t, 1, '#ffb03a');
-      gkAwning(k.cap);
       ctx.translate(shake, 0);
       if (k.open > 0) gkRoom(k);
       // the door swings on its left hinge; the key in the lock swings with it
@@ -4874,6 +4976,8 @@
       // a short reading line for grown-ups and early readers
       const tip = k.st === 'pick' ? (g.tier === 1 ? `Find the key with ${k.n} dot${k.n > 1 ? 's' : ''}!` : `Which key shows ${k.n}?`) : k.st === 'turn' ? 'Twist the key round!' : k.st === 'count' ? 'Count with Gnorbert!' : k.st === 'reveal' || k.st === 'cheer' ? `${k.n} ${k.n === 1 ? k.room.one : k.room.many}!` : '';
       if (tip) { ctx.font = `700 17px ${FONT}`; const tw = ctx.measureText(tip).width + 30; rrect(16, 66, tw, 34, 17, 'rgba(60,30,70,.75)'); text(tip, 16 + tw / 2, 83, 17, '#fff', 'center', 700); }
+      // stepping into the new room: a warm flash as the zoom ends
+      if (k.here && k.st === 'arrive' && k.st_t < 0.45) { ctx.fillStyle = `rgba(255,248,230,${1 - k.st_t / 0.45})`; ctx.fillRect(0, 0, W, H); }
       if (k.st === 'cheer' && !g.done) button('gknext', W - 200, 64, 184, 48, 'Next door', { icon: '🚪', color: '#5fb87a', size: 20 });
     },
   };
@@ -5344,40 +5448,41 @@
   // each fact is [harder?, fact in the animal's voice, what we say after]. Every fact must fit only
   // ONE of these animals, because any of the others can be milling about in the pen.
   const FARM_FACTS = {
-    cow: [[0, 'Most of the milk at the grocery store comes from me.', 'Cows give us most of the milk we drink.'],
-      [0, 'A boy of my kind is called a bull, and my baby is a calf.', 'Boy cows are bulls, and babies are calves.'],
-      [1, 'I can lick the inside of my own nose with my long tongue!', 'A cow\'s tongue is so long it can reach right up its nose!']],
-    sheep: [[0, 'My baby is a lamb, and a boy of my kind is a ram.', 'Baby sheep are lambs, and boy sheep are rams.'],
-      [0, 'If one of my flock walks off, the rest of us follow the leader!', 'Sheep stick together and follow the leader.'],
-      [1, 'My wool has a special grease called lanolin that goes in hand cream.', 'Lanolin from sheep wool keeps hands soft!']],
-    goat: [[0, 'My baby is called a kid, just like a human child!', 'Baby goats are called kids.'],
-      [0, 'I am such a good climber, I can even climb up trees!', 'Some goats climb trees to munch the leaves.'],
-      [1, 'I have a beard on my chin, and my horns curve backwards.', 'Lots of goats have chin beards and curvy horns.']],
-    llama: [[0, 'When I get really grumpy, I spit!', 'Llamas spit when they are cross.'],
-      [0, 'I come from the tall Andes mountains in South America.', 'Llamas live high in the Andes mountains.'],
-      [1, 'My baby is called a cria, and I hum to talk to my friends.', 'Llamas hum to each other, and their babies are crias.']],
-    horse: [[0, 'People measure how tall I am in hands, not feet!', 'Horses are measured in hands. One hand is about four inches.'],
-      [0, 'I race around a racetrack with a jockey riding on my back.', 'Racehorses are ridden by jockeys.'],
-      [1, 'A grown-up boy of my kind is called a stallion.', 'A grown-up boy horse is a stallion.']],
-    donkey: [[0, 'I have extra-long ears, and I bray: hee-haw!', 'Donkeys bray hee-haw, and their long ears help them stay cool.'],
-      [0, 'Another name for me is a burro.', 'Burro is another word for a donkey.'],
-      [1, 'A girl of my kind is called a jenny, and a boy is a jack.', 'Girl donkeys are jennies, and boy donkeys are jacks.']],
-    pig: [[0, 'I roll in mud to stay cool, because I can hardly sweat.', 'Pigs can\'t sweat much, so mud keeps them cool.'],
-      [0, 'My nose is called a snout, and I dig in the dirt with it.', 'Pigs dig for food with their snouts.'],
-      [1, 'I am one of the smartest farm animals, even smarter than a dog!', 'Pigs are super smart and can learn tricks.']],
-    rabbit: [[0, 'My front teeth never stop growing, so I chew all day.', 'Rabbits chew hay to keep their teeth short.'],
-      [0, 'I thump my big back feet to warn my friends about danger.', 'A rabbit thump means look out!'],
-      [1, 'When I am happy, I jump and twist in the air. It is called a binky!', 'A happy rabbit does a binky!']],
-    hen: [[0, 'A boy of my kind is called a rooster, and he crows in the morning.', 'Roosters crow cock-a-doodle-doo!'],
-      [0, 'The red crown on top of my head is called a comb.', 'That floppy red crown is a comb.'],
-      [1, 'My babies are called chicks, and I cluck to call them to food.', 'Mother hens cluck to show their chicks where the food is.']],
-    duck: [[0, 'My oily feathers keep me dry, so water rolls right off me.', 'Oily feathers keep ducks dry.'],
-      [0, 'I have webbed feet that work like flippers.', 'Webbed feet help ducks paddle.'],
-      [1, 'I tip upside down in the pond to find food. It is called dabbling.', 'Ducks dabble with their tails in the air!']],
-    turkey: [[0, 'A boy of my kind gobbles and fans his tail out like a big wheel.', 'Boy turkeys gobble and show off their tail fans.'],
-      [0, 'The floppy red skin that hangs over my beak is called a snood.', 'That dangly bit over a turkey\'s beak is a snood.'],
-      [1, 'My bare head can change colour to red, white or blue!', 'A turkey\'s head changes colour when it gets excited.']],
+    cow: [[0, 'I say MOO!', 'Cows say moo!'],
+      [0, 'Most of the milk we drink comes from me.', 'Cows give us most of our milk.'],
+      [1, 'I am big, and lots of us have black and white spots.', 'Lots of cows have black and white patches.']],
+    sheep: [[0, 'I say BAA!', 'Sheep say baa!'],
+      [0, 'My fluffy wool is made into warm sweaters.', 'Sheep wool keeps us cosy!'],
+      [1, 'My baby is called a lamb.', 'Baby sheep are lambs.']],
+    goat: [[0, 'I have a little beard on my chin.', 'Lots of goats have beards!'],
+      [0, 'I love to climb up high on rocks.', 'Goats are great climbers!'],
+      [1, 'My baby is called a kid, just like you!', 'Baby goats are called kids.']],
+    llama: [[0, 'I have a long fluffy neck, and I spit when I get grumpy!', 'Llamas spit when they are cross.'],
+      [0, 'I hum to talk to my friends. Hmmmm!', 'Llamas hum to each other.'],
+      [1, 'I come from big mountains in South America.', 'Llamas come from the mountains of South America.']],
+    horse: [[0, 'I say NEIGH!', 'Horses say neigh!'],
+      [0, 'I have a long flowing mane, and I gallop super fast.', 'Horses are fast runners!'],
+      [1, 'Cowboys ride on my back to round up the cows.', 'Cowboys ride horses.']],
+    donkey: [[0, 'I say HEE-HAW!', 'Donkeys say hee-haw!'],
+      [0, 'I look like a little horse with really long ears.', 'Donkeys have big long ears.'],
+      [1, 'Eeyore in Winnie the Pooh is one of me!', 'Eeyore is a donkey!']],
+    pig: [[0, 'I say OINK!', 'Pigs say oink!'],
+      [0, 'I roll in the mud to stay cool.', 'Mud keeps pigs cool.'],
+      [1, 'I have a curly tail and a flat nose called a snout.', 'A pig\'s nose is called a snout.']],
+    rabbit: [[0, 'I hop, hop, hop, and I love to munch carrots.', 'Rabbits hop and munch!'],
+      [0, 'I have long ears and a fluffy cotton tail.', 'Rabbits have fluffy tails.'],
+      [1, 'I thump my big back feet to say: watch out!', 'A rabbit thump means look out!']],
+    hen: [[0, 'I say CLUCK CLUCK!', 'Hens say cluck cluck!'],
+      [0, 'Most of the eggs we eat for breakfast come from me.', 'Hens lay the eggs we eat.'],
+      [1, 'I have a floppy red comb on top of my head.', 'That red crown is called a comb.']],
+    duck: [[0, 'I say QUACK!', 'Ducks say quack!'],
+      [0, 'I swim in the pond and paddle with my webbed feet.', 'Webbed feet help ducks paddle.'],
+      [1, 'Water rolls right off my oily feathers.', 'Oily feathers keep ducks dry.']],
+    turkey: [[0, 'I say GOBBLE GOBBLE!', 'Turkeys say gobble gobble!'],
+      [0, 'I spread my tail feathers out like a big fan.', 'Turkeys show off their tail fans.'],
+      [1, 'Kids draw me by tracing their hand!', 'A hand turkey!']],
   };
+
   const FARM_KINDS = Object.keys(FARM_FACTS);
   // the pen: its fence line, the floor the animals' feet stay on, and the barn door they come and go by
   const FFP = { x0: 196, x1: 944, y0: 214, y1: 530, ax0: 252, ax1: 896, ay0: 282, ay1: 484, door: { x: 862, y: 250 } };
@@ -5463,7 +5568,7 @@
     kind: 'learn', title: () => 'Farm Facts', icon: () => '🐮',
     how: () => 'Penny will tell you a farm fact. Listen, then find the animal it is about and catch it! Tap the animal, or walk up to it and press Space.',
     init(g) {
-      const rounds = [6, 7, 8][g.tier - 1], nHard = [1, 3, 4][g.tier - 1], n = [4, 5, 6][g.tier - 1];
+      const rounds = [6, 7, 8][g.tier - 1], nHard = [0, 1, 2][g.tier - 1], n = [4, 5, 6][g.tier - 1];
       const pool = shuffle(FARM_KINDS), herd = [];
       for (const k of pool.slice(0, n)) { const p = ffSpot(herd); herd.push(ffAnimal(k, p.x, p.y)); }
       Object.assign(g, { round: 0, rounds, nHard, total: 0, herd, spare: pool.slice(n), ax: 560, ay: 400, adir: 1, run: 0, aim: null, hug: null, talk: 0, ffyay: 0, ffHint: 0 });
