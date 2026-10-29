@@ -1424,7 +1424,8 @@
       if (g.x < -20) g.x = W + 20; if (g.x > W + 20) g.x = -20;
       const prev = g.wy;
       g.vy -= CB_G * dt; g.wy += g.vy * dt;
-      if (g.vy < 0) for (const c of g.clouds) {
+      // once she's won she stays put on the castle; without this guard she 'lands' again every frame and the jump sound drones
+      if (g.vy < 0 && (g.state === 'play' || g.timeout)) for (const c of g.clouds) {
         if (prev >= c.wy && g.wy <= c.wy && Math.abs(g.x - c.x) < c.w / 2 + 12) {
           g.wy = c.wy; c.sq = 0.25; g.land = 0.12; g.last = c;
           g.vy = c.kind === 'bouncy' ? CB_V * 1.42 : CB_V;
@@ -1512,7 +1513,7 @@
     ['The bunny ___ fast.', 'runs', ['the', 'my'], '🐇'],
     ['Can you ___ me?', 'see', ['big', 'the'], '👋'],
     ['I ___ you!', 'love', ['the', 'is'], '💖'],
-    ['The duck is ___ the pond.', 'on', ['go', 'said'], '🦆'],
+    ['Please open the ___.', 'door', ['said', 'is'], '🚪'],
     ['Here is a ___ star.', 'little', ['go', 'said'], '⭐'],
     ['The cake is ___ me!', 'for', ['big', 'can'], '🎂'],
   ];
