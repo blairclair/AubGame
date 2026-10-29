@@ -3,6 +3,68 @@
 
 const HUB_UNI = { x: 400, y: 494, s: 1.12 };
 
+// the shed on the dino route: the same shed, made over into a cosy prehistoric den for him
+function paintShedDino() {
+  paintShedInterior();
+  const R = rng(777);
+  // leafy jungle-green wainscoting with fern fronds
+  for (let x = 0; x < W; x += 30) { ctx.fillStyle = vgrad(330, 470, x % 60 ? '#8fd47a' : '#84ca70', '#5aa04c'); ctx.fillRect(x, 336, 30, 132); ctx.strokeStyle = 'rgba(30,80,20,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, 336); ctx.lineTo(x, 468); ctx.stroke(); }
+  const fern = (x, y, h, lean) => {
+    ctx.strokeStyle = '#3f8a3a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + lean * 0.5, y - h * 0.6, x + lean, y - h); ctx.stroke();
+    for (let i = 1; i < 9; i++) { const t = i / 9, px = x + lean * t * t, py = y - h * t, l = (1 - t) * 18 + 5;
+      for (const sd of [-1, 1]) { ctx.fillStyle = sd < 0 ? '#4fae4a' : '#5fc05a'; ctx.beginPath(); ctx.ellipse(px + sd * l * 0.6, py + 2, l * 0.6, 3.5, sd * 0.5, 0, TAU); ctx.fill(); } }
+  };
+  for (let x = 30; x < W; x += 110) fern(x + R() * 30, 470, 90 + R() * 40, (R() - 0.5) * 40);
+  box(-4, 322, W + 8, 14, 2, '#c8f0b0', '#6aa060', 2);
+  // the crayon drawings become dinosaurs: Sprout, and his mama and him together
+  [[280, 76, -0.08, '#fff8f0'], [292, 196, 0.06, '#f0fff0']].forEach(([x, y, rot, paper], i) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    box(0, 0, 70, 84, 2, paper, '#c8b8c8', 1.5);
+    ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+    const dino = (dx, dy, k, col) => {
+      ctx.strokeStyle = col; ctx.beginPath(); ctx.ellipse(dx, dy, 16 * k, 10 * k, 0, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(dx + 12 * k, dy - 6 * k); ctx.quadraticCurveTo(dx + 18 * k, dy - 20 * k, dx + 24 * k, dy - 22 * k); ctx.stroke();
+      ctx.beginPath(); ctx.arc(dx + 26 * k, dy - 24 * k, 6 * k, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(dx - 14 * k, dy); ctx.lineTo(dx - 26 * k, dy + 4 * k); ctx.stroke();
+      for (const lx of [-8, 8]) { ctx.beginPath(); ctx.moveTo(dx + lx * k, dy + 9 * k); ctx.lineTo(dx + lx * k, dy + 17 * k); ctx.stroke(); }
+      ctx.strokeStyle = '#ff8a6a'; for (const px of [-8, 0, 8]) { ctx.beginPath(); ctx.moveTo(dx + px * k - 3, dy - 9 * k); ctx.lineTo(dx + px * k, dy - 15 * k); ctx.lineTo(dx + px * k + 3, dy - 9 * k); ctx.stroke(); }
+    };
+    if (i === 0) { dino(32, 52, 1, '#3fae4a'); ctx.fillStyle = '#ffd23f'; circle(58, 14, 6); }
+    else { dino(28, 52, 1.05, '#2a8a5a'); dino(52, 62, 0.55, '#3fae4a'); heart(40, 16, 18, '#ff8fc8'); ctx.fillStyle = '#2a8a5a'; ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('MAMA + ME', 35, 80); }
+    ctx.fillStyle = '#ff4a4a'; circle(35, 4, 4);
+    ctx.restore();
+  });
+  // the jars hold his favourite things now
+  [['#c8f0c0', '🌿'], ['#ffd8b0', '🦴'], ['#fff1d8', '🥚'], ['#d6c2ff', '🫐'], ['#ffe0a8', '🍃']].forEach(([c, e], i) => {
+    const jx = 612 + i * 58;
+    box(jx, 126, 44, 52, 12, mix(c, '#ffffff', 0.35), mix(c, '#5a3a60', 0.4), 2);
+    ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(jx + 4, 146, 36, 28, 8); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillRect(jx + 7, 132, 5, 36);
+    box(jx + 4, 118, 36, 12, 4, '#c8a070', '#7a5030', 1.5);
+    emoji(e, jx + 22, 160, 22);
+  });
+  // a hand-made map of the way home pinned over the tool board, with a dotted trail to the nest
+  ctx.save(); ctx.translate(816, 222); ctx.rotate(0.03);
+  box(0, 0, 118, 98, 3, '#f6e6c0', '#a08050', 2);
+  ctx.fillStyle = '#a8d888'; ellipse(30, 70, 26, 14); ctx.fillStyle = '#8ac4e8'; ctx.beginPath(); ctx.moveTo(0, 40); ctx.quadraticCurveTo(60, 30, 118, 52); ctx.lineTo(118, 60); ctx.quadraticCurveTo(60, 40, 0, 48); ctx.fill();
+  ctx.fillStyle = '#c0705a'; ctx.beginPath(); ctx.moveTo(78, 34); ctx.lineTo(92, 10); ctx.lineTo(106, 34); ctx.closePath(); ctx.fill();
+  ctx.setLineDash([3, 4]); ctx.strokeStyle = '#c0304a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(14, 84); ctx.bezierCurveTo(50, 60, 40, 30, 96, 22); ctx.stroke(); ctx.setLineDash([]);
+  emoji('🪺', 96, 22, 16); text('HOME', 96, 44, 9, '#c0304a', 'center', 800);
+  ctx.fillStyle = '#ff4a4a'; circle(59, 4, 4);
+  ctx.restore();
+  // a toy volcano and a stack of dino books on the workbench
+  ctx.beginPath(); ctx.moveTo(690, 396); ctx.lineTo(712, 350); ctx.lineTo(730, 350); ctx.lineTo(752, 396); ctx.closePath(); fillLine('#b8705a', '#6a3a2a', 2);
+  ctx.fillStyle = '#ff8a3a'; ellipse(721, 350, 10, 4); ctx.fillStyle = 'rgba(220,220,230,.8)'; circle(718, 338, 6); circle(726, 328, 5);
+  [['#5fae5a', 0], ['#e8a040', 1], ['#7a8ae0', 2]].forEach(([c, i]) => box(780, 386 - i * 10, 56, 10, 2, c, mix(c, '#000000', 0.4), 1.5));
+  // big muddy three-toed footprints across the floor, and his rug becomes a leafy one
+  for (let i = 0; i < 7; i++) {
+    ctx.strokeStyle = ['#5a9a40', '#8fd47a', '#a0703a', '#6ab85a', '#c8e090', '#4f8a3a', '#5a9a40'][i]; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.ellipse(HUB_UNI.x, 508, 290 - i * 34, 36 - i * 4.2, 0, 0, TAU); ctx.stroke();
+  }
+  const foot = (x, y, r) => { ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.fillStyle = 'rgba(110,70,40,.4)'; ellipse(0, 0, 7, 9); for (const a of [-0.6, 0, 0.6]) { ctx.beginPath(); ctx.ellipse(Math.sin(a) * 12, -Math.cos(a) * 12, 3, 7, a, 0, TAU); ctx.fill(); } ctx.restore(); };
+  [[700, 520, -0.3], [760, 500, -0.1], [820, 524, -0.3], [880, 504, -0.1], [40, 524, 0.2], [96, 508, 0.4]].forEach(([x, y, r]) => foot(x, y, r));
+}
+
 // the inside of the shed, painted once and cached (see scenery.js sprite())
 function paintShedInterior() {
   const R = rng(4242);
@@ -111,7 +173,7 @@ function paintShedInterior() {
   for (let i = 0; i < 40; i++) { const sx = HUB_UNI.x - 270 + R() * 200, sy = 482 + R() * 30; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 14 - R() * 28, sy - 6 + R() * 4); ctx.stroke(); }
 }
 function drawShedInterior(dim = 0) {
-  blit(sprite('shedInterior', W, H, 0, 0, paintShedInterior), 0, 0);
+  blit(isDino() ? sprite('shedDino', W, H, 0, 0, paintShedDino) : sprite('shedInterior', W, H, 0, 0, paintShedInterior), 0, 0);
   // a warm lantern glow, flickering a little
   const f = 0.85 + Math.sin(S.t * 7) * 0.05 + Math.sin(S.t * 13) * 0.04;
   const lg = ctx.createRadialGradient(540, 70, 4, 540, 70, 260);
@@ -270,14 +332,15 @@ const EVIDENCE_SPOTS = [[110, 236], [200, 250], [560, 230], [650, 260], [90, 420
 SCENES.hide = {
   enter(onDone) {
     const n = 3 + Math.floor(S.day / 2);
-    const icons = MAT_ORDER.map(k => MATS[k].icon);
+    // on the dino route Mom mustn't see the mess he made; otherwise it's the sparkly treasures
+    const icons = isDino() ? ['🥪', '🧦', '🍃', '🫐', '🪴', '🦴', '🧸', '🍌', '📰'] : MAT_ORDER.map(k => MATS[k].icon);
     const spots = [...EVIDENCE_SPOTS].sort(() => Math.random() - 0.5).slice(0, n);
     Object.assign(this, {
       onDone, time: 8 - S.day * 0.4, max: 8 - S.day * 0.4, tarp: false, result: null, stepT: 0, intro: 1.4,
-      items: spots.map(([x, y]) => ({ x, y, icon: pick(icons), gone: false, fly: 0 })),
+      items: spots.map(([x, y], i) => ({ x, y, icon: isDino() && i % 3 === 2 ? 'mud' : icons[i % icons.length], gone: false, fly: 0, rot: rand(-0.6, 0.6) })),
     });
     SFX.alert();
-    speak(`Oh no! Mom is coming! Click everything sparkly, and click ${S.name} to hide ${isDino() ? 'him' : 'her'} under the tarp!`);
+    speak(isDino() ? `Oh no! Mom is coming! Clean up the mess ${S.name} made, and click him to hide him under the tarp!` : `Oh no! Mom is coming! Click everything sparkly, and click ${S.name} to hide her under the tarp!`);
   },
   update(dt) {
     if (this.result) return;
@@ -303,19 +366,26 @@ SCENES.hide = {
     drawShedInterior();
     if (this.tarp) drawTarp(HUB_UNI.x + 20, HUB_UNI.y, 1.15);
     else drawPet(HUB_UNI.x, HUB_UNI.y, HUB_UNI.s, petLook(), { facing: 1, mood: isDino() ? 'scared' : 'wow' });
-    inkRect(850, 448, 90, 56, '#c99a5a', 3, 10);
+    inkRect(850, 448, 90, 56, isDino() ? '#8a9aa8' : '#c99a5a', 3, 10); // a basket for treasures, a bin for his mess
+    if (isDino()) { inkRect(844, 440, 102, 10, '#6a7a88', 2.5, 4); }
     ctx.strokeStyle = 'rgba(91,63,115,.4)'; ctx.lineWidth = 2;
     for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(850 + i * 18, 450); ctx.lineTo(850 + i * 18, 502); ctx.stroke(); }
     for (const it of this.items) {
       if (it.fly >= 1) continue;
       const k = easeOut(it.fly), x = lerp(it.x, 895, k), y = lerp(it.y, 470, k) - Math.sin(k * Math.PI) * 80;
-      if (!it.gone) { ctx.fillStyle = `rgba(255,255,200,${0.4 + 0.3 * Math.sin(S.t * 8)})`; circle(x, y, 32); }
-      emoji(it.icon, x, y, 38 * (1 - k * 0.5));
+      if (!it.gone) { ctx.fillStyle = isDino() ? `rgba(255,190,120,${0.25 + 0.2 * Math.sin(S.t * 8)})` : `rgba(255,255,200,${0.4 + 0.3 * Math.sin(S.t * 8)})`; circle(x, y, 32); }
+      if (it.icon === 'mud') {
+        // a muddy splat with a three-toed footprint in it
+        ctx.save(); ctx.translate(x, y); ctx.rotate(it.rot); ctx.scale(1 - k * 0.5, 1 - k * 0.5);
+        ink(P2('M-26,4 C-30,-14 -12,-24 4,-20 C22,-24 32,-8 26,6 C30,20 10,26 -4,22 C-20,26 -32,18 -26,4 Z'), '#8a5a34', 2, '#5a3a20');
+        ctx.fillStyle = '#5a3a20'; ellipse(0, 6, 6, 7); for (const a of [-0.6, 0, 0.6]) { ctx.beginPath(); ctx.ellipse(Math.sin(a) * 11, 6 - Math.cos(a) * 11, 2.6, 6, a, 0, TAU); ctx.fill(); }
+        ctx.restore();
+      } else emoji(it.icon, x, y, 38 * (1 - k * 0.5));
     }
     const left = this.items.filter(i => !i.gone).length;
     panel(W / 2 - 270, 14, 540, 92, 18);
-    outlined("Mom's coming! Hide everything!", W / 2, 40, 24, '#ff6fb5', 'center', '#fff');
-    text(`Click the sparkly things (${left} left)${this.tarp ? '' : ` and click ${S.name} to throw a tarp over ${isDino() ? 'him' : 'her'}!`}`, W / 2, 68, 14, '#5a2a6e', 'center', 600);
+    outlined(isDino() ? "Mom's coming! Tidy up, quick!" : "Mom's coming! Hide everything!", W / 2, 40, 24, '#ff6fb5', 'center', '#fff');
+    text(`${isDino() ? `Clean up ${S.name}'s mess` : 'Click the sparkly things'} (${left} left)${this.tarp ? '' : ` and click ${S.name} to throw a tarp over ${isDino() ? 'him' : 'her'}!`}`, W / 2, 68, 14, '#5a2a6e', 'center', 600);
     bar(W / 2 - 240, 84, 480, 12, (this.time / this.max) * 100, this.time / this.max < 0.35 ? '#ff5a5a' : '#ffb15c');
     const k = 1 - clamp(this.time / this.max, 0, 1);
     ctx.save(); ctx.beginPath(); ctx.rect(86, 74, 144, 108); ctx.clip();
@@ -329,6 +399,8 @@ function momVisitOk(onDone) {
   const visits = [
     [['mom', null, 'Aubrey? Oh, there you are! What are you doing out in the shed?'], ['aubrey', 'silly', 'Just... organising flowerpots!'], ['mom', null, "Well, aren't you a helper. ...Is that tarp breathing?"], ['aubrey', 'winky', "It's a very old lawnmower."], ['mom', null, "Hm! Okay, sweetie. Don't stay out too long."]],
     [['mom', null, 'Knock knock! I brought you a snack, honey.'], ['aubrey', 'happy', 'Thanks, Mom! Everything is totally normal in here!'], ['mom', null, "I never said it wasn't... Okay! Love you!"]],
+
+    ...(isDino() ? [[['mom', null, 'My goodness, Aubrey, this shed is SPOTLESS!'], ['aubrey', 'silly', 'I just felt like tidying!'], ['mom', null, '...Since when? And why does it smell like ferns?'], ['aubrey', 'winky', 'Air freshener. Jungle scent.']]] : []),
   ];
   say([...pick(visits), ['narrator', null, 'Phew! The secret is safe.']], onDone);
 }
