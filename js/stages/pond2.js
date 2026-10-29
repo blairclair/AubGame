@@ -367,7 +367,9 @@
       }
       for (const tr of g.trains) {
         if (tr.done) { tr.done += dt; continue; }
-        tr.d += g.speed * dt; tr.spin += g.speed * dt / 14;
+        // trains chug slowly out of the tunnel (half speed) to give time to decide, then speed up near the first switch
+        const sp = g.speed * (tr.edge.from === 'E' ? lerp(0.5, 1, clamp((tr.d - (tr.edge.len - 50)) / 50, 0, 1)) : 1);
+        tr.d += sp * dt; tr.spin += sp * dt / 14;
         while (tr.d >= tr.edge.len) {
           const node = tr.edge.to;
           if (node[0] === 'P') {
