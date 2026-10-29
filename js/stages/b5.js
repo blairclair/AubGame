@@ -1555,7 +1555,7 @@
     ['The fish is ___ the water.', 'in', ['said', 'go'], '🐟'],
     ['The ball is ___.', 'red', ['and', 'go'], '🔴'],
     ['She ___ a crown.', 'has', ['to', 'in'], '👑'],
-    ['The bunny ___ fast.', 'runs', ['the', 'my'], '🐇'],
+    ['The bunny ___ fast.', 'hops', ['the', 'my'], '🐇'],
     ['Can you ___ me?', 'see', ['big', 'the'], '👋'],
     ['I ___ you!', 'love', ['the', 'is'], '💖'],
     ['Please open the ___.', 'door', ['said', 'is'], '🚪'],
