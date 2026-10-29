@@ -1535,6 +1535,14 @@
     hibiscus(26, -29, 9, '#ff6fae');
     ctx.restore();
   }
+  // Dolly with Aubrey riding on her back, just behind the fin, tilting with every leap
+  const dolphinRider = (x, y, rot) => {
+    drawDolphin(x, y, rot, 1);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    drawAubrey(RIDE[0], RIDE[1], 'crouch', 1, 0, RIDE[2]);
+    ctx.restore();
+  };
+  const RIDE = [-28, -22, 0.3]; // seat on Dolly's back (dolphin-local x, y) and Aubrey's scale
   const hoopRing = (x, y, half) => {
     // half: -1 back half (right side), 1 front half (left side)
     const a0 = half < 0 ? -Math.PI / 2 : Math.PI / 2, a1 = a0 + Math.PI;
@@ -1673,7 +1681,7 @@
       rfTrail(g.rfTrailPts || []);
       const rot = g.air ? Math.atan2(g.vy, g.v * 2.2) : Math.sin(S.t * 3) * 0.06;
       if (!g.air) { ctx.save(); surface(); ctx.clip(); }
-      drawDolphin(DH.DX, g.y, rot, 1);
+      dolphinRider(DH.DX, g.y, rot);
       if (!g.air) ctx.restore();
       ctx.save(); ctx.globalAlpha = g.air ? 1 : 0.75; surface(); ctx.fillStyle = lg; ctx.fill(); ctx.restore();
       // under the water: sunbeams, rippling light, a sandy floor with swaying seaweed and coral, rising bubbles
@@ -1703,7 +1711,7 @@
       ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.5;
       for (let i = 0; i < 10; i++) { const p = (S.t * 0.35 + hash(i + 20)) % 1, x = wrapX(hash(i) * W - scroll * 0.4 + Math.sin(S.t * 2 + i) * 6, W), y = H - p * (H - DH.WY - 10); ctx.beginPath(); ctx.arc(x, y, 2 + hash(i + 3) * 3, 0, TAU); ctx.stroke(); }
       ctx.restore();
-      if (!g.air) { ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, DH.WY - 2); ctx.clip(); drawDolphin(DH.DX, g.y, rot, 1); ctx.restore(); }
+      if (!g.air) { ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, DH.WY - 2); ctx.clip(); dolphinRider(DH.DX, g.y, rot); ctx.restore(); }
       // a frothy white edge along the surface, with ripples drifting by
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       ctx.strokeStyle = 'rgba(40,110,170,.55)'; ctx.lineWidth = 6; ctx.beginPath(); for (let x = 0; x <= W; x += 16) ctx.lineTo(x, surfY(x)); ctx.stroke();
