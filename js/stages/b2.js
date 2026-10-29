@@ -3065,9 +3065,13 @@
     rrect(x - 32, y + 4, 64, 22, 8, col === '#ffffff' ? '#f0eaf8' : col);
     text(name, x, y + 15.5, 15, name === 'white' || name === 'yellow' ? '#5a2a6e' : '#ffffff', 'center', 800);
   }
+  // the mixing bowl: drag paint in from the pots, then stir round and round until it blends into a new colour
+  const CM_BOWL = { x: 600, y: 268, rx: 132, ry: 44, depth: 92 };
+  const cmPotRect = (g, i) => { const n = g.pots.length, pw = 116, gap = 16, x0 = 600 - (n * pw + (n - 1) * gap) / 2; return { x: x0 + i * (pw + gap), y: 392, w: pw, h: 128 }; };
+  const cmInBowl = (x, y) => ((x - CM_BOWL.x) / (CM_BOWL.rx + 20)) ** 2 + ((y - CM_BOWL.y - 20) / (CM_BOWL.ry + 60)) ** 2 < 1;
   MG.colourmix = {
     kind: 'learn', title: () => 'Colour Mixing', icon: () => '🎨',
-    how: () => 'Otto asks for a colour. Pick TWO colours to drop into the magic crystal and mix them! Click the pots, or press their numbers.',
+    how: () => 'Otto asks for a colour. Drag TWO colours into the mixing bowl, then stir round and round to see what colour they make! (Number keys add paint, Space stirs.)',
     init(g) {
       const tg = MIX_TARGETS[g.tier - 1], rounds = g.tier === 1 ? 5 : 6;
       Object.assign(g, { round: 0, rounds, total: 0, pots: MIX_POTS[g.tier - 1], order: [...shuffle(tg), ...shuffle(tg)].slice(0, rounds), shake: {} });
@@ -3076,34 +3080,103 @@
     start(g) { speak(g.say); },
     next(g) {
       const name = g.order[g.round], col = Object.values(MIXES).find(m => m[0] === name)[1];
-      Object.assign(g, { want: [name, col], a: null, b: null, tries: 0, state: 'pick', t2: 0, res: null });
-      g.say = `Can you make ${name}? Pick two colours to mix!`;
+      Object.assign(g, { want: [name, col], tries: 0 });
+      this.empty(g);
+      g.say = `Can you make ${name}? Drag two colours into the bowl!`;
       if (g.phase === 'play') speak(g.say);
     },
+    empty(g) { Object.assign(g, { a: null, b: null, res: null, state: 'pick', t2: 0, drag: null, stir: 0, lang: null, plop: 0 }); },
+    addPaint(g, p) {
+      if (g.a == null) g.a = p; else g.b = p;
+      g.plop = 0.35; tone(300, 0.15, 'sine', 0.09, 0, 140); noise(0.06, 0.03);
+      burst(CM_BOWL.x + rand(-30, 30), CM_BOWL.y, 8, { colors: [PAINTS[p], '#ffffff'], spread: 60, up: 60, size: [3, 6] });
+      if (g.b) { g.state = 'stir'; g.res = mixResult(g.a, g.b); speak('Now stir it! Round and round!'); }
+      else speak(`${p}! Now one more colour.`);
+    },
     update(g, dt, id) {
-      tickDown(g.shake, dt);
+      tickDown(g.shake, dt); g.plop = Math.max(0, g.plop - dt);
       if (g.state === 'pick') {
-        const i = idPick(id, 'pot:', g.pots.length);
-        if (i >= 0 && i < g.pots.length) {
-          const p = g.pots[i]; tone(500 + i * 90, 0.12, 'sine', 0.08, 0, 300);
-          if (g.a == null) g.a = p; else { g.b = p; g.state = 'mix'; g.t2 = 0; g.res = mixResult(g.a, g.b); }
+        // drag a blob of paint from a pot into the bowl
+        if (!g.drag && pointer.clicked) {
+          const i = g.pots.findIndex((_, i) => inRect(cmPotRect(g, i)));
+          if (i >= 0) { g.drag = { p: g.pots[i], x: pointer.x, y: pointer.y }; tone(500 + i * 90, 0.08, 'sine', 0.07); }
         }
-      } else if (g.state === 'mix') {
-        g.t2 += dt;
-        if (g.t2 > 1.2) {
+        if (g.drag) {
+          g.drag.x = pointer.x; g.drag.y = pointer.y;
+          if (!pointer.down) { const d = g.drag; g.drag = null; if (cmInBowl(d.x, d.y)) this.addPaint(g, d.p); else SFX.blip(); }
+        }
+        const k = keyPick(g.pots.length);
+        if (k >= 0) this.addPaint(g, g.pots[k]);
+      } else if (g.state === 'stir') {
+        // stir: drag round and round inside the bowl (or tap Space); the colours blend as you go
+        const dx = pointer.x - CM_BOWL.x, dy = (pointer.y - CM_BOWL.y) * 2.4;
+        if (pointer.down && cmInBowl(pointer.x, pointer.y)) {
+          const ang = Math.atan2(dy, dx);
+          if (g.lang != null) { let d = ang - g.lang; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; if (Math.abs(d) < 1) g.stir = Math.min(1, g.stir + Math.abs(d) / (TAU * 2.5)); }
+          g.lang = ang;
+          if (Math.random() < dt * 6) tone(220 + g.stir * 200, 0.05, 'sine', 0.03);
+        } else g.lang = null;
+        if (pressed[' '] || pressed.enter) g.stir = Math.min(1, g.stir + 0.2);
+        if (g.stir >= 1) {
+          g.state = 'mixed'; g.t2 = 0; SFX.sparkle(); burst(CM_BOWL.x, CM_BOWL.y, 22, { colors: [g.res[1], '#ffffff', '#fff6a8'] });
+          speak(`${g.a} and ${g.b} make ${g.res[0]}!`);
+        }
+      } else if (g.state === 'mixed') {
+        // the bowl always shows what the colours really make; then Otto checks it against what he asked for
+        if ((g.t2 += dt) > 1.8) {
           if (g.res[0] === g.want[0]) {
-            g.total += [1, 0.6, 0.3, 0][Math.min(3, g.tries)]; g.state = 'yay'; g.t2 = 0; SFX.sparkle(); burst(520, 250, 30, { colors: [g.want[1], '#ffffff', '#fff6a8'] });
-            speak(`${g.a} and ${g.b} make ${g.res[0]}! You did it!`);
+            g.total += [1, 0.6, 0.3, 0][Math.min(3, g.tries)]; g.state = 'yay'; g.t2 = 0; SFX.sparkle(); burst(175, 200, 26, { colors: [g.want[1], '#ffffff', '#fff6a8'] });
+            speak(`That's ${g.want[0]}! Just what Otto wanted!`);
           } else {
             g.tries++; g.state = 'oops'; g.t2 = 0; SFX.miss();
-            speak(`${g.a} and ${g.b} make ${g.res[0]}. We need ${g.want[0]}. Try again!`);
+            speak(`That made ${g.res[0]}. Otto wanted ${g.want[0]}. Let's empty the bowl and try again!`);
           }
         }
-      } else if ((g.t2 += dt) > (g.state === 'yay' ? 2.4 : 2.6)) {
-        if (g.state === 'yay') { g.round++; if (g.round >= g.rounds) { g.done = true; return; } this.next(g); } else Object.assign(g, { a: null, b: null, res: null, state: 'pick' });
+      } else if ((g.t2 += dt) > (g.state === 'yay' ? 2.4 : 3)) {
+        if (g.state === 'oops' && g.tries >= 3) {
+          // after three tries Otto mixes the right two himself, so nobody gets stuck
+          const [x, y] = recipeOf(g.want[0]);
+          Object.assign(g, { a: x, b: y, res: g.want, state: 'yay', t2: -0.6 });
+          speak(`Watch Otto! ${x} and ${y} make ${g.want[0]}!`);
+        } else if (g.state === 'yay') { g.round++; if (g.round >= g.rounds) { g.done = true; return; } this.next(g); } else this.empty(g);
       }
       g.progress = `Colour ${Math.min(g.round + 1, g.rounds)} of ${g.rounds}`;
       g.score = g.total / g.rounds;
+    },
+    drawBowl(g) {
+      const { x, y, rx, ry, depth } = CM_BOWL, t = S.t;
+      ctx.fillStyle = 'rgba(40,20,60,.18)'; ellipse(x, y + depth + 6, rx * 0.8, 12);
+      // the bowl's body, then the paint inside, then the near rim
+      const body = P2(`M${x - rx},${y} C${x - rx},${y + depth * 1.1} ${x + rx},${y + depth * 1.1} ${x + rx},${y} Z`);
+      ink(body, '#ffffff', 2.5);
+      ctx.save(); ctx.clip(body); ctx.fillStyle = '#d8e8ff'; ctx.fillRect(x - rx, y + depth * 0.45, rx * 2, 12); ctx.fillStyle = '#ff9ac8'; ctx.fillRect(x - rx, y + depth * 0.45 + 12, rx * 2, 6); ctx.restore();
+      inkEllipse(x, y, rx, ry, 0, '#f4f0fa', 2.5);
+      const paint = new Path2D(); paint.ellipse(x, y + 4, rx - 14, ry - 10, 0, 0, TAU);
+      if (g.a) {
+        ctx.save(); ctx.clip(paint);
+        const k = g.state === 'stir' ? g.stir : g.res ? 1 : 0;
+        if (!g.b) { ctx.fillStyle = PAINTS[g.a]; ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2); }
+        else {
+          // two colours side by side, swirling together as she stirs, until it's all the new colour
+          ctx.fillStyle = PAINTS[g.a]; ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2);
+          ctx.fillStyle = PAINTS[g.b];
+          ctx.beginPath(); for (let a = 0; a <= TAU + 0.01; a += 0.1) { const r = (rx - 14) * (0.95 - 0.35 * Math.sin(a * 2 + k * 9)); ctx.lineTo(x + Math.cos(a + k * 6) * r * Math.max(0, Math.cos(a)), y + 4 + Math.sin(a) * (ry - 10)); } ctx.fill();
+          for (let i = 0; i < 4; i++) { ctx.strokeStyle = i % 2 ? PAINTS[g.a] : PAINTS[g.b]; ctx.lineWidth = 6; ctx.beginPath(); ctx.ellipse(x, y + 4, (rx - 30) * (0.3 + i * 0.18), (ry - 14) * (0.3 + i * 0.18), 0, k * 8 + i, k * 8 + i + 2.2); ctx.stroke(); }
+          ctx.globalAlpha = Math.min(1, k * 1.15); ctx.fillStyle = g.res[1]; ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2); ctx.globalAlpha = 1;
+        }
+        ctx.fillStyle = 'rgba(255,255,255,.35)'; ellipse(x - rx * 0.35, y - 6, rx * 0.25, 6, -0.1);
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(40,20,60,.35)'; ctx.lineWidth = 1.5; ctx.stroke(paint);
+      }
+      // the wooden spoon: follows the pointer while stirring, otherwise rests in the bowl
+      let sx = x + 40, sy = y - 2;
+      if (g.state === 'stir') { if (pointer.down && cmInBowl(pointer.x, pointer.y)) { sx = pointer.x; sy = clamp(pointer.y, y - ry + 10, y + ry - 4); } else { sx = x + Math.cos(t * 2) * 50; sy = y + 4 + Math.sin(t * 2) * 16; } }
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(-0.5);
+      ctx.strokeStyle = OL; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(40, -110); ctx.stroke();
+      ctx.strokeStyle = '#d8a060'; ctx.lineWidth = 7; ctx.stroke();
+      inkEllipse(0, 2, 12, 16, 0, '#d8a060', 2);
+      ctx.restore();
+      if (g.plop > 0) { ctx.strokeStyle = `rgba(255,255,255,${g.plop * 2})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 4, (rx - 20) * (1 - g.plop), (ry - 12) * (1 - g.plop), 0, 0, TAU); ctx.stroke(); }
     },
     draw(g) {
       // what Otto wants
@@ -3113,45 +3186,41 @@
       twinkle(196, 140, 8, 0.6 + 0.4 * Math.sin(S.t * 4), '#ffffff');
       outlined(g.want[0], 175, 246, 30, g.want[1] === '#ffffff' ? '#e8e0f4' : g.want[1]);
       drawCritter('Otto the Otter', 110, 492, 0.62, 1);
-      // the magic mixing crystal
-      const cx = 600, cy = 322, mixing = g.state !== 'pick';
-      ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.1 * Math.sin(S.t * 3)})`; circle(cx, cy - 90, 120);
-      const shape = P2(`M${cx - 70},${cy} L${cx - 70},${cy - 130} L${cx},${cy - 190} L${cx + 70},${cy - 130} L${cx + 70},${cy} Z`);
-      ctx.fillStyle = 'rgba(240,250,255,.75)'; ctx.fill(shape);
-      ctx.save(); ctx.clip(shape);
-      const k = g.state === 'mix' ? clamp(g.t2 / 1.1, 0, 1) : 1;
-      if (g.a && !g.b) { ctx.fillStyle = PAINTS[g.a]; ctx.fillRect(cx - 80, cy - 70, 160, 80); }
-      if (g.b) {
-        const level = lerp(70, 150, k);
-        ctx.fillStyle = PAINTS[g.a]; ctx.fillRect(cx - 80, cy - level, 80, level + 10);
-        ctx.fillStyle = PAINTS[g.b]; ctx.fillRect(cx, cy - level, 80, level + 10);
-        ctx.globalAlpha = mixing ? k : 0; ctx.fillStyle = g.res[1]; ctx.fillRect(cx - 80, cy - level, 160, level + 10); ctx.globalAlpha = 1;
-        if (g.state === 'mix') { ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, cy - 60, 30, S.t * 8, S.t * 8 + 4); ctx.stroke(); }
-      }
-      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(cx - 70, cy - 200, 26, 210);
-      ctx.restore();
-      ctx.strokeStyle = OL; ctx.lineWidth = 3.5; ctx.stroke(shape);
+      const cx = 600;
       // the sum so far: a + b = ?
       const sw = (x, col) => inkCircle(x, 82 + 12, 18, col || '#f4ecff', 1.5);
       darkPanel(cx - 170, 66, 340, 56, 24);
       sw(cx - 110, g.a && PAINTS[g.a]); text('+', cx - 55, 94, 30, '#fff', 'center', 800);
       sw(cx, g.b && PAINTS[g.b]); text('=', cx + 55, 94, 30, '#fff', 'center', 800);
-      if (g.res && g.state !== 'mix') sw(cx + 110, g.res[1]); else text('?', cx + 110, 95, 28, '#ffe9a0', 'center', 800);
-      if (g.state === 'yay' || g.state === 'oops') {
+      if (g.res && g.state !== 'stir') sw(cx + 110, g.res[1]); else text('?', cx + 110, 95, 28, '#ffe9a0', 'center', 800);
+      this.drawBowl(g);
+      // what to do now
+      if (g.state === 'mixed' || g.state === 'yay' || g.state === 'oops') {
         const msg = `${g.a} + ${g.b} = ${g.res[0]}!`;
-        darkPanel(cx - 200, 330, 400, 46, 20); text(msg, cx, 353, 21, g.state === 'yay' ? '#a6f0b8' : '#ffd0d8', 'center', 700);
-      } else text(g.state === 'mix' ? 'Mixing...' : g.a ? 'Now pick another colour!' : 'Pick a colour!', cx, 353, 20, '#5a2a6e', 'center', 700);
-      // hint after two misses: the right pots sparkle
+        darkPanel(cx - 200, 140, 400, 46, 20); text(msg, cx, 163, 21, g.state === 'oops' ? '#ffd0d8' : '#a6f0b8', 'center', 700);
+      } else {
+        const tip = g.state === 'stir' ? `Stir! Round and round... ${Math.round(g.stir * 100)}%` : g.a ? 'Drag one more colour into the bowl!' : 'Drag a colour into the bowl!';
+        text(tip, cx, 160, 20, '#5a2a6e', 'center', 700);
+        if (g.state === 'stir') { rrect(cx - 90, 176, 180, 12, 6, 'rgba(255,255,255,.7)', OL, 1.5); rrect(cx - 88, 178, 176 * g.stir, 8, 4, g.res[1]); }
+      }
+      // the paint pots (after two misses the right ones sparkle)
       const hint = g.tries >= 2 ? recipeOf(g.want[0]) : [];
-      const n = g.pots.length, pw = 116, gap = 16, x0 = cx - (n * pw + (n - 1) * gap) / 2;
       g.pots.forEach((p, i) => {
-        const x = x0 + i * (pw + gap);
-        button(`pot:${i}`, x, 392, pw, 128, '', { color: hint.includes(p) ? '#ffd23f' : '#c8b8e8', on: g.state === 'pick', key: String(i + 1) });
-        paintPot(x + pw / 2, 446, PAINTS[p], p);
-        if (hint.includes(p)) twinkle(x + pw - 16, 404, 9, 0.6 + 0.4 * Math.sin(S.t * 6), '#ffffff');
+        const r = cmPotRect(g, i);
+        button(`pot:${i}`, r.x, r.y, r.w, r.h, '', { color: hint.includes(p) ? '#ffd23f' : '#c8b8e8', on: g.state === 'pick', key: String(i + 1) });
+        paintPot(r.x + r.w / 2, 446, PAINTS[p], p);
+        if (hint.includes(p)) twinkle(r.x + r.w - 16, 404, 9, 0.6 + 0.4 * Math.sin(S.t * 6), '#ffffff');
       });
+      // the blob of paint being dragged
+      if (g.drag) {
+        const { x, y, p } = g.drag, over = cmInBowl(x, y);
+        if (over) { ctx.strokeStyle = 'rgba(255,240,140,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(CM_BOWL.x, CM_BOWL.y, CM_BOWL.rx + 8, CM_BOWL.ry + 8, 0, 0, TAU); ctx.stroke(); }
+        ink(P2(`M${x},${y - 26} C${x + 18},${y - 6} ${x + 20},${y + 14} ${x},${y + 18} C${x - 20},${y + 14} ${x - 18},${y - 6} ${x},${y - 26} Z`), PAINTS[p], 2);
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ellipse(x - 6, y - 2, 4, 7, 0.3);
+      }
     },
   };
+
 
   restage('crystalcreek', {
     bg: 'crystalcreek_bg',
