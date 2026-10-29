@@ -2101,8 +2101,9 @@ MG.outfits = {
       // the look's own little world
       ctx.save(); ctx.beginPath(); ctx.roundRect(bx, top, OF_CW, OF_CH, 24); ctx.clip(); ctx.translate(bx, top);
       OF_SCENES[scene](OF_CW, OF_CH);
-      const sp = ctx.createRadialGradient(OF_CW / 2, OF_CH - 110, 10, OF_CW / 2, OF_CH - 110, 130);
-      sp.addColorStop(0, m.done ? 'rgba(255,250,200,.7)' : 'rgba(255,255,255,.35)'); sp.addColorStop(1, 'rgba(255,255,255,0)');
+      // a soft halo right behind Aubrey so she pops from even the busiest scene
+      const sp = ctx.createRadialGradient(OF_CW / 2, OF_CH - 120, 20, OF_CW / 2, OF_CH - 120, 112);
+      sp.addColorStop(0, m.done ? 'rgba(255,250,200,.8)' : 'rgba(255,255,255,.6)'); sp.addColorStop(0.6, m.done ? 'rgba(255,250,200,.4)' : 'rgba(255,255,255,.28)'); sp.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = sp; ctx.fillRect(0, 0, OF_CW, OF_CH);
       ctx.fillStyle = 'rgba(42,16,80,.25)'; ellipse(OF_CW / 2, OF_GY - OF_CT, 52, 9);
       ctx.restore();
@@ -2114,18 +2115,27 @@ MG.outfits = {
       const lift = g.show > 0 ? Math.abs(Math.sin(S.t * 7 + i)) * 18 : Math.sin(m.bump / 0.45 * Math.PI) * 14;
       const mine = g.items.filter(it => it.o === i).sort((a, b) => a.idx - b.idx);
       const snaps = {}; for (const it of mine) if (it.snap > 0) snaps[it.id] = 1 + Math.sin(it.snap / 0.4 * Math.PI) * 0.35;
-      ofDressed(m.cx, OF_GY, OF_AH, mine.filter(it => it.on).map(it => it.id), lift, m.done ? [] : mine.filter(it => !it.on).map(it => it.id), snaps);
+      ofDressed(m.cx, OF_GY, OF_AH, mine.filter(it => it.on).map(it => it.id), lift, [], snaps);
       if (m.done) for (let k = 0; k < 5; k++) {
         const a = S.t * 1.6 + k * Math.PI * 0.4;
         star(m.cx + Math.cos(a) * 110, top + 150 + Math.sin(a) * 100, 6 + Math.sin(S.t * 6 + k) * 2, '#fff6a8', 4);
       }
       // how many pieces found so far
-      const found = mine.filter(it => it.on).length;
-      rrect(bx + OF_CW - 66, top + 14, 50, 26, 13, m.done ? '#ffd23f' : 'rgba(255,255,255,.92)', OL, 2.5);
-      text(m.done ? '✓' : `${found}/${mine.length}`, bx + OF_CW - 41, top + 27, 16, '#5a2a6e', 'center', 800);
+      // slot badges: one plain numbered circle per piece still needed (no shapes or colours that give it away),
+      // filled with a mini picture once that piece is on
+      const found = mine.filter(it => it.on), n = mine.length, bw = n * 34 + 12, bxs = m.cx - bw / 2;
+      rrect(bxs, top + 12, bw, 40, 20, 'rgba(255,255,255,.88)', OL, 2.5);
+      for (let k = 0; k < n; k++) {
+        const x = bxs + 23 + k * 34, y = top + 32, it = found[k];
+        if (it) { inkCircle(x, y, 14, m.done ? '#fff3b0' : '#ffffff', 1.2); ofDrawPiece(it.id, x, y, 22); }
+        else {
+          ctx.save(); ctx.setLineDash([3, 3]); ctx.strokeStyle = '#9a7aaa'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+          text(String(k + 1), x, y + 1, 14, '#9a7aaa', 'center', 800);
+        }
+      }
       ofBanner(m.cx, top + OF_CH, m.name, acc);
       if (hint) {
-        const ay = top + 30 + Math.sin(S.t * 8) * 6;
+        const ay = top + 84 + Math.sin(S.t * 8) * 6;
         ctx.fillStyle = OL; tri(m.cx - 18, ay - 22, m.cx + 18, ay - 22, m.cx, ay + 4);
         ctx.fillStyle = '#ffe36b'; tri(m.cx - 12, ay - 19, m.cx + 12, ay - 19, m.cx, ay - 2);
       }
