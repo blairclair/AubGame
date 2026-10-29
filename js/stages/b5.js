@@ -1120,7 +1120,8 @@
     kind: 'action', title: () => 'Keep Eggs Warm', icon: () => '🥚',
     how: () => "Pip's eggs are getting cold! Tap an egg (or press its number) and Pip breathes fire on it. Keep every egg in the green. Not too hot!",
     init(g) {
-      const n = [3, 4, 4][g.tier - 1], [lo, hi] = [[2.2, 3.4], [2.8, 4.4], [3.4, 5.2]][g.tier - 1];
+      // always 3 eggs; higher tiers get harder through faster cooling and chilly gusts
+      const n = 3, [lo, hi] = [[2.2, 3.4], [2.8, 4.4], [3.4, 5.2]][g.tier - 1];
       const bx = rowX(n, 140, n === 3 ? 90 : 60);
       g.eggs = Array.from({ length: n }, (_, i) => ({ x: bx(i) + 70, y: 316, T: rand(56, 70), rate: rand(lo, hi), warm: 0, col: EGG_COLS[i], chill: 0, flame: 0 }));
       Object.assign(g, { timeLeft: 40, played: 0, pipX: 120, pipTo: 120, target: -1, cool: 0, gust: 6, state: 'play', t2: 0, hatched: 0 });
