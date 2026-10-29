@@ -310,24 +310,63 @@ function drawPet(x, y, s, look, o = {}) {
   }
   return drawUnicorn(x, y, s, look || uniLook(), o);
 }
-// tucked up asleep under a quilt
-function drawDinoTucked(x, y, s, quilt = 1) {
-  drawBabyDino(x, y, s, dinoLook(), { facing: 1, pose: 'sit', mood: 'sleepy' });
-  if (quilt <= 0) return;
-  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+// curled up in his little nest; quilt 0..1 is Aubrey laying the blanket over him (it floats in from her
+// hands at (fromX, fromY), unfolds, and settles over him up to his chin)
+const NEST_TWIGS = [...Array(26)].map((_, i) => [Math.sin(i * 12.9898) * 0.5 + 0.5, Math.sin(i * 78.233) * 0.5 + 0.5, Math.sin(i * 3.7)]);
+function drawDinoTucked(x, y, s, quilt = 1, o = {}) {
   const k = easeOut(clamp(quilt, 0, 1));
-  ctx.translate(lerp(-260, 0, k), 0);
-  const q = P2('M-120,6 C-126,-40 -100,-92 -40,-100 C10,-106 50,-96 74,-80 C88,-50 90,-20 86,6 Z');
-  ctx.lineJoin = 'round';
-  ink(q, '#ffb3d6', 2.4, '#a04a7a');
-  ctx.save(); ctx.clip(q);
-  const cols = ['#ffd23f', '#8ad4ff', '#c6a2ff', '#a6f0b8', '#ff8fc8'];
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 8; c++) { ctx.fillStyle = cols[(r + c) % 5]; ctx.globalAlpha = 0.7; ctx.fillRect(-120 + c * 26 + 3, -100 + r * 27 + 3, 20, 21); }
-  ctx.globalAlpha = 1;
-  ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.6;
-  for (let r = 1; r < 4; r++) { ctx.beginPath(); ctx.moveTo(-130, -100 + r * 27); ctx.lineTo(100, -100 + r * 27); ctx.stroke(); }
-  ctx.setLineDash([]);
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  // the nest's hollow, lined with soft straw
+  ctx.fillStyle = 'rgba(40,20,10,.25)'; ellipse(0, 8, 150, 22);
+  ink(P2('M-150,-44 C-150,-80 150,-80 150,-44 C150,-14 -150,-14 -150,-44 Z'), '#7a5030', 2.2);
+  ctx.fillStyle = '#f2d08a'; ellipse(0, -46, 132, 22);
+  ctx.strokeStyle = '#d8a850'; ctx.lineWidth = 2; for (let i = 0; i < 12; i++) { const a = -2.6 + i * 0.44; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 30, -30 + Math.sin(a) * 6); ctx.lineTo(Math.cos(a) * 104, -30 + Math.sin(a) * 17); ctx.stroke(); }
   ctx.restore();
+  // him, curled up: sitting low in the nest, so the rim hides his legs and tummy
+  drawBabyDino(x - 6 * s, y - 2 * s, s * 0.92, dinoLook(), { facing: 1, pose: 'sit', mood: o.mood || 'sleepy' });
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  // the woven front rim of twigs, over him (and over the blanket's edge, so it looks tucked in)
+  const nestRim = () => {
+    const rim = P2('M-156,-46 C-162,-6 -120,34 0,36 C120,34 162,-6 156,-46 C120,-30 60,-24 0,-24 C-60,-24 -120,-30 -156,-46 Z');
+    ink(rim, '#a8743e', 2.6);
+    ctx.save(); ctx.clip(rim);
+    for (const [a, b, c] of NEST_TWIGS) { ctx.strokeStyle = c > 0 ? '#8a5a2c' : '#d4a060'; ctx.lineWidth = 3.5; ctx.beginPath(); const x0 = -160 + a * 320, y0 = -36 + b * 66; ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x0 + 20, y0 - 10 + c * 6, x0 + 46 + c * 20, y0 - 4 + c * 10); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(255,230,170,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-140, -38); ctx.quadraticCurveTo(0, -18, 140, -38); ctx.stroke();
+    ctx.restore();
+    for (const [dx, dy] of [[-150, -44], [118, -40], [146, -30], [-60, 32]]) { ctx.strokeStyle = '#8a5a2c'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx + 16, dy - 14); ctx.stroke(); }
+  };
+  // his tail curls round over the front of the nest
+  ctx.strokeStyle = OL; ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(-110, -40); ctx.quadraticCurveTo(-70, -10, 0, -22); ctx.stroke();
+  ctx.strokeStyle = '#7fd88a'; ctx.lineWidth = 17; ctx.stroke();
+  nestRim();
+  // the blanket: folded small in Aubrey's hands, floating over, opening out, then lying over him
+  if (k > 0) {
+    const fx = o.fromX != null ? (o.fromX - x) / s : -250, fy = o.fromY != null ? (o.fromY - y) / s : -120;
+    const bx = lerp(fx, 0, k), by = lerp(fy, -6, k) - Math.sin(k * Math.PI) * 70, w = lerp(0.3, 1, k), sag = Math.sin(S.t * 1.2) * 1.5 * k;
+    ctx.save(); ctx.translate(bx, by); ctx.scale(w, lerp(0.5, 1, k));
+    const q = P2(`M-132,-6 C-130,-70 -84,-96 -30,-100 C20,-104 70,-96 104,-74 C122,-50 128,-26 132,-6 C110,${10 + sag} 80,${4 - sag} 50,${12 + sag} C20,${4 + sag} -10,${12 - sag} -40,${6 + sag} C-70,${12 - sag} -100,${4 + sag} -132,-6 Z`);
+    ink(q, '#ffb3d6', 2.4, '#a04a7a');
+    ctx.save(); ctx.clip(q);
+    const cols = ['#ffd23f', '#8ad4ff', '#c6a2ff', '#a6f0b8', '#ff8fc8'];
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 10; c++) { ctx.fillStyle = cols[(r + c) % 5]; ctx.globalAlpha = 0.7; ctx.fillRect(-134 + c * 27 + 3, -104 + r * 24 + 3, 21, 18); }
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.6;
+    for (let r = 1; r < 5; r++) { ctx.beginPath(); ctx.moveTo(-140, -104 + r * 24); ctx.lineTo(140, -104 + r * 24); ctx.stroke(); }
+    ctx.setLineDash([]);
+    ctx.restore();
+    ctx.restore();
+    if (k > 0.85) nestRim();
+  }
+  ctx.restore();
+  // once the blanket is on, his sleepy head pokes out over the top of it
+  if (k >= 1) drawDinoHeadOnly(x - 6 * s, y - 2 * s, s * 0.92, o.mood || 'sleepy');
+}
+// redraws just the top of him (head and neck) so it sits over the blanket
+function drawDinoHeadOnly(x, y, s, mood) {
+  ctx.save(); ctx.beginPath(); ctx.rect(x - 260 * s, y - 400 * s, 520 * s, 300 * s); ctx.clip();
+  drawBabyDino(x, y, s, dinoLook(), { facing: 1, pose: 'sit', mood });
   ctx.restore();
 }
 
@@ -460,7 +499,7 @@ SCENES.dinonight = {
   },
   updateSleep(dt) {
     const z = this.sleep;
-    if (z.tucked) z.tuck = Math.min(1, z.tuck + dt * 1.6);
+    if (z.tucked) z.tuck = Math.min(1, z.tuck + dt * 0.9); // the blanket floats over from Aubrey and settles on him
     if (z.hum) z.humT += dt;
     if (z.dimmed) z.dim = Math.min(0.62, z.dim + dt * 0.6);
     const all = z.tucked && z.humT > 3.4 && z.dimmed;
@@ -488,8 +527,7 @@ SCENES.dinonight = {
     if (z) {
       // a moonbeam from the window once the lantern is low
       if (z.dim > 0) { ctx.fillStyle = `rgba(200,220,255,${z.dim * 0.35})`; ctx.beginPath(); ctx.moveTo(90, 70); ctx.lineTo(230, 70); ctx.lineTo(DN.x + 160, 500); ctx.lineTo(DN.x - 140, 500); ctx.closePath(); ctx.fill(); }
-      drawDinoTucked(DN.x, DN.y, DN.s, z.tucked ? z.tuck : 0);
-      if (!z.tucked) drawBabyDino(DN.x, DN.y, DN.s, dinoLook(), { facing: 1, pose: 'sit', mood: z.hum ? 'sleepy' : 'sad' });
+      drawDinoTucked(DN.x + 30, DN.y, DN.s * 0.95, z.tucked ? z.tuck : 0, { mood: z.tucked || z.hum ? 'sleepy' : 'sad', fromX: 200, fromY: 360 });
     } else {
       drawBabyDino(DN.x, DN.y, DN.s, dinoLook(), { facing: 1, mood: this.mood(), chomp: this.chomp, glow: this.done.cuddle ? 0.4 : 0 });
     }

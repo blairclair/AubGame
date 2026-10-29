@@ -52,7 +52,7 @@ SCENES.night = {
     panel(560, 130, 370, 280, 22);
     outlined(`Day ${S.day - 1} is over`, 745, 168, 30, '#ff6fb5', 'center', '#fff');
     const lines = isDino() ? [
-      `${S.name} is snuggled up under his quilt, dreaming of his mama.`,
+      `${S.name} is curled up in his nest under his quilt, dreaming of his mama.`,
       `Things made for the journey: ${dinoKit().length}`,
       this.countdown(),
     ] : [
