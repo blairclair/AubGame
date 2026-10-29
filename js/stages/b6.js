@@ -500,7 +500,7 @@
   };
   MG.emberpinball = {
     kind: 'action', title: () => 'Ember Pinball', icon: () => '🔥',
-    how: () => 'Flip with the left and right arrows, or tap each side. Bounce the fireball up to hit the floating embers!',
+    how: () => 'Aubrey is at the controls! Flip with the left and right arrows, or tap each side. Bounce the fireball up to hit the floating embers!',
     init(g) {
       const bumpers = [[410, 206, 26], [550, 206, 26], [480, 292, 28]];
       if (g.tier >= 2) bumpers.push([360, 310, 15], [600, 310, 15]);
@@ -558,11 +558,12 @@
         if (sp > 880) { b.vx *= 880 / sp; b.vy *= 880 / sp; }
       }
       for (const bp of g.bumpers) bp.lit = Math.max(0, bp.lit - dt);
+      g.hop = Math.max(0, (g.hop || 0) - dt);
       if (b.live) {
         for (let i = g.embers.length - 1; i >= 0; i--) {
           const e = g.embers[i];
           if (Math.hypot(e.x - b.x, e.y - b.y) > PB_R + 22) continue;
-          g.embers.splice(i, 1); g.got++; g.spawnT = 0.7;
+          g.embers.splice(i, 1); g.got++; g.spawnT = 0.7; g.hop = 0.45;
           SFX.hit(); burst(e.x, e.y, 18, { colors: ['#ffe14a', '#ff8a3a', '#fff6a8'] }); floatText(e.x, e.y - 20, '+1', '#fff6a8', false, 24);
         }
         // a ball that sits still for a while gets a friendly puff of hot air
@@ -582,13 +583,35 @@
       g.score = g.got / g.target;
       if (g.got >= g.target || g.timeLeft <= 0) g.done = true;
     },
-    draw(g) {
-      // side panels that show where to tap
-      for (const [x, label, key, on] of [[150, 'Left flipper', '← key', g.lWas], [810, 'Right flipper', '→ key', g.rWas]]) {
-        rrect(x - 110, 330, 220, 150, 22, on ? 'rgba(255,200,90,.55)' : 'rgba(80,20,30,.45)', 'rgba(255,240,200,.7)', 3);
-        outlined(label, x, 380, 22, '#fff6a8');
-        text(`tap this side or ${key}`, x, 420, 16, '#fff', 'center', 600);
+    // Aubrey stands beside the table holding the flipper controller, wired to the machine.
+    // She leans toward whichever flipper she presses and hops when the fireball hits an ember.
+    drawPlayer(g) {
+      const x = 150, feet = 528, s = 0.95, im = IMG.idle_front, h = im.height * s;
+      const lean = (g.lWas ? -0.05 : 0) + (g.rWas ? 0.05 : 0), hop = g.hop > 0 ? Math.sin((g.hop / 0.45) * Math.PI) * 16 : 0;
+      ctx.fillStyle = 'rgba(20,0,10,.35)'; ellipse(x, feet + 2, 46, 8);
+      ctx.save(); ctx.translate(x, feet - hop); ctx.rotate(lean);
+      drawAubrey(0, 0, 'idle_front', 1, 0, s);
+      // the controller in her hands, with a big button for each flipper
+      const cy = -h * 0.44;
+      ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(44, cy + 4); ctx.bezierCurveTo(100, cy + 60, 120, cy - 40, 150 - lean * 200, -150 + hop); ctx.stroke();
+      ctx.strokeStyle = '#3a2a4a'; ctx.lineWidth = 4; ctx.stroke();
+      inkRect(-46, cy - 18, 92, 40, '#7a3a9a', 2, 16);
+      ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.roundRect(-40, cy - 14, 80, 10, 6); ctx.fill();
+      for (const [bx, on, col] of [[-22, g.lWas, '#ff6a3a'], [22, g.rWas, '#ffb03a']]) {
+        if (on) glow(bx, cy + 2, 30, '#ffe14a', 0.8);
+        inkCircle(bx, cy + (on ? 4 : 1), 12, on ? '#fff3a0' : col, 1.6);
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; circle(bx - 4, cy - 3 + (on ? 3 : 0), 3.5);
       }
+      ctx.restore();
+    },
+    draw(g) {
+      // where to tap: a hint above Aubrey on the left, the right flipper's panel on the right
+      rrect(46, 214, 210, 56, 18, g.lWas ? 'rgba(255,200,90,.55)' : 'rgba(80,20,30,.45)', 'rgba(255,240,200,.7)', 2.5);
+      outlined('Left flipper', 151, 234, 19, '#fff6a8'); text('tap this side or ← key', 151, 256, 14, '#fff', 'center', 600);
+      rrect(700, 330, 220, 150, 22, g.rWas ? 'rgba(255,200,90,.55)' : 'rgba(80,20,30,.45)', 'rgba(255,240,200,.7)', 3);
+      outlined('Right flipper', 810, 380, 22, '#fff6a8');
+      text('tap this side or → key', 810, 420, 16, '#fff', 'center', 600);
+      this.drawPlayer(g);
       // the table
       ctx.save(); ctx.shadowColor = 'rgba(60,10,20,.5)'; ctx.shadowBlur = 24;
       const tg = ctx.createLinearGradient(0, 66, 0, 540); tg.addColorStop(0, '#4a1530'); tg.addColorStop(1, '#22081c');
