@@ -228,16 +228,6 @@
     rain(80, 0.38);
   };
 
-  // --- Boot Stomp: puddles pop up in a grid; stomp them before they dry. Not the snails! -------
-  const BOOT = P2('M-18,-72 L18,-72 L18,-20 C36,-18 48,-10 48,0 L-22,0 C-24,-22 -21,-50 -18,-72 Z');
-  function drawBoot(x, y, s, col = '#ffd23a') {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    ink(BOOT, col, 2.5);
-    ctx.fillStyle = '#ff8a3a'; ctx.fillRect(-18, -66, 36, 7);
-    inkRect(-25, -6, 76, 10, '#5a4a6a', 2, 4);
-    ctx.fillStyle = 'rgba(255,255,255,.5)'; ellipse(-8, -40, 4, 16);
-    ctx.restore();
-  }
   function drawSnail(x, y, s, dir = 1, hid = false, t = 0) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s * dir, s);
     if (!hid) {
@@ -255,165 +245,871 @@
     ctx.stroke();
     ctx.restore();
   }
-  const splashSound = () => { tone(320, 0.18, 'sine', 0.12, 0, 90); noise(0.15, 0.06); };
+  // --- Boot Stomp: Aubrey, in her rain boots and raincoat, hops about a rainy back garden ----------
+  // A rain cloud drifts overhead and its drops make the puddles (go and stand under it!). Tap = a
+  // small hop, hold = a BIG jump for big puddles. Fergus calls out BIG / small stomp jobs and joins in
+  // for double splashes. Snails and worms with umbrellas cross the patio: hop OVER them, never on them.
+  const BS_Y0 = 300, BS_Y1 = 510, BS_X0 = 70, BS_X1 = 890;
+  const bsPer = y => lerp(0.8, 1.08, clamp((y - BS_Y0) / (BS_Y1 - BS_Y0), 0, 1));
+  const bsRad = p => { const k = bsPer(p.y) * p.sz; return [(p.big ? 80 : 44) * k, (p.big ? 26 : 15) * k]; };
+  const bsSeeded = s => () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  const BS_STONES = (() => {
+    const r = bsSeeded(11), out = [];
+    for (let y = 276, row = 0; y < H; row++) {
+      const h = 24 + row * 4;
+      for (let x = -40 + r() * 50; x < W + 10;) { const w = 76 + r() * 46 + row * 8; out.push([x, y, w, h, Math.floor(r() * 4), r()]); x += w; }
+      y += h;
+    }
+    return out;
+  })();
+  const BS_STONE_COLS = ['#8e96c6', '#9aa0cd', '#8690bf', '#a4a7d2'];
+  function bsPuddlePath(x, y, rx, ry, seed) {
+    const p = new Path2D();
+    for (let i = 0; i <= 28; i++) {
+      const a = i / 28 * Math.PI * 2, k = 1 + 0.09 * Math.sin(a * 3 + seed) + 0.05 * Math.sin(a * 5 + seed * 2);
+      if (i) p.lineTo(x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k); else p.moveTo(x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k);
+    }
+    p.closePath();
+    return p;
+  }
+  // Aubrey in a sunny yellow raincoat and red polka-dot rain boots, drawn in the idle_front sprite's
+  // own pixels (feet at the bottom of the box); (0, 0) is the ground under her
+  function bsAubBody(h, lift, sx, sy, tilt) {
+    const im = IMG.idle_front, s = h / im.height, lw = 1.25 / s;
+    ctx.save(); ctx.translate(0, -lift); ctx.rotate(tilt); ctx.scale(sx * s, sy * s); ctx.translate(-im.width / 2, -im.height);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ink(P2('M49,-8 C78,-8 90,14 86,40 C84,56 76,64 66,64 L32,64 C22,64 14,56 12,40 C8,14 20,-8 49,-8 Z'), '#ffd23a', lw); // hood behind her head
+    ctx.drawImage(im, 0, 0);
+    ink(P2('M30,52 C40,58 58,58 68,52 L74,58 C88,96 102,128 102,152 C70,160 28,160 -4,152 C-4,128 10,96 24,58 Z'), '#ffd23a', lw);
+    ctx.strokeStyle = '#e0a810'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(49, 60); ctx.lineTo(49, 154); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-2, 146); ctx.quadraticCurveTo(49, 156, 100, 146); ctx.stroke();
+    inkRect(12, 118, 22, 14, '#ffc21a', lw * 0.8, 3); inkRect(64, 118, 22, 14, '#ffc21a', lw * 0.8, 3);
+    for (const y of [74, 96, 118, 140]) inkCircle(54, y, 2.8, '#3a8ad0', lw * 0.5);
+    ink(P2('M30,52 L46,72 L49,59 Z'), '#ffe27a', lw * 0.8); ink(P2('M68,52 L52,72 L49,59 Z'), '#ffe27a', lw * 0.8);
+    ctx.drawImage(aubArmsImage(), 0, 0);
+    ink(P2('M25,57 C15,64 12,90 13,124 L28,124 C29,100 30,82 32,66 Z'), '#ffd23a', lw);
+    ink(P2('M73,57 C83,64 86,90 85,124 L70,124 C69,100 68,82 66,66 Z'), '#ffd23a', lw);
+    inkRect(11, 120, 19, 7, '#3a8ad0', lw * 0.7, 3); inkRect(68, 120, 19, 7, '#3a8ad0', lw * 0.7, 3);
+    for (const [fx, d] of [[32, -1], [81, 1]]) {
+      ctx.save(); ctx.translate(fx, 0); ctx.scale(d, 1);
+      const boot = P2('M-11,178 L11,178 L12,206 C22,207 27,212 26,220 L-13,220 C-13,206 -12,190 -11,178 Z');
+      ink(boot, '#ff3f62', lw);
+      ctx.save(); ctx.clip(boot); ctx.fillStyle = '#ffffff';
+      for (const [dx, dy] of [[-5, 188], [5, 196], [-4, 206], [7, 184], [16, 214], [3, 214]]) circle(dx, dy, 2.2);
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(-9, 180, 4, 24);
+      ctx.restore();
+      inkRect(-13, 173, 26, 8, '#ffd23a', lw * 0.8, 3);
+      inkRect(-14, 218, 41, 5, '#5a3a6a', lw * 0.6, 2);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  // a pink worm with a tiny umbrella; curled up when shy
+  function bsWorm(x, y, s, dir, t, hid) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s * dir, s);
+    if (hid) {
+      inkCircle(0, -14, 14, '#ff9ab8', 2);
+      ctx.strokeStyle = '#e06a90'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -14, 8, 0, Math.PI * 1.6); ctx.stroke();
+    } else {
+      const segs = [];
+      for (let i = 0; i < 7; i++) segs.push([-30 + i * 9, -8 - Math.abs(Math.sin(t * 6 - i * 0.8)) * 6 * (i > 0 && i < 6 ? 1 : 0.3)]);
+      ctx.strokeStyle = OL; ctx.lineWidth = 4;
+      for (const [sx, sy] of segs) { ctx.beginPath(); ctx.arc(sx, sy, 8, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(32, -14, 11, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#ff9ab8'; for (const [sx, sy] of segs) circle(sx, sy, 8); circle(32, -14, 11);
+      ctx.fillStyle = 'rgba(255,255,255,.4)'; for (const [sx, sy] of segs) circle(sx - 2, sy - 3, 3);
+      ctx.fillStyle = OL; circle(35, -17, 2); circle(30, -17, 2);
+      ctx.fillStyle = '#ff5f8a'; circle(38, -11, 2.5);
+      ctx.strokeStyle = OL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(33, -11, 3, 0.3, Math.PI - 0.3); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // the grumbly-but-friendly rain cloud
+  function bsCloud(x, y, t, puffT) {
+    const k = 1 + Math.max(0, puffT) * 0.5, b = Math.sin(t * 1.6) * 3;
+    ctx.save(); ctx.translate(x, y + b); ctx.scale(k, 1 / Math.sqrt(k));
+    leafBlob([[-58, 8, 28], [-30, -8, 34], [6, -20, 40], [44, -6, 34], [68, 10, 24], [-14, 16, 32], [30, 16, 30]], '#aab2dc', '#4a4278');
+    ctx.fillStyle = OL; ctx.lineWidth = 2.5; ctx.strokeStyle = OL;
+    ctx.beginPath(); ctx.arc(-12, 2, 5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(18, 2, 5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(3, 10, 6, 0.2, Math.PI - 0.2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,130,170,.5)'; ellipse(-24, 10, 6, 3.5); ellipse(30, 10, 6, 3.5);
+    ctx.restore();
+  }
+  // a little ladybug carrying an umbrella
+  function bsLadybug(x, y, t, dir) {
+    umbrella(x - 4 * dir, y - 26, 13, '#5adc7a', Math.sin(t * 3) * 0.12, '#ffffff');
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+    inkCircle(9, -6, 5, '#3a2a4a', 1.2);
+    inkEllipse(0, -7, 10, 8, 0, '#ff3f4a', 1.5);
+    ctx.strokeStyle = OL; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(0, 1); ctx.stroke();
+    ctx.fillStyle = OL; circle(-4, -10, 1.8); circle(4, -5, 1.8); circle(-5, -3, 1.5);
+    ctx.fillStyle = '#ffffff'; circle(11, -7, 1.3);
+    ctx.restore();
+  }
+  // the back garden: rainy sky, a growing rainbow, the fence, glistening bushes and a wet stone patio
+  function bsGarden(g) {
+    const t = S.t, sc = clamp(g.score, 0, 1);
+    const sk = ctx.createLinearGradient(0, 0, 0, 280); sk.addColorStop(0, '#8eaae4'); sk.addColorStop(1, '#e8e4ff');
+    ctx.fillStyle = sk; ctx.fillRect(0, 0, W, 280);
+    puff(150, 92, 0.9, 'rgba(236,238,255,.8)'); puff(820, 84, 1.0, 'rgba(236,238,255,.8)'); puff(520, 70, 0.7, 'rgba(236,238,255,.7)');
+    // the rainbow fills in band by band as Aubrey splashes
+    ctx.save(); ctx.lineCap = 'butt';
+    PG_RAINBOW.forEach((c, i) => {
+      const r = 250 - i * 11, a = clamp(sc * 6 - i, 0, 1), a0 = Math.PI * 1.04, sweep = Math.PI * 0.92;
+      ctx.strokeStyle = c; ctx.lineWidth = 11;
+      ctx.globalAlpha = 0.16; ctx.beginPath(); ctx.arc(480, 330, r, a0, a0 + sweep); ctx.stroke();
+      if (a > 0) { ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.arc(480, 330, r, a0, a0 + sweep * a); ctx.stroke(); }
+    });
+    ctx.restore();
+    if (sc >= 0.99) for (let i = 0; i < 6; i++) twinkle(260 + i * 88, 96 + Math.abs(i - 2.5) * 22, 9, 0.5 + 0.5 * Math.sin(t * 5 + i), '#fff6a8');
+    // far-off trees
+    ctx.fillStyle = 'rgba(110,170,150,.55)';
+    for (let x = -20; x < W + 40; x += 70) circle(x, 176 + Math.sin(x) * 8, 40 + (x % 3) * 6);
+    // the picket fence
+    for (let x = -10; x < W; x += 36) ink(P2(`M${x},264 L${x},182 L${x + 13},166 L${x + 26},182 L${x + 26},264 Z`), '#f6f0ff', 1.2);
+    inkRect(-10, 194, W + 20, 11, '#e2d8f4', 2, 3); inkRect(-10, 238, W + 20, 11, '#e2d8f4', 2, 3);
+    // a ladybug with an umbrella strolls along the top rail
+    const lbx = ((t * 26) % (W + 120)) - 60;
+    bsLadybug(lbx, 194, t, 1);
+    // the big tree on the left
+    inkRect(46, 120, 34, 150, '#8a6a50', 2.5, 8);
+    leafBlob([[20, 112, 44], [74, 92, 46], [124, 116, 38], [58, 146, 40], [4, 152, 30], [110, 152, 28]], '#4fae5a');
+    // the house corner, its downpipe and the rain barrel on the right
+    inkRect(908, 90, 70, 180, '#ffd2c4', 2.5, 2);
+    ink(P2('M896,96 L972,70 L972,96 Z'), '#c05a5a', 1.5);
+    inkRect(920, 130, 30, 40, '#bfe4ff', 2, 4);
+    inkRect(892, 96, 10, 120, '#9aa6c8', 1.5, 3);
+    ctx.fillStyle = 'rgba(190,225,255,.85)'; const sp = Math.sin(t * 20) * 1.5; ctx.fillRect(894 + sp * 0.3, 214, 6, 22);
+    inkRect(866, 222, 60, 48, '#9a6a48', 2.5, 8);
+    ctx.fillStyle = '#6e4a34'; ctx.fillRect(866, 234, 60, 4); ctx.fillRect(866, 256, 60, 4);
+    inkEllipse(896, 223, 30, 6, 0, '#7fb8ec', 1.5);
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5; const rk = (t * 1.5) % 1;
+    ctx.beginPath(); ctx.ellipse(897, 223, 4 + rk * 22, 1 + rk * 4, 0, 0, Math.PI * 2); ctx.stroke();
+    // a mouse peeking out from behind the barrel, under its umbrella
+    const my = 238 + Math.sin(t * 1.3) * 3;
+    umbrella(846, my - 30, 18, '#ff6fb5', -0.2, '#ffffff');
+    inkCircle(838, my - 14, 7, '#c8c0d8', 1.2); inkCircle(856, my - 14, 7, '#c8c0d8', 1.2);
+    inkEllipse(847, my - 2, 14, 12, 0, '#c8c0d8', 1.5);
+    ctx.fillStyle = '#ffb0c8'; circle(838, my - 14, 3.5); circle(856, my - 14, 3.5); circle(847, my + 4, 2.5);
+    ctx.fillStyle = OL; circle(842, my - 3, 1.8); circle(852, my - 3, 1.8);
+    // glistening bushes and tulips along the fence
+    for (const [bx, bc] of [[160, '#3fa85a'], [370, '#4fb862'], [590, '#3fa85a'], [770, '#4fb862']]) {
+      leafBlob([[bx - 30, 258, 22], [bx, 248, 28], [bx + 30, 258, 22], [bx - 12, 266, 20], [bx + 14, 266, 20]], bc);
+      for (let i = 0; i < 4; i++) {
+        const dx = [-30, -6, 18, 34][i], dy = [248, 232, 240, 254][i];
+        twinkle(bx + dx, dy, 5, 0.3 + 0.7 * Math.max(0, Math.sin(t * 2.2 + bx + i * 1.7)), '#ffffff');
+      }
+    }
+    for (const [fx, col] of [[250, '#ff5f7e'], [272, '#ffd23a'], [460, '#c690ff'], [482, '#ff8a3a'], [680, '#ff6fb5'], [702, '#ffd23a']]) {
+      const sw = Math.sin(t * 1.8 + fx) * 3;
+      ctx.strokeStyle = '#2f8a3a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(fx, 276); ctx.quadraticCurveTo(fx, 256, fx + sw, 236); ctx.stroke();
+      ink(P2(`M${fx + sw - 9},${236} C${fx + sw - 10},${222} ${fx + sw - 4},${220} ${fx + sw - 3},${226} L${fx + sw},${219} L${fx + sw + 3},${226} C${fx + sw + 4},${220} ${fx + sw + 10},${222} ${fx + sw + 9},${236} Z`), col, 1.2);
+    }
+    // grass edge, then the wet stone patio
+    inkRect(-10, 262, W + 20, 20, '#6cc46a', 1.5, 6);
+    ctx.fillStyle = '#5c6292'; ctx.fillRect(0, 276, W, H - 276);
+    for (const [x, y, w, h, c, r] of BS_STONES) {
+      rrect(x + 3, y + 3, w - 6, h - 6, 9, BS_STONE_COLS[c]);
+      ctx.fillStyle = 'rgba(255,255,255,.16)'; ellipse(x + w * (0.3 + r * 0.3), y + h * 0.35, w * 0.22, h * 0.14);
+    }
+    // the sky, the fence and the rainbow reflected on the wet stones
+    const rf = ctx.createLinearGradient(0, 276, 0, H); rf.addColorStop(0, 'rgba(235,236,255,.35)'); rf.addColorStop(0.5, 'rgba(235,236,255,0)');
+    ctx.fillStyle = rf; ctx.fillRect(0, 276, W, H - 276);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 276, W, H - 276); ctx.clip(); ctx.lineCap = 'butt';
+    PG_RAINBOW.forEach((c, i) => {
+      const a = clamp(sc * 6 - i, 0, 1);
+      if (a <= 0) return;
+      ctx.strokeStyle = c; ctx.lineWidth = 8; ctx.globalAlpha = 0.13;
+      ctx.beginPath(); ctx.ellipse(480, 250, 250 - i * 11, (250 - i * 11) * 0.55, 0, Math.PI * 0.06, Math.PI * 0.06 + Math.PI * 0.88 * a); ctx.stroke();
+    });
+    ctx.restore();
+    for (let i = 0; i < 9; i++) {
+      const k = (t * 1.4 + i * 0.37) % 1, sx = (i * 131 + Math.floor(t * 1.4 + i * 0.37) * 211) % W, sy = 300 + (i * 47) % 230;
+      ctx.strokeStyle = `rgba(255,255,255,${0.6 * (1 - k)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(sx, sy, 2 + k * 12, 1 + k * 4, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  const bsSplashSound = (big, combo) => {
+    const f = 300 + Math.min(combo, 6) * 40;
+    tone(f, big ? 0.3 : 0.18, 'sine', 0.13, 0, 80); noise(big ? 0.3 : 0.16, big ? 0.09 : 0.06);
+    tone(f * 2.4, 0.12, 'triangle', 0.05, 0.05);
+    if (big) tone(90, 0.25, 'sine', 0.16, 0, 50);
+  };
+  const BS_JOBS = [
+    [['big', 1], ['small', 2], ['big', 1], ['small', 3], ['big', 1], ['small', 2], ['big', 1], ['small', 3]],
+    [['small', 2], ['big', 1], ['small', 3], ['big', 2], ['small', 3], ['big', 1], ['small', 4], ['big', 2]],
+    [['big', 2], ['small', 3], ['big', 1], ['small', 4], ['big', 2], ['small', 3], ['big', 2], ['small', 4]],
+  ];
   MG.bootstomp = {
     kind: 'action', title: () => 'Boot Stomp', icon: () => '👢',
-    how: () => "Puddles keep popping up! Click a puddle, or press its number, to STOMP it before it dries up. Don't squish the snails!",
+    how: () => 'Move Aubrey with the mouse or arrows. Tap, or press Space, to hop and SPLASH! Hold for a BIG jump on BIG puddles. Stand near the rain cloud to find new puddles, do what Fergus says, and hop OVER the snails!',
     init(g) {
       const t = g.tier - 1;
       Object.assign(g, {
-        timeLeft: 30, cells: [], boots: [], spawnT: 0.5, hits: 0, oops: 0, dried: 0,
-        target: [16, 20, 24][t], life: [3.2, 2.6, 2.1][t], gap: [0.95, 0.75, 0.6][t], snailP: [0.2, 0.26, 0.3][t], maxLive: [2, 3, 4][t],
-        say: 'Stomp the puddles! Not the snails!',
+        timeLeft: [45, 44, 42][t], target: [34, 38, 42][t], gap: [1.5, 1.35, 1.2][t], life: [9.5, 8, 7][t],
+        chargeT: [0.38, 0.45, 0.5][t], critGap: [8, 6, 4.6][t], critMax: [1, 2, 3][t], streakGap: [12, 11, 10][t],
+        px: 330, py: 430, vx: 0, vy: 0, facing: 1, walk: 0, air: null, charge: -1, chKey: false, sq: 0, sqv: 0,
+        pts: 0, splashes: 0, oops: 0, combo: 0, lastStomp: -9, puds: [], crits: [], drops: [], rings: [], shk: 0,
+        cloud: { x: 520, gy: 400, tx: 520, tgy: 400, wait: 2, puff: 0 }, spawnT: 0.3, critT: 3, streakT: 7, tellBig: 0,
+        fg: { x: 800, y: 486, fx: 800, fy: 486, tx: 800, ty: 486, hop: -1, dir: -1, coop: null, coopT: 6, bubble: 0 },
+        jobs: BS_JOBS[t], jobI: 0, job: null, jobWait: 0.6, warned: {}, win: 0, said: false,
+        say: 'Splash the puddles! Hop over the snails!',
       });
-      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) g.cells.push({ x: 300 + c * 180, y: 180 + r * 118, kind: null, age: 0, life: 1, seed: r * 3 + c });
+      for (let i = 0; i < 3; i++) this.spawnPuddle(g, i === 1, 520 + (i - 1) * 140, 400 + (i - 1) * 30, 0.4);
     },
-    start(g) { speak(g.say); },
-    update(g, dt) {
-      g.timeLeft -= dt;
-      if ((g.spawnT -= dt) <= 0) {
-        const empty = g.cells.filter(c => !c.kind), live = g.cells.filter(c => c.kind === 'puddle' || c.kind === 'snail');
-        if (empty.length && live.length < g.maxLive) {
-          const c = pick(empty), snail = Math.random() < g.snailP && !g.cells.some(c => c.kind === 'snail');
-          Object.assign(c, { kind: snail ? 'snail' : 'puddle', age: 0, life: snail ? rand(2.4, 3.4) : g.life * rand(0.85, 1.15), dir: pick([-1, 1]) });
+    start(g) { speak('Splash the puddles! Hold for a BIG jump. Hop over the snails!'); },
+    spawnPuddle(g, big, x, y, age = -0.35) {
+      for (let k = 0; k < 10; k++) {
+        const px = clamp(x + (k ? rand(-90, 90) : 0), BS_X0, BS_X1), py = clamp(y + (k ? rand(-30, 30) : 0), BS_Y0 + 6, BS_Y1);
+        const free = g.puds.every(p => { const [rx, ry] = [(p.big ? 84 : 48) + (big ? 84 : 48), 40 + (big ? 14 : 0)]; return ((px - p.x) / rx) ** 2 + ((py - p.y) / ry) ** 2 > 1; });
+        if (free) { g.puds.push({ x: px, y: py, big, age, life: g.life * rand(0.9, 1.1) * (big ? 1.15 : 1), seed: rand(0, 9), sz: 0, wob: 0, coop: false }); return true; }
+      }
+      return false;
+    },
+    newJob(g) {
+      const [size, n] = g.jobs[g.jobI % g.jobs.length];
+      g.jobI++;
+      g.job = { size, n, got: 0, done: 0 };
+      g.say = `Stomp ${NUM_WORDS[n]} ${size === 'big' ? 'BIG' : 'small'} puddle${n > 1 ? 's' : ''}!`;
+      speak(`Fergus says: ${g.say}`);
+      g.fg.bubble = 2.5;
+    },
+    splash(g, x, y, big, k) {
+      const n = big ? 34 : 20;
+      for (let i = 0; i < n; i++) {
+        const a = rand(0, Math.PI * 2), sp = rand(50, big ? 270 : 170) * k;
+        g.drops.push({ x, y, z: 4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.4, vz: rand(200, big ? 520 : 380), r: rand(2.5, big ? 6 : 4.5) * k });
+      }
+      for (let i = 0; i < (big ? 4 : 3); i++) g.rings.push({ x, y, r: 6, R: (big ? 130 : 80) * k * (1 - i * 0.18), life: 0.7 + i * 0.15, max: 0.7 + i * 0.15, rb: big && i === 0, d: i * 0.08 });
+      if (big) { g.shk = 0.35; burst(x, y - 30, 14, { colors: PG_RAINBOW, spread: 200, up: 160 }); } else burst(x, y - 20, 6, { colors: ['#ffffff', '#bfe6ff', '#fff6a8'], spread: 120, up: 100 });
+    },
+    launch(g) {
+      const big = g.charge >= 1, pow = clamp(g.charge, 0, 1);
+      let tx = g.px, ty = g.py;
+      if (!g.chKey) {
+        const dx = pointer.x - g.px, dy = pointer.y - g.py, d = Math.hypot(dx, dy), mx = big ? 340 : 260;
+        if (d > 8) { const f = Math.min(1, mx / d); tx = g.px + dx * f; ty = g.py + dy * f; }
+      } else {
+        let kx = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), ky = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+        const l = Math.hypot(kx, ky);
+        if (l) { tx += kx / l * (big ? 190 : 130); ty += ky / l * (big ? 120 : 85); }
+      }
+      tx = clamp(tx, BS_X0, BS_X1); ty = clamp(ty, BS_Y0, BS_Y1);
+      g.air = { x0: g.px, y0: g.py, x1: tx, y1: ty, t: 0, dur: lerp(0.42, 0.7, pow), h: lerp(46, 124, pow), big, near: {} };
+      if (Math.abs(tx - g.px) > 2) g.facing = Math.sign(tx - g.px);
+      g.charge = -1; g.sqv = 7 + pow * 5;
+      tone(big ? 300 : 420, 0.18, 'triangle', 0.07, 0, big ? 900 : 760);
+    },
+    land(g) {
+      const a = g.air, x = g.px, y = g.py, k = bsPer(y);
+      g.air = null; g.sqv = a.big ? -10 : -7;
+      // landing on a snail or worm? It ducks and squeaks, unhurt, and the stomp is lost
+      const onCrit = g.crits.find(c => !c.hide && ((x - c.x) / (40 * k)) ** 2 + ((y - c.y) / (20 * k)) ** 2 < 1);
+      if (onCrit) {
+        onCrit.hide = 1.6; g.oops++; g.pts = Math.max(0, g.pts - 1); g.combo = 0; SFX.miss();
+        floatText(onCrit.x, onCrit.y - 60, 'Eek! Hop OVER me!', '#ffb0c4', false, 20);
+        if (!g.warned.crit) { g.warned.crit = 1; speak(`Oops! Hop over the ${onCrit.kind}s, don't land on them!`); }
+        return;
+      }
+      // a near miss: the critter giggles
+      for (const c of g.crits) if (a.near[c.id] && !c.hide) {
+        c.giggle = 1.4; g.pts += 0.5; tone(1200, 0.08, 'sine', 0.06); tone(1500, 0.08, 'sine', 0.06, 0.09);
+        floatText(c.x, c.y - 56, 'Hee hee! +½', '#ffd0f0', false, 20);
+      }
+      const hits = g.puds.filter(p => p.age > 0.1 && p.sz > 0.2).map(p => { const [rx, ry] = bsRad(p); return [p, ((x - p.x) / (rx + 10)) ** 2 + ((y - p.y) / (ry + 8)) ** 2]; }).filter(h => h[1] < 1.1).sort((u, v) => u[1] - v[1]);
+      if (!hits.length) { SFX.step(); g.rings.push({ x, y, r: 4, R: 34 * k, life: 0.5, max: 0.5, d: 0 }); return; }
+      const p = hits[0][0];
+      if (p.big && !a.big) {
+        p.wob = 0.5; g.combo = 0; SFX.miss(); tone(260, 0.1, 'sine', 0.08, 0, 140);
+        g.rings.push({ x, y, r: 4, R: 46 * k, life: 0.5, max: 0.5, d: 0 });
+        floatText(p.x, p.y - 70, 'Too BIG! Hold for a BIG jump!', '#fff6a8', false, 20);
+        if (g.tellBig <= 0) { g.tellBig = 6; speak('That puddle is BIG! Hold down to charge a BIG jump!'); }
+        return;
+      }
+      g.puds = g.puds.filter(q => q !== p);
+      g.splashes++;
+      g.combo = g.t - g.lastStomp < 1.5 ? g.combo + 1 : 1; g.lastStomp = g.t;
+      g.pts += p.big ? 1.5 : 1;
+      this.splash(g, p.x, p.y, p.big || a.big, k * (p.big ? 1.15 : 1));
+      bsSplashSound(p.big, g.combo);
+      floatText(p.x, p.y - 80, p.big ? pick(['KER-SPLOOSH!', 'MEGA SPLASH!', 'SPLOOOSH!']) : pick(['SPLASH!', 'SPLISH!', 'SPLOSH!']), p.big ? '#ffe36b' : '#d8f0ff', false, p.big ? 30 : 24);
+      if (g.combo >= 2) { if (g.combo >= 3) g.pts += 0.25; floatText(p.x, p.y - 112, `Hop combo x${g.combo}!`, '#ffb0e0', false, 20); }
+      const f = g.fg;
+      if (p.coop && f.coop === p) {
+        g.pts += 1; f.coop = null; f.hop = 0; f.fx = f.x; f.fy = f.y; f.tx = f.x; f.ty = f.y; f.coopT = rand(7, 10);
+        this.splash(g, f.x, f.y, false, k);
+        floatText(f.x, f.y - 110, 'Double splash! Ribbit!', '#a6f0b8', false, 24); SFX.sparkle();
+      }
+      const j = g.job;
+      if (j && !j.done && (p.big ? 'big' : 'small') === j.size) {
+        j.got++;
+        if (j.got >= j.n) {
+          j.done = 1; g.pts += 1.5; g.jobWait = 2.6; SFX.hit();
+          speak(`Ribbit! ${NUM_WORDS[j.n]} ${j.size === 'big' ? 'BIG' : 'small'} puddle${j.n > 1 ? 's' : ''}! Well done!`);
+          burst(170, 100, 16);
         }
-        g.spawnT = g.gap * rand(0.7, 1.3);
       }
-      for (const c of g.cells) {
-        if (!c.kind) continue;
-        c.age += dt;
-        if (c.age >= c.life) { if (c.kind === 'puddle') { g.dried++; floatText(c.x, c.y - 30, 'Dried up!', '#e8e8ff', false, 18); } c.kind = null; }
+    },
+    update(g, dt) {
+      g.timeLeft -= dt; g.tellBig -= dt; g.shk = Math.max(0, g.shk - dt);
+      const cl = g.cloud;
+      cl.puff = Math.max(0, cl.puff - dt * 2);
+      // the rain cloud drifts about; its drops make new puddles underneath it
+      const cdx = cl.tx - cl.x, cdy = cl.tgy - cl.gy, cd = Math.hypot(cdx, cdy), cs = 70 + g.tier * 12;
+      if (cd > 2) { cl.x += cdx / cd * Math.min(cd, cs * dt); cl.gy += cdy / cd * Math.min(cd, cs * 0.6 * dt); } else if ((cl.wait -= dt) <= 0) {
+        let nx;
+        do nx = rand(170, 800); while (Math.abs(nx - cl.x) < 200);
+        cl.tx = nx; cl.tgy = rand(BS_Y0 + 40, BS_Y1 - 20); cl.wait = rand(2.5, 4);
       }
-      let hit = keyPick(9);
-      if (hit < 0 && pointer.clicked) hit = g.cells.findIndex(c => ((pointer.x - c.x) / 92) ** 2 + ((pointer.y - c.y) / 52) ** 2 < 1);
-      if (hit >= 0) {
-        const c = g.cells[hit];
-        g.boots.push({ x: c.x, y: c.y + 12, t: 0.12 });
-        if (c.kind === 'puddle') {
-          g.hits++; c.kind = null; splashSound();
-          burst(c.x, c.y, 18, { colors: ['#bfe4ff', '#8ac8ff', '#ffffff'], spread: 220, up: 140 });
-          floatText(c.x, c.y - 50, pick(['SPLASH!', 'SPLOSH!', 'Splish!']), '#bfe4ff', false, 24);
-        } else if (c.kind === 'snail') {
-          g.oops++; c.kind = 'hid'; c.age = 0; c.life = 0.9; SFX.miss();
-          floatText(c.x, c.y - 50, 'Oops! Poor snail!', '#ffb0c4', false, 22); speak('Oops! Watch out for the snails.');
-        } else SFX.step();
+      if ((g.spawnT -= dt) <= 0 && g.timeLeft > 1.5) {
+        g.spawnT = g.gap * rand(0.8, 1.2);
+        const live = g.puds.length, wantBig = g.job && !g.job.done && g.job.size === 'big';
+        if (live < 4 + g.tier) { this.spawnPuddle(g, Math.random() < (wantBig ? 0.6 : 0.3), cl.x + rand(-80, 80), cl.gy + rand(-26, 26)); cl.puff = 0.4; }
       }
-      for (const b of g.boots) b.t -= dt;
-      g.boots = g.boots.filter(b => b.t > -0.25);
-      g.progress = `Stomped ${g.hits} of ${g.target}`;
-      g.score = clamp((g.hits - g.oops) / g.target, 0, 1);
-      if (g.timeLeft <= 0) g.done = true;
+      // now and then the cloud sneezes out a whole row of little puddles to hop along
+      if ((g.streakT -= dt) <= 0 && g.timeLeft > 4) {
+        g.streakT = g.streakGap * rand(0.9, 1.15);
+        const n = g.tier === 1 ? 3 : 4, y = clamp(cl.gy, BS_Y0 + 20, BS_Y1 - 10), x0 = clamp(cl.x - (n - 1) * 60, BS_X0 + 10, BS_X1 - (n - 1) * 120 - 10);
+        let made = 0;
+        for (let i = 0; i < n; i++) made += this.spawnPuddle(g, false, x0 + i * 120, y + Math.sin(i * 1.7) * 10, -0.3 - i * 0.22) ? 1 : 0;
+        if (made >= 2) { cl.puff = 1; floatText(cl.x, 200, 'A puddle path! Hop, hop, hop!', '#ffffff', false, 22); if (!g.said) { g.said = true; speak('A puddle path! Hop, hop, hop!'); } }
+      }
+      for (const p of g.puds) {
+        p.age += dt; p.wob = Math.max(0, p.wob - dt);
+        const grow = clamp(p.age / 0.45, 0, 1), dry = clamp((p.age - p.life * 0.65) / (p.life * 0.35), 0, 1);
+        p.sz = (1 - (1 - grow) ** 3) * (1 - 0.6 * dry) * (1 + Math.sin(p.wob * 30) * 0.06);
+      }
+      g.puds = g.puds.filter(p => {
+        if (p.age < p.life) return true;
+        floatText(p.x, p.y - 30, 'Dried up!', '#eef0ff', false, 16);
+        if (g.fg.coop === p) { g.fg.coop = null; g.fg.coopT = rand(4, 7); }
+        return false;
+      });
+      // snails and worms with umbrellas wander across the patio
+      if ((g.critT -= dt) <= 0) {
+        g.critT = g.critGap * rand(0.8, 1.2);
+        if (g.crits.length < g.critMax) {
+          const dir = pick([-1, 1]);
+          g.crits.push({ id: Math.random(), kind: pick(['snail', 'worm']), x: dir > 0 ? -50 : W + 50, y: g.crits.length ? (g.crits[g.crits.length - 1].y > 405 ? rand(BS_Y0 + 20, 380) : rand(430, BS_Y1 - 10)) : rand(BS_Y0 + 20, BS_Y1 - 10), dir, spd: rand(24, 34) + g.tier * 4, hide: 0, giggle: 0, col: pick(['#ff6fb5', '#40b0ff', '#ffd23a', '#9c6cff']) });
+        }
+      }
+      for (const c of g.crits) {
+        c.hide = Math.max(0, c.hide - dt); c.giggle = Math.max(0, c.giggle - dt);
+        if (!c.hide) c.x += c.dir * c.spd * dt;
+        if (!g.air && !c.hide && Math.abs(g.px - c.x) < 34 && Math.abs(g.py - c.y) < 16 && !c.shy) { c.shy = 1; floatText(c.x, c.y - 50, 'Excuse me!', '#ffffff', false, 16); }
+        if (Math.abs(g.px - c.x) > 60) c.shy = 0;
+      }
+      g.crits = g.crits.filter(c => c.x > -80 && c.x < W + 80);
+      // Fergus's stomp jobs
+      if (g.job?.done || !g.job) { if ((g.jobWait -= dt) <= 0) this.newJob(g); }
+      g.fg.bubble = Math.max(0, g.fg.bubble - dt);
+      // Fergus hops over to a puddle and waits there to splash it together
+      const f = g.fg;
+      if (f.hop >= 0) {
+        f.hop += dt / 0.55;
+        f.x = lerp(f.fx, f.tx, Math.min(1, f.hop)); f.y = lerp(f.fy, f.ty, Math.min(1, f.hop));
+        if (f.hop >= 1) { f.hop = -1; SFX.step(); }
+      } else if (!f.coop && (f.coopT -= dt) <= 0) {
+        const p = g.puds.filter(p => p.age > 0.5 && p.life - p.age > 4.5 && !p.coop).sort((a, b) => Math.hypot(a.x - g.px, a.y - g.py) - Math.hypot(b.x - g.px, b.y - g.py))[1] || g.puds.find(p => p.age > 0.5 && p.life - p.age > 4.5);
+        if (p) {
+          const side = p.x > 760 ? -1 : 1, [rx] = [(p.big ? 80 : 44) * bsPer(p.y)];
+          Object.assign(f, { fx: f.x, fy: f.y, tx: clamp(p.x + side * (rx + 34), 40, W - 40), ty: p.y + 6, hop: 0, dir: -side, coop: p });
+          p.coop = true; f.bubble = 3; tone(300, 0.1, 'square', 0.04); tone(220, 0.12, 'square', 0.04, 0.1);
+        } else f.coopT = 1;
+      }
+      // Aubrey: walk, charge, leap, land
+      if (g.air) {
+        const a = g.air;
+        a.t += dt / a.dur;
+        const k = Math.min(1, a.t);
+        g.px = lerp(a.x0, a.x1, k); g.py = lerp(a.y0, a.y1, k);
+        for (const c of g.crits) if (!c.hide && Math.abs(g.px - c.x) < 56 && Math.abs(g.py - c.y) < 30 && k > 0.15 && k < 0.85) a.near[c.id] = 1;
+        if (a.t >= 1) this.land(g);
+      } else if (g.charge >= 0) {
+        g.charge = Math.min(1, g.charge + dt / g.chargeT);
+        if (g.charge >= 1 && !g.fullTone) { g.fullTone = 1; SFX.pop(); }
+        const held = g.chKey ? keys[' '] : pointer.down;
+        if (!held) this.launch(g);
+        pointerMoved(g);
+      } else {
+        g.fullTone = 0;
+        if (pressed[' '] || pressed.enter) { g.charge = 0; g.chKey = true; } else if (pointer.clicked && pointer.y > 64) { g.charge = 0; g.chKey = false; g.usePointer = true; }
+        else {
+          steer(g, dt, 250, BS_X0, BS_X1, BS_Y0, BS_Y1);
+          const sp = Math.hypot(g.vx, g.vy);
+          g.walk = sp > 20 ? g.walk + dt * 12 : 0;
+        }
+      }
+      // squash and stretch on a spring
+      const tgt = g.charge >= 0 ? -0.24 * g.charge : g.air ? (g.air.t < 0.5 ? 0.16 : 0.06) : 0;
+      g.sqv += ((tgt - g.sq) * 220 - g.sqv * 13) * dt; g.sq = clamp(g.sq + g.sqv * dt, -0.4, 0.4);
+      // splash droplets and ripples
+      for (const d of g.drops) { d.vz -= 1100 * dt; d.z += d.vz * dt; d.x += d.vx * dt; d.y += d.vy * dt; if (d.z < 0 && !d.gone) { d.gone = 1; if (Math.random() < 0.3) g.rings.push({ x: d.x, y: d.y, r: 2, R: 14, life: 0.4, max: 0.4, d: 0 }); } }
+      g.drops = g.drops.filter(d => !d.gone);
+      for (const r of g.rings) { if (r.d > 0) r.d -= dt; else r.life -= dt; }
+      g.rings = g.rings.filter(r => r.life > 0);
+      g.progress = `Splashes: ${g.splashes}`;
+      g.score = clamp(g.pts / g.target, 0, 1);
+      if (g.score >= 1 && !g.win) { g.win = 1.6; speak('A whole rainbow! Splendid splashing!'); SFX.sparkle(); }
+      if (g.win && (g.win -= dt) <= 0) g.done = true;
+      if (g.timeLeft <= 0) { g.timeLeft = 0; g.done = true; }
     },
     draw(g) {
-      // a cobbled town square to stomp about in
       ctx.save();
-      ctx.beginPath(); ctx.roundRect(150, 104, 660, 420, 30); ctx.fillStyle = '#9095c0'; ctx.fill(); ctx.clip();
-      for (let r = 0; r < 30; r++) for (let x = 150 + (r % 2) * -20; x < 810; x += 40) rrect(x + 2, 106 + r * 14, 36, 11, 5, ['#9ea2cc', '#a7a3cf', '#989dc7'][(r + Math.round(x / 40)) % 3]);
-      ctx.restore();
-      rrect(150, 104, 660, 420, 30, null, OL, 3);
-      g.cells.forEach((c, i) => {
-        ctx.fillStyle = 'rgba(70,70,130,.25)'; ellipse(c.x, c.y + 4, 88, 32);
-        ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.ellipse(c.x, c.y + 4, 88, 32, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-        if (c.kind === 'puddle') {
-          const pop = clamp(c.age / 0.15, 0, 1), dry = c.age / c.life, s = pop * (1 - 0.55 * dry);
-          puddle(c.x, c.y + 4, 84 * s, 30 * s, c.seed, 2);
-          if (dry > 0.7 && Math.sin(S.t * 20) > 0) twinkle(c.x + 50 * s, c.y - 14 * s, 8, 0.9, '#fff6a8');
-        } else if (c.kind === 'snail' || c.kind === 'hid') {
-          const cr = c.kind === 'snail' ? Math.sin(c.age * 1.2) * 18 * c.dir : 0;
-          drawSnail(c.x + cr, c.y + 22, 1.05, c.dir, c.kind === 'hid', S.t);
-          if (c.kind === 'hid') outlined('!', c.x + 30, c.y - 40, 26, '#ffb0c4');
+      if (g.shk > 0) ctx.translate(Math.sin(g.t * 70) * g.shk * 18, Math.cos(g.t * 55) * g.shk * 10);
+      bsGarden(g);
+      const cl = g.cloud, t = S.t, cy = 182;
+      // the cloud's shadow and the rain column it sends down
+      const ck = bsPer(cl.gy);
+      ctx.fillStyle = 'rgba(40,40,110,.2)'; ellipse(cl.x, cl.gy, 110 * ck, 30 * ck);
+      ctx.strokeStyle = 'rgba(70,100,190,.55)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let i = 0; i < 18; i++) {
+        const ox = ((i * 37) % 160) - 80, len = cl.gy - cy - 10, yy = cy + 14 + ((t * 420 + i * 61) % len);
+        ctx.moveTo(cl.x + ox, yy); ctx.lineTo(cl.x + ox - 2, yy + 14);
+      }
+      ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        const k = (t * 2.2 + i * 0.25) % 1, ox = ((i * 53 + Math.floor(t * 2.2 + i * 0.25) * 71) % 180) - 90;
+        ctx.strokeStyle = `rgba(255,255,255,${0.8 * (1 - k)})`; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.ellipse(cl.x + ox, cl.gy + ((i * 13) % 30) - 15, 2 + k * 14, 1 + k * 4, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      // puddles, with Aubrey reflected in them
+      const pClip = new Path2D();
+      for (const p of g.puds) {
+        if (p.age < 0) continue;
+        const [rx, ry] = bsRad(p);
+        puddle(p.x, p.y, rx, ry, p.seed, p.big ? 3 : 2);
+        pClip.addPath(bsPuddlePath(p.x, p.y, rx, ry, p.seed));
+        if (p.coop && g.fg.coop === p) {
+          ctx.strokeStyle = `rgba(166,240,184,${0.6 + 0.4 * Math.sin(t * 6)})`; ctx.lineWidth = 4; ctx.setLineDash([10, 8]);
+          ctx.beginPath(); ctx.ellipse(p.x, p.y, rx + 12, ry + 8, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         }
-        inkCircle(c.x - 86, c.y - 30, 14, '#ffffff', 1.5);
-        text(String(i + 1), c.x - 86, c.y - 29, 16, '#5a2a6e', 'center', 800);
-      });
-      for (const b of g.boots) drawBoot(b.x - 10, b.y - Math.max(0, b.t) * 600, 1);
+        if (p.big) { // a leaf boat rides the big puddles
+          const bx = p.x + Math.sin(t * 0.8 + p.seed) * rx * 0.4, by = p.y + Math.sin(t * 2 + p.seed) * 1.5;
+          ink(P2(`M${bx - 13},${by - 3} C${bx - 6},${by + 6} ${bx + 6},${by + 6} ${bx + 14},${by - 4} C${bx + 4},${by - 1} ${bx - 4},${by - 1} ${bx - 13},${by - 3} Z`), '#5adc7a', 1.2);
+        }
+        if (p.sz < 0.75 && p.age > p.life * 0.6 && Math.sin(t * 16 + p.seed) > 0.3) twinkle(p.x + rx * 0.7, p.y - ry, 7, 0.9, '#fff6a8');
+      }
+      // drops falling from the cloud to where new puddles are about to appear
+      for (const p of g.puds) if (p.age < 0) { const k = 1 + p.age / 0.35; if (k > 0) { const y = lerp(cy + 20, p.y - 6, clamp(k, 0, 1)); inkEllipse(p.x, y, 5, 8, 0, '#bfe6ff', 1, '#4a6aa8'); } }
+      // charge ring and leap target
+      const ak = bsPer(g.py), ah = 132 * ak;
+      if (g.charge >= 0) {
+        const full = g.charge >= 1;
+        ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 7; ctx.beginPath(); ctx.ellipse(g.px, g.py, 46 * ak, 15 * ak, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = full ? (Math.sin(t * 20) > 0 ? '#ff6fb5' : '#ffd23a') : '#ffd23a'; ctx.beginPath(); ctx.ellipse(g.px, g.py, 46 * ak, 15 * ak, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * g.charge); ctx.stroke();
+        if (!g.chKey) {
+          const dx = pointer.x - g.px, dy = pointer.y - g.py, d = Math.hypot(dx, dy), m = Math.min(1, (full ? 340 : 260) / Math.max(d, 1));
+          const tx = clamp(g.px + dx * m, BS_X0, BS_X1), ty = clamp(g.py + dy * m, BS_Y0, BS_Y1);
+          if (d > 30) {
+            ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.moveTo(g.px, g.py - 20);
+            ctx.quadraticCurveTo((g.px + tx) / 2, Math.min(g.py, ty) - (full ? 130 : 70), tx, ty); ctx.stroke(); ctx.setLineDash([]);
+            ctx.strokeStyle = full ? '#ff6fb5' : '#ffd23a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(tx, ty, 26, 9, 0, 0, Math.PI * 2); ctx.stroke();
+          }
+        }
+      }
+      // Aubrey's reflection: faint on the wet stones, bright in the puddles
+      const lift = g.air ? 4 * g.air.h * Math.min(1, g.air.t) * (1 - Math.min(1, g.air.t)) : g.walk ? Math.abs(Math.sin(g.walk)) * 5 : 0;
+      const tilt = g.air ? (g.air.x1 - g.air.x0) / 2200 : g.walk ? Math.sin(g.walk) * 0.04 : 0;
+      const sx = 1 - g.sq * 0.7, sy = 1 + g.sq;
+      for (const [clip, al] of [[null, 0.16], [pClip, 0.4]]) {
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 278, W, H); ctx.clip(); if (clip) ctx.clip(clip);
+        ctx.globalAlpha = al; ctx.translate(g.px, g.py + 2); ctx.scale(1, -0.75); bsAubBody(ah, lift, sx, sy, tilt);
+        ctx.restore();
+      }
+      // everything standing on the patio, back to front
+      const ents = [];
+      for (const c of g.crits) ents.push([c.y, () => {
+        const k = bsPer(c.y), wig = c.giggle ? Math.sin(t * 30) * 0.12 : 0;
+        ctx.fillStyle = 'rgba(40,20,60,.2)'; ellipse(c.x, c.y, 40 * k, 8 * k);
+        ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(wig);
+        if (c.kind === 'snail') { drawSnail(0, 0, 0.62 * k, c.dir, c.hide > 0, t); if (!c.hide) umbrella(-4 * 0.62 * k * c.dir, -58 * k, 20 * k, c.col, Math.sin(t * 2 + c.id * 9) * 0.1, '#ffffff'); }
+        else { bsWorm(0, 0, 0.8 * k, c.dir, t, c.hide > 0); if (!c.hide) umbrella(26 * k * c.dir, -46 * k, 18 * k, c.col, 0.15 * c.dir, '#ffffff'); }
+        if (c.hide) { umbrella(-34 * k * c.dir, -8 * k, 16 * k, c.col, 1.3 * c.dir, null); outlined('!', 0, -50 * k, 24, '#ffb0c4'); }
+        if (c.giggle) { text('hee hee!', 0, -86 * k - (1.4 - c.giggle) * 20, 16, '#ff6fb5', 'center', 800); emoji('💕', 22 * k, -70 * k, 16); }
+        ctx.restore();
+      }]);
+      const f = g.fg;
+      ents.push([f.y, () => {
+        const fl = f.hop >= 0 ? Math.sin(Math.min(1, f.hop) * Math.PI) * 60 : 0, k = bsPer(f.y);
+        ctx.fillStyle = 'rgba(40,20,60,.2)'; ellipse(f.x, f.y, 30 * k, 7 * k);
+        drawCritter('Fergus the Frog', f.x, f.y - fl, 0.5 * k, f.dir);
+      }]);
+      ents.push([g.py, () => {
+        ctx.fillStyle = 'rgba(40,20,60,.24)'; ellipse(g.px, g.py, 34 * ak * (1 - lift / 300), 9 * ak * (1 - lift / 300));
+        ctx.save(); ctx.translate(g.px, g.py); bsAubBody(ah, lift, sx, sy, tilt); ctx.restore();
+        if (g.charge >= 1) outlined('BIG!', g.px, g.py - ah - 22, 26, '#ff6fb5', 'center', '#fff');
+      }]);
+      ents.sort((a, b) => a[0] - b[0]).forEach(e => e[1]());
+      // splash droplets and ripple rings
+      for (const r of g.rings) {
+        if (r.d > 0) continue;
+        const k = 1 - r.life / r.max, rr = lerp(r.r, r.R, 1 - (1 - k) ** 2);
+        if (r.rb) PG_RAINBOW.forEach((c, i) => { ctx.strokeStyle = c; ctx.globalAlpha = 0.7 * (1 - k); ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(r.x, r.y, rr + i * 5, (rr + i * 5) * 0.32, 0, 0, Math.PI * 2); ctx.stroke(); });
+        ctx.globalAlpha = 1; ctx.strokeStyle = `rgba(255,255,255,${0.9 * (1 - k)})`; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(r.x, r.y, rr, rr * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      for (const d of g.drops) {
+        ctx.fillStyle = 'rgba(40,40,100,.15)'; ellipse(d.x, d.y, d.r, d.r * 0.4);
+        inkEllipse(d.x, d.y - d.z, d.r * 0.8, d.r * 1.2, Math.atan2(d.vx, -d.vz) * 0.5, '#cfeeff', 0.7, '#4a6aa8');
+        ctx.fillStyle = '#ffffff'; circle(d.x - d.r * 0.25, d.y - d.z - d.r * 0.4, d.r * 0.3);
+      }
+      bsCloud(cl.x, cy - 10, t, cl.puff);
+      rain(60, 0.32, 64);
+      // Fergus's speech bubble
+      if (f.bubble > 0 || (f.coop && f.hop < 0)) {
+        const k = bsPer(f.y), bx = clamp(f.x, 110, W - 110), by = f.y - 124 * k - 30, msg = f.coop ? 'Splash with me!' : 'Ribbit!';
+        rrect(bx - 84, by - 18, 168, 36, 16, '#ffffff', OL, 2.5);
+        ctx.fillStyle = '#ffffff'; tri(f.x - 8, by + 16, f.x + 8, by + 16, f.x, by + 30);
+        text(msg, bx, by, 17, '#2f8a3a', 'center', 800);
+      }
+      ctx.restore();
+      // Fergus's stomp job card
+      const j = g.job;
+      if (j) {
+        panel(12, 64, 330, 78, 18);
+        drawCritterPortrait('Fergus the Frog', 20, 72, 62, 62);
+        text(j.done ? 'Ribbit! You did it!' : 'Fergus says: stomp', 94, 86, 15, '#8a5aa0', 'left', 700);
+        if (!j.done) {
+          const big = j.size === 'big';
+          text(String(j.n), 96, 117, 28, '#5a2a6e', 'left', 800);
+          if (big) outlined('BIG', 124, 116, 34, '#ff5f7e', 'left', '#fff'); else text('small', 126, 120, 17, '#3a8ad0', 'left', 800);
+          for (let i = 0; i < j.n; i++) {
+            const x = 214 + i * 30, on = i < j.got;
+            inkEllipse(x, 117, big ? 13 : 8, big ? 7 : 4.5, 0, on ? '#6aaef0' : '#ffffff', 1.2, on ? OL : '#bbb0cc');
+            if (on) star(x, 104, 6, '#ffd23a', 5);
+          }
+        } else for (let i = 0; i < 5; i++) star(110 + i * 40, 118, 10, PG_RAINBOW[i], 5);
+      }
     },
   };
 
-  // --- Opposites: Fergus shows a picture; pick its opposite ------------------------------------
-  // [word, picture, size, what Fergus says]
-  const OPPOSITES = [
-    [['big', '🐸', 1, 'This frog is big.'], ['small', '🐸', 0.42, 'This frog is small.']],
-    [['wet', '☔', 1, 'This umbrella is wet.'], ['dry', '🌂', 1, 'This umbrella is dry.']],
-    [['hot', '🔥', 1, 'Fire is hot.'], ['cold', '🧊', 1, 'Ice is cold.']],
-    [['happy', '😀', 1, 'This face is happy.'], ['sad', '😢', 1, 'This face is sad.']],
-    [['fast', '🐇', 1, 'A bunny is fast.'], ['slow', '🐢', 1, 'A turtle is slow.']],
-    [['day', '🌞', 1, 'The sun shines in the day.'], ['night', '🌙', 1, 'The moon comes out at night.']],
-    [['up', '⬆️', 1, 'This arrow points up.'], ['down', '⬇️', 1, 'This arrow points down.']],
-    [['open', '📖', 1, 'This book is open.'], ['closed', '📕', 1, 'This book is closed.']],
-    [['loud', '📢', 1, 'A loudspeaker is loud.'], ['quiet', '🤫', 1, 'Shh! This means quiet.']],
-    [['heavy', '🐘', 1, 'An elephant is heavy.'], ['light', '🪶', 1, 'A feather is light.']],
-  ];
-  MG.opposites = {
-    kind: 'learn', title: () => 'Opposites', icon: () => '🔄',
-    how: () => 'Fergus shows you a picture. Find its OPPOSITE! Big and small are opposites. Click the picture, or press its number.',
+  // --- Opposite Machine: Fergus's rainy-day contraption. Fergus calls a word ("COLD!") and the child
+  // works the right station's control (pump, dial, crank, slider, lever, hold buttons) to turn its
+  // thing into the OPPOSITE (make the kettle HOT). Every thing starts in the middle, so both ways are possible.
+  const OM_WIN_Y = 160, OM_WIN_H = 180;
+  const omHoldBtn = (x, y, icon, label, on) => {
+    inkCircle(x, y + (on ? 2 : 0), 27, on ? '#fff6a8' : '#ffffff', 2);
+    emoji(icon, x, y + (on ? 2 : 0), 26);
+    text(label, x, y + 38, 13, '#ffffff', 'center', 800);
+  };
+  const OM_ITEMS = {
+    balloon: { name: 'balloon', lo: 'small', hi: 'big', ctrl: 'pump',
+      draw(s, cx, t) {
+        const v = s.v, r = lerp(16, 70, v), by = 322 - r - 8;
+        ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, by + r); ctx.quadraticCurveTo(cx + 8, 330, cx, 342); ctx.stroke();
+        ctx.fillStyle = '#ff5f7e'; tri(cx - 6, by + r + 6, cx + 6, by + r + 6, cx, by + r - 2);
+        inkEllipse(cx + Math.sin(t * 2) * 3 * v, by, r * 0.9, r, Math.sin(t * 1.5) * 0.06, '#ff5f7e', 2);
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ellipse(cx - r * 0.35, by - r * 0.4, r * 0.18, r * 0.3, -0.4);
+        if (v < 0.3) { ctx.strokeStyle = 'rgba(120,20,50,.5)'; ctx.lineWidth = 1.5; for (const k of [-0.3, 0.2]) { ctx.beginPath(); ctx.moveTo(cx + k * r, by - r * 0.6); ctx.lineTo(cx + k * r + 4, by + r * 0.5); ctx.stroke(); } }
+        if (s.blow > 0) for (let i = 0; i < 3; i++) { const k = (t * 3 + i / 3) % 1; ctx.globalAlpha = 1 - k; emoji('💨', cx + r + 10 + k * 30, by + r * 0.6, 16); ctx.globalAlpha = 1; }
+      },
+      ctrlDraw(s, cx, t) {
+        const hy = 392 + s.handle;
+        inkRect(cx - 70, 404, 34, 62, '#4fa8e0', 2, 6);
+        ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 53, hy); ctx.lineTo(cx - 53, 406); ctx.stroke();
+        inkRect(cx - 88, hy - 8, 70, 14, '#ffd23a', 2, 7);
+        ctx.strokeStyle = '#5b3f73'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 36, 450); ctx.quadraticCurveTo(cx, 452, cx, 342); ctx.stroke();
+        text('pump ⇩', cx - 53, 474, 13, '#ffffff', 'center', 800);
+        omHoldBtn(cx + 58, 424, '💨', 'let air out', s.hold < 0);
+      },
+      hit(s, cx, x, y) {
+        if (Math.hypot(x - (cx + 58), y - 424) < 34) return 'hold-';
+        if (x > cx - 96 && x < cx - 10 && y > 370 && y < 470) return 'pumpH';
+        return null;
+      } },
+    kettle: { name: 'kettle', lo: 'cold', hi: 'hot', ctrl: 'dial',
+      draw(s, cx, t) {
+        const v = s.v, hot = clamp((v - 0.5) * 2, 0, 1), cold = clamp((0.5 - v) * 2, 0, 1);
+        inkRect(cx - 80, 318, 160, 16, '#5a5a7a', 2, 4);
+        if (hot > 0) for (let i = -2; i <= 2; i++) {
+          const fh = (14 + hot * 26) * (1 + Math.sin(t * 18 + i * 2) * 0.15);
+          ctx.fillStyle = '#ff8a3a'; ellipse(cx + i * 14, 318 - fh / 2, 6 + hot * 3, fh / 2);
+          ctx.fillStyle = '#ffe36b'; ellipse(cx + i * 14, 318 - fh / 3, 3 + hot, fh / 3);
+        }
+        const col = mix(mix('#9fd8ff', '#c8c8d8', clamp(v * 2, 0, 1)), '#ff6a4a', hot);
+        ink(P2(`M${cx - 56},${300} C${cx - 64},${240} ${cx + 64},${240} ${cx + 56},${300} Z`), col, 2);
+        ink(P2(`M${cx + 50},${276} L${cx + 84},${250} L${cx + 88},${258} L${cx + 58},${290} Z`), col, 2);
+        ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(cx, 250, 34, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+        inkCircle(cx, 244, 7, '#ffd23a', 1.5);
+        ctx.fillStyle = 'rgba(255,255,255,.45)'; ellipse(cx - 28, 272, 6, 14, 0.3);
+        // eyes on the kettle: sweaty when hot, shivery when cold
+        const sh = cold * Math.sin(t * 40) * 2;
+        ctx.fillStyle = OL; circle(cx - 14 + sh, 280, 3); circle(cx + 14 + sh, 280, 3);
+        ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); if (cold > 0.3) { ctx.moveTo(cx - 8 + sh, 290); for (let i = 1; i <= 4; i++) ctx.lineTo(cx - 8 + sh + i * 4, 290 + (i % 2 ? -3 : 0)); } else ctx.arc(cx, 286, 6, 0.3, Math.PI - 0.3); ctx.stroke();
+        if (hot > 0.2) for (let i = 0; i < 4; i++) { const k = (t * 0.9 + i / 4) % 1; ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - k) * hot})`; circle(cx + 90 + Math.sin(k * 6 + i) * 8, 244 - k * 70, 8 + k * 14); }
+        if (cold > 0.2) {
+          ctx.globalAlpha = cold;
+          for (const [dx, dy] of [[-70, 300], [66, 304], [-40, 312]]) { inkRect(cx + dx - 11, dy - 11, 22, 20, '#dff4ff', 1.5, 5); ctx.fillStyle = '#ffffff'; ctx.fillRect(cx + dx - 6, dy - 7, 5, 4); }
+          for (let i = 0; i < 5; i++) star(cx - 80 + i * 40, 180 + ((t * 30 + i * 37) % 120), 6, '#ffffff', 6);
+          ctx.fillStyle = '#e8f8ff'; for (let i = 0; i < 5; i++) tri(cx - 40 + i * 20, 300, cx - 34 + i * 20, 300, cx - 37 + i * 20, 312 + (i % 2) * 6);
+          ctx.globalAlpha = 1;
+        }
+      },
+      ctrlDraw(s, cx) {
+        emoji('❄️', cx - 68, 426, 26); emoji('🔥', cx + 68, 426, 26);
+        ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 3;
+        for (let i = 0; i <= 8; i++) { const a = -2.1 + i * 4.2 / 8 - Math.PI / 2; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * 38, 430 + Math.sin(a) * 38); ctx.lineTo(cx + Math.cos(a) * 44, 430 + Math.sin(a) * 44); ctx.stroke(); }
+        inkCircle(cx, 430, 32, '#f4f0ff', 2.5);
+        const a = (s.v - 0.5) * 4.2 - Math.PI / 2;
+        ctx.strokeStyle = '#e2507e'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx, 430); ctx.lineTo(cx + Math.cos(a) * 26, 430 + Math.sin(a) * 26); ctx.stroke();
+        inkCircle(cx, 430, 8, '#e2507e', 1.5);
+        text('turn the dial', cx, 474, 13, '#ffffff', 'center', 800);
+      },
+      hit(s, cx, x, y) { return Math.hypot(x - cx, y - 430) < 50 ? 'dial' : null; } },
+    kite: { name: 'kite', lo: 'down', hi: 'up', ctrl: 'crank',
+      draw(s, cx, t) {
+        const v = s.v, ky = lerp(316, 196, v), kx = cx + Math.sin(t * 1.7) * 18 * v, rot = v < 0.08 ? 1.3 : Math.sin(t * 2) * 0.15 * v;
+        inkRect(cx - 110, 322, 220, 20, '#6cc46a', 1.5, 2);
+        ctx.strokeStyle = 'rgba(91,63,115,.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(kx, ky + 30); ctx.quadraticCurveTo(cx + 40, 330, cx, 344); ctx.stroke();
+        for (let i = 0; i < 4; i++) { const tx = kx + Math.sin(t * 4 + i) * 6 * v - (v < 0.08 ? i * 14 : 0), ty = ky + 34 + i * 14 * (v < 0.08 ? 0.1 : 1); ctx.fillStyle = PG_RAINBOW[i]; tri(tx - 6, ty - 4, tx + 6, ty - 4, tx, ty + 4); }
+        ctx.save(); ctx.translate(kx, ky); ctx.rotate(rot);
+        ink(P2('M0,-34 L26,0 L0,34 L-26,0 Z'), '#ffd23a', 2);
+        ctx.save(); ctx.clip(P2('M0,-34 L26,0 L0,34 L-26,0 Z')); ctx.fillStyle = '#ff6fb5'; ctx.fillRect(0, -34, 26, 34); ctx.fillRect(-26, 0, 26, 34); ctx.restore();
+        ctx.strokeStyle = OL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(0, 34); ctx.moveTo(-26, 0); ctx.lineTo(26, 0); ctx.stroke();
+        ctx.restore();
+        if (v > 0.7) { emoji('🐦', cx - 70 + Math.sin(t) * 10, 200, 20); }
+      },
+      ctrlDraw(s, cx) {
+        inkCircle(cx, 428, 30, '#c98a4a', 2.5);
+        ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(cx, 428, 10 + i * 7, 0, Math.PI * 2); ctx.stroke(); }
+        const a = s.crank, kx = cx + Math.cos(a) * 30, ky = 428 + Math.sin(a) * 30;
+        ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(cx, 428); ctx.lineTo(kx, ky); ctx.stroke();
+        inkCircle(kx, ky, 11, '#ff6fb5', 2);
+        text('↻ up', cx + 64, 412, 15, '#ffffff', 'center', 800); text('↺ down', cx - 64, 412, 15, '#ffffff', 'center', 800);
+        text('wind the reel', cx, 474, 13, '#ffffff', 'center', 800);
+      },
+      hit(s, cx, x, y) { return Math.hypot(x - cx, y - 428) < 56 ? 'crank' : null; } },
+    umbrella: { name: 'umbrella', lo: 'closed', hi: 'open', ctrl: 'slide',
+      draw(s, cx, t) {
+        const v = s.v;
+        for (let i = 0; i < 14; i++) { const x = cx - 100 + i * 15, y = 166 + ((t * 300 + i * 47) % 170); const under = Math.abs(x - cx) < 74 * v && y > 214; if (!under) { ctx.strokeStyle = 'rgba(70,110,200,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 10); ctx.stroke(); } }
+        // a duckling under it: dry and happy when it's open, soggy when it's closed
+        const wet = 1 - v;
+        inkEllipse(cx, 318, 24, 18, 0, mix('#ffe36b', '#d8c070', wet * 0.6), 2); inkCircle(cx + 8, 294, 14, mix('#ffe36b', '#d8c070', wet * 0.6), 2);
+        ctx.fillStyle = '#ff8a3a'; tri(cx + 20, 292, cx + 32, 296, cx + 20, 299);
+        ctx.fillStyle = OL; circle(cx + 12, 290, 2.2);
+        if (wet > 0.5) { ctx.fillStyle = '#7fc0ff'; for (let i = 0; i < 3; i++) ellipse(cx - 14 + i * 14, 334 + ((t * 40 + i * 9) % 10), 2.5, 4); text('brr!', cx - 40, 286, 15, '#3a6ab0', 'center', 800); }
+        else if (v > 0.9) text('♪', cx - 34, 286 + Math.sin(t * 4) * 3, 18, '#ff6fb5', 'center', 800);
+        ctx.save(); ctx.translate(cx, 222); ctx.scale(lerp(0.12, 1, v), lerp(1.25, 1, v)); umbrella(0, 0, 74, '#9c6cff', 0, '#ffe36b'); ctx.restore();
+      },
+      ctrlDraw(s, cx) {
+        emoji('🌂', cx - 100 + 14, 404, 24); emoji('☂️', cx + 100 - 14, 404, 24);
+        rrect(cx - 82, 424, 164, 14, 7, 'rgba(255,255,255,.55)', OL, 2);
+        const kx = lerp(cx - 76, cx + 76, s.v);
+        inkRect(kx - 16, 414, 32, 34, '#ffd23a', 2, 9);
+        text('slide', cx, 474, 13, '#ffffff', 'center', 800);
+      },
+      hit(s, cx, x, y) { return Math.abs(x - cx) < 104 && y > 396 && y < 462 ? 'slide' : null; } },
+    cloud: { name: 'cloud', lo: 'sad', hi: 'happy', ctrl: 'lever',
+      draw(s, cx, t) {
+        const v = s.v, m = lerp(-1, 1, v);
+        if (v > 0.6) { ctx.globalAlpha = (v - 0.6) * 2.5; PG_RAINBOW.forEach((c, i) => { ctx.strokeStyle = c; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, 336, 100 - i * 6, Math.PI, 0); ctx.stroke(); }); ctx.globalAlpha = 1; }
+        const col = mix('#8a94b8', '#f4f6ff', v);
+        leafBlob([[cx - 50, 262, 30], [cx - 18, 240, 38], [cx + 24, 244, 36], [cx + 54, 264, 28], [cx, 274, 36]], col, '#4a4278');
+        const ey = 252, br = m * 5;
+        ctx.fillStyle = OL; ellipse(cx - 18, ey, 4.5, 6); ellipse(cx + 18, ey, 4.5, 6);
+        ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 28, ey - 14 + br); ctx.lineTo(cx - 10, ey - 14 - br); ctx.moveTo(cx + 28, ey - 14 + br); ctx.lineTo(cx + 10, ey - 14 - br); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - 22, 278); ctx.quadraticCurveTo(cx, 278 + m * 20, cx + 22, 278); ctx.stroke();
+        if (v > 0.6) { ctx.fillStyle = 'rgba(255,120,170,.55)'; ellipse(cx - 32, 270, 8, 5); ellipse(cx + 32, 270, 8, 5); }
+        if (v < 0.4) for (let i = 0; i < 6; i++) { ctx.fillStyle = '#6aaef0'; ellipse(cx - 40 + i * 16, 300 + ((t * 120 + i * 23) % 40), 2.5, 5); }
+        if (v < 0.25) { ctx.fillStyle = '#9fd8ff'; ellipse(cx - 20, ey + 12 + ((t * 30) % 14), 3, 5); }
+      },
+      ctrlDraw(s, cx) {
+        emoji('😢', cx - 52, 456, 26); emoji('😀', cx + 52, 398, 26);
+        rrect(cx - 8, 382, 16, 88, 8, 'rgba(255,255,255,.55)', OL, 2);
+        const ky = lerp(458, 394, s.v);
+        inkCircle(cx, ky, 16, '#ff6fb5', 2); ctx.fillStyle = 'rgba(255,255,255,.6)'; circle(cx - 5, ky - 5, 5);
+        text('lever', cx + 48, 448, 13, '#ffffff', 'center', 800);
+      },
+      hit(s, cx, x, y) { return Math.abs(x - cx) < 40 && y > 372 && y < 478 ? 'lever' : null; } },
+    bucket: { name: 'bucket', lo: 'empty', hi: 'full', ctrl: 'hold',
+      draw(s, cx, t) {
+        const v = s.v;
+        ctx.save(); ctx.translate(cx + 10, 326); ctx.rotate(-s.tip * 0.7);
+        const body = P2('M-48,-90 L48,-90 L38,0 L-38,0 Z');
+        ink(body, '#ffffff', 2);
+        ctx.save(); ctx.clip(body); ctx.fillStyle = '#5aa8ff'; ctx.fillRect(-60, -90 * v, 120, 100); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(-60, -90 * v, 120, 4); ctx.restore();
+        ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.stroke(body);
+        ctx.fillStyle = '#ff9a3a'; ctx.fillRect(-46, -70, 92, 7);
+        ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, -90, 46, Math.PI, 0); ctx.stroke();
+        ctx.restore();
+        inkRect(cx - 110, 176, 76, 14, '#b8c4d8', 2, 4); inkRect(cx - 42, 186, 14, 18, '#b8c4d8', 2, 3);
+        if (s.hold > 0) { ctx.fillStyle = 'rgba(90,168,255,.85)'; ctx.fillRect(cx - 39, 204, 8, Math.max(6, 326 - 90 * v - 204)); }
+        if (s.hold < 0 && v > 0.03) for (let i = 0; i < 5; i++) { ctx.fillStyle = '#5aa8ff'; ellipse(cx + 70 + i * 4, 270 + ((t * 200 + i * 17) % 60), 4, 6); }
+      },
+      ctrlDraw(s, cx) { omHoldBtn(cx - 54, 424, '🚰', 'fill', s.hold > 0); omHoldBtn(cx + 54, 424, '💦', 'tip out', s.hold < 0); },
+      hit(s, cx, x, y) { if (Math.hypot(x - (cx - 54), y - 424) < 34) return 'hold+'; if (Math.hypot(x - (cx + 54), y - 424) < 34) return 'hold-'; return null; } },
+    teddy: { name: 'teddy', lo: 'dry', hi: 'wet', ctrl: 'hold',
+      draw(s, cx, t) {
+        const v = s.v, col = mix('#d8a070', '#8a6040', v), sw = Math.sin(t * 2) * 0.05;
+        if (v < 0.4) { ctx.globalAlpha = 0.9 - v * 2; inkCircle(cx + 84, 188, 18, '#ffd23a', 1.5); ctx.globalAlpha = 1; }
+        ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 110, 186); ctx.quadraticCurveTo(cx, 200, cx + 110, 186); ctx.stroke();
+        ctx.save(); ctx.translate(cx, 196); ctx.rotate(sw);
+        inkRect(-24, -12, 10, 22, '#ff6fb5', 1.5, 3); inkRect(14, -12, 10, 22, '#ff6fb5', 1.5, 3);
+        const droop = v * 8;
+        inkCircle(-30, 12 + droop, 12, col, 2); inkCircle(30, 12 + droop, 12, col, 2);
+        inkEllipse(0, 92, 40, 46, 0, col, 2); inkCircle(0, 36, 32, col, 2);
+        inkEllipse(0, 46, 12, 9, 0, mix('#f4d8b0', '#b89070', v), 1.5);
+        ctx.fillStyle = OL; circle(-11, 30, 3.5); circle(11, 30, 3.5); circle(0, 42, 3.5);
+        ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 48 + v * 6, 6, v > 0.6 ? Math.PI + 0.4 : 0.3, v > 0.6 ? -0.4 : Math.PI - 0.3); ctx.stroke();
+        if (v > 0.5) { ctx.fillStyle = '#6aaef0'; for (let i = 0; i < 4; i++) ellipse(-30 + i * 20, 140 + ((t * 70 + i * 13) % 16), 3, 5); }
+        else if (v < 0.2) { twinkle(-36, 70, 8, 0.5 + 0.5 * Math.sin(t * 6), '#fff6a8'); twinkle(36, 110, 8, 0.5 + 0.5 * Math.sin(t * 6 + 2), '#fff6a8'); }
+        ctx.restore();
+        if (s.hold > 0) for (let i = 0; i < 8; i++) { ctx.strokeStyle = 'rgba(70,110,200,.7)'; ctx.lineWidth = 2; const x = cx - 50 + i * 14, y = 170 + ((t * 300 + i * 29) % 160); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 10); ctx.stroke(); }
+        if (s.hold < 0) for (let i = 0; i < 3; i++) { const k = (t + i / 3) % 1; ctx.fillStyle = `rgba(255,255,255,${0.7 * (1 - k)})`; circle(cx - 30 + i * 30, 260 - k * 80, 8 + k * 8); }
+      },
+      ctrlDraw(s, cx) { omHoldBtn(cx - 54, 424, '🌧️', 'rain', s.hold > 0); omHoldBtn(cx + 54, 424, '☀️', 'sunshine', s.hold < 0); },
+      hit(s, cx, x, y) { if (Math.hypot(x - (cx - 54), y - 424) < 34) return 'hold+'; if (Math.hypot(x - (cx + 54), y - 424) < 34) return 'hold-'; return null; } },
+  };
+  const OM_POOL = [['balloon', 'kettle', 'kite', 'umbrella', 'cloud'], ['balloon', 'kettle', 'kite', 'umbrella', 'cloud', 'bucket'], ['balloon', 'kettle', 'kite', 'umbrella', 'cloud', 'bucket', 'teddy']];
+  const OM_COLS = ['#4fa8e0', '#9a6ae0', '#3fbf6a', '#ff9a3a', '#e0508a'];
+  MG.oppositemachine = {
+    kind: 'learn', title: () => 'The Opposite Machine', icon: () => '⚙️',
+    how: () => 'Fergus says a word, like COLD. Find the thing that can be its OPPOSITE and use its pump, dial, crank or lever to make it HOT! Press a number to pick a machine and the arrow keys to work it, or use the mouse.',
     init(g) {
-      const pool = shuffle(OPPOSITES.slice(0, g.tier === 1 ? 6 : 10).map((_, i) => i));
-      Object.assign(g, { round: 0, rounds: [5, 6, 7][g.tier - 1], n: g.tier === 1 ? 3 : 4, total: 0, order: pool, shake: {} });
+      const pool = OM_POOL[g.tier - 1];
+      Object.assign(g, { round: 0, rounds: [5, 6, 7][g.tier - 1], n: g.tier === 1 ? 2 : 3, total: 0, order: shuffle(pool.slice()), grab: null, sel: 0, slide: 1, out: 0, mood: 0, hop: 0 });
+      while (g.order.length < g.rounds) g.order.push(...shuffle(pool.slice()));
       this.next(g);
     },
     start(g) { speak(g.say); },
+    stX(g, i) { return (g.n === 2 ? [300, 610] : [205, 470, 735])[i] + (g.slide - g.out) * W; },
     next(g) {
-      const pi = g.order[g.round % g.order.length], side = randInt(0, 1);
-      const shown = OPPOSITES[pi][side], answer = OPPOSITES[pi][1 - side];
-      const others = shuffle(OPPOSITES.map((_, i) => i).filter(i => i !== pi)).slice(0, g.n - 1).map(i => OPPOSITES[i][randInt(0, 1)]);
-      Object.assign(g, { shown, answer, choices: shuffle([answer, ...others]), tried: [], state: 'pick', t2: 0 });
-      g.say = `${shown[3]} What is the opposite of ${shown[0]}?`;
+      const goal = g.order[g.round], others = shuffle(OM_POOL[g.tier - 1].filter(k => k !== goal)).slice(0, g.n - 1);
+      const items = shuffle([goal, ...others]);
+      g.st = items.map((k, i) => ({ key: k, it: OM_ITEMS[k], v: 0.5, handle: 0, crank: -Math.PI / 2, hold: 0, tip: 0, back: 0, shake: 0, col: OM_COLS[(g.round + i) % OM_COLS.length], yay: 0 }));
+      g.goal = items.indexOf(goal); g.goalEnd = pick(['lo', 'hi']);
+      const it = OM_ITEMS[goal];
+      g.word = it[g.goalEnd === 'lo' ? 'hi' : 'lo']; g.answer = it[g.goalEnd];
+      g.mist = 0; g.state = 'play'; g.slide = 1; g.out = 0; g.grab = null; g.sel = 0;
+      g.say = `Make something the OPPOSITE of ${g.word}!`;
       if (g.phase === 'play') speak(g.say);
     },
-    update(g, dt, id) {
-      tickDown(g.shake, dt);
-      if (g.state === 'pick') {
-        const i = idPick(id, 'opp:', g.n);
-        if (i >= 0 && i < g.n && !g.tried.includes(i)) {
-          g.tried.push(i);
-          const c = g.choices[i];
-          if (c === g.answer) {
-            g.total += [1, 0.5, 0.2, 0][g.tried.length - 1]; g.state = 'yay'; g.t2 = 2.3; SFX.hit();
-            burst(this.cardX(g, i) + this.cardW(g) / 2, 380, 24);
-            speak(`Yes! The opposite of ${g.shown[0]} is ${g.answer[0]}!`);
-          } else {
-            g.shake[i] = 0.4; SFX.miss();
-            speak(`That one is ${c[0]}. What is the opposite of ${g.shown[0]}?`);
-          }
-        }
-      } else if ((g.t2 -= dt) <= 0) {
-        g.round++;
-        if (g.round >= g.rounds) g.done = true; else this.next(g);
+    arrive(g, s, end) {
+      const i = g.st.indexOf(s), word = s.it[end];
+      g.grab = null; s.hold = 0;
+      if (i === g.goal && end === g.goalEnd) {
+        g.total += [1, 0.5, 0.15][Math.min(g.mist, 2)];
+        g.state = 'yay'; g.t2 = 3; s.yay = 3; g.hop = 1; SFX.sparkle(); SFX.hit();
+        burst(this.stX(g, i), 250, 30, { colors: PG_RAINBOW, spread: 220, up: 140 });
+        speak(`${g.word}... ${word}! ${word} is the opposite of ${g.word}!`);
+        return;
       }
-      g.progress = `Picture ${Math.min(g.round + 1, g.rounds)} of ${g.rounds}`;
+      g.mist++; s.shake = 0.5; s.back = 1; SFX.miss(); tone(150, 0.25, 'sawtooth', 0.05);
+      if (i === g.goal) speak(`That's ${word}. That's the SAME, not the opposite! Try the other way.`);
+      else speak(`That made the ${s.it.name} ${word}. What is the opposite of ${g.word}?`);
+      floatText(this.stX(g, i), 200, i === g.goal ? 'Same! Try the other way!' : 'Hmm, not that one!', '#ffe0f0', false, 20);
+    },
+    update(g, dt, id) {
+      g.hop = Math.max(0, g.hop - dt * 1.5);
+      g.slide = Math.max(0, g.slide - dt * 2.2);
+      for (const s of g.st) {
+        s.shake = Math.max(0, s.shake - dt); s.yay = Math.max(0, s.yay - dt);
+        if (!g.grab || g.grab.s !== s) s.handle = Math.max(0, s.handle - dt * 160);
+        if (s.back) { s.v += (0.5 - s.v) * Math.min(1, dt * 5); if (Math.abs(s.v - 0.5) < 0.02) { s.v = 0.5; s.back = 0; } }
+        s.tip += ((s.hold < 0 && s.key === 'bucket' ? 1 : 0) - s.tip) * Math.min(1, dt * 6);
+        s.blow = s.hold < 0 && s.key === 'balloon' ? 1 : 0;
+      }
+      if (g.state === 'yay') {
+        if ((g.t2 -= dt) < 0.6) g.out = clamp(1 - g.t2 / 0.6, 0, 1);
+        if (g.t2 <= 0) { g.round++; if (g.round >= g.rounds) { g.done = true; g.out = 0; } else this.next(g); }
+      } else if (g.slide <= 0) {
+        // keyboard: number keys pick a machine, arrow keys work it
+        const kp = keyPick(g.n);
+        if (kp >= 0) { g.sel = kp; SFX.click(); }
+        const s = g.st[g.sel];
+        const dir = (keys.arrowright || keys.arrowup || keys.d || keys.w ? 1 : 0) - (keys.arrowleft || keys.arrowdown || keys.a || keys.s ? 1 : 0);
+        if (dir && !s.back) {
+          s.v = clamp(s.v + dir * 0.55 * dt, 0, 1);
+          if (s.key === 'kite') s.crank += dir * 0.55 * dt * Math.PI * 2 * 0.9;
+          if (s.key === 'balloon' && dir > 0) s.handle = 20 + Math.sin(g.t * 14) * 20;
+          s.hold = s.it.ctrl === 'hold' || s.key === 'balloon' ? dir : 0;
+        } else if (!g.grab) for (const q of g.st) q.hold = 0;
+        // the mouse: grab a control and work it
+        if (pointer.clicked && !g.grab) {
+          g.st.forEach((q, i) => {
+            const c = !q.back && q.it.hit(q, this.stX(g, i), pointer.x, pointer.y);
+            if (c) { g.sel = i; g.grab = { s: q, c, x0: pointer.x, y0: pointer.y, v0: q.v, ly: pointer.y, la: Math.atan2(pointer.y - 428, pointer.x - this.stX(g, i)) }; SFX.click(); }
+          });
+        }
+        const gb = g.grab;
+        if (gb && !pointer.down) { gb.s.hold = 0; g.grab = null; } else if (gb) {
+          const q = gb.s, cx = this.stX(g, g.st.indexOf(q));
+          if (gb.c === 'pumpH') { const dy = pointer.y - gb.ly; if (dy > 0 && q.handle < 46) { q.v = clamp(q.v + dy / 260, 0, 1); if (dy > 3) tone(200 + q.v * 300, 0.05, 'triangle', 0.04); } q.handle = clamp(pointer.y - gb.y0, 0, 46); gb.ly = pointer.y; if (q.handle <= 1) gb.y0 = pointer.y; }
+          else if (gb.c === 'hold+' || gb.c === 'hold-') { const d = gb.c === 'hold+' ? 1 : -1; q.hold = d; q.v = clamp(q.v + d * 0.42 * dt, 0, 1); }
+          else if (gb.c === 'dial') { const a = Math.atan2(pointer.x - cx, -(pointer.y - 430)); q.v = clamp(0.5 + a / 4.2, 0, 1); }
+          else if (gb.c === 'crank') { const a = Math.atan2(pointer.y - 428, pointer.x - cx); let da = a - gb.la; if (da > Math.PI) da -= Math.PI * 2; if (da < -Math.PI) da += Math.PI * 2; gb.la = a; q.crank += da; q.v = clamp(q.v + da / (Math.PI * 2 * 1.5), 0, 1); }
+          else if (gb.c === 'slide') q.v = clamp(gb.v0 + (pointer.x - gb.x0) / 152, 0, 1);
+          else if (gb.c === 'lever') q.v = clamp(gb.v0 + (gb.y0 - pointer.y) / 64 * 0.5, 0, 1);
+        }
+        for (const q of g.st) if (!q.back && (q.v <= 0.02 || q.v >= 0.98)) { this.arrive(g, q, q.v >= 0.98 ? 'hi' : 'lo'); break; }
+      }
+      g.progress = `Round ${Math.min(g.round + 1, g.rounds)} of ${g.rounds}`;
       g.score = g.total / g.rounds;
     },
-    cardW: g => (g.n === 3 ? 220 : 176),
-    cardX(g, i) { const w = this.cardW(g), gap = 22; return W / 2 + 84 - (g.n * w + (g.n - 1) * gap) / 2 + i * (w + gap); },
     draw(g) {
-      drawCritter('Fergus the Frog', 96, 480, 0.85, 1);
-      // Fergus's picture card
-      panel(250, 70, 560, 180, 24);
-      rrect(270, 86, 170, 148, 18, '#e6f4ff', '#bcd8f0', 3);
-      const bob = Math.sin(S.t * 2) * 3;
-      emoji(g.shown[1], 355, 152 + bob, 100 * g.shown[2]);
-      text('This is', 470, 112, 20, '#8a5aa0', 'left', 600);
-      outlined(g.shown[0].toUpperCase(), 470, 152, 44, '#ff6fb5', 'left', '#fff');
-      text(g.state === 'yay' ? `The opposite is ${g.answer[0]}!` : 'What is the OPPOSITE?', 470, 200, 22, '#5a2a6e', 'left', 700);
-      // the choices
-      const w = this.cardW(g), y = 282, h = 200;
-      g.choices.forEach((c, i) => {
-        const x = this.cardX(g, i) + shakeX(g.shake, i), wrong = g.tried.includes(i) && c !== g.answer, right = g.state === 'yay' && c === g.answer;
-        button(`opp:${i}`, x, y, w, h, '', { color: right ? '#ffd23f' : wrong ? '#c9bcd4' : CARD_COLS[i], on: (g.state === 'pick' && !wrong) || right, key: String(i + 1) });
-        rrect(x + 10, y + 10, w - 20, h - 64, 14, wrong ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.85)');
-        emoji(c[1], x + w / 2, y + 10 + (h - 64) / 2, 92 * c[2]);
-        outlined(c[0], x + w / 2, y + h - 30, 30, '#ffffff', 'center', 'rgba(60,20,80,.65)');
-        if (right) { star(x + 20, y + 20, 12, '#fff6a8', 5); star(x + w - 20, y + 20, 12, '#fff6a8', 5); }
+      const t = S.t;
+      ctx.fillStyle = 'rgba(40,30,70,.25)'; ctx.fillRect(0, 60, W, H);
+      // the big copper pipe feeding the machines, with gears turning
+      for (const [gx, gy, r, d] of [[40, 150, 34, 1], [920, 150, 30, -1]]) {
+        ctx.save(); ctx.translate(gx, gy); ctx.rotate(t * d * (g.state === 'yay' ? 3 : 0.6));
+        const p = new Path2D(); for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2, rr = i % 2 ? r : r * 0.78; i ? p.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : p.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } p.closePath();
+        ink(p, '#d0a050', 2); inkCircle(0, 0, r * 0.3, '#8a6a3a', 1.5); ctx.restore();
+      }
+      inkRect(0, 140, W, 18, '#d08a4a', 2.5, 9);
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(0, 144, W, 4);
+      // Fergus's word sign
+      const wy = 64;
+      panel(270, wy, 420, 72, 20);
+      if (g.state === 'yay') {
+        text('Opposites!', 480, wy + 16, 15, '#8a5aa0', 'center', 700);
+        outlined(`${g.word.toUpperCase()} ↔ ${g.answer.toUpperCase()}`, 480, wy + 46, 32, '#3fbf6a', 'center', '#fff');
+      } else {
+        text('Make something the OPPOSITE of', 480, wy + 18, 16, '#8a5aa0', 'center', 700);
+        outlined(g.word.toUpperCase(), 480, wy + 50, 34, '#ff6fb5', 'center', '#fff');
+      }
+      // the machines
+      g.st.forEach((s, i) => {
+        const cx = this.stX(g, i) + (s.shake ? Math.sin(s.shake * 60) * 6 : 0), sel = i === g.sel && g.state !== 'yay';
+        if (cx < -150 || cx > W + 150) return;
+        ink(P2(`M${cx - 26},146 L${cx + 26},146 L${cx + 14},164 L${cx - 14},164 Z`), '#b8763a', 1.5);
+        inkRect(cx - 124, 158, 248, 324, s.col, 3, 22);
+        if (sel) { ctx.strokeStyle = '#fff6a8'; ctx.lineWidth = 5; ctx.beginPath(); ctx.roundRect(cx - 130, 152, 260, 336, 26); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(cx - 116, 164, 10, 300);
+        for (const [bx, by] of [[-112, 170], [112, 170], [-112, 470], [112, 470]]) inkCircle(cx + bx, by, 4, '#ffe36b', 1);
+        // the window onto the thing
+        ctx.save(); ctx.beginPath(); ctx.roundRect(cx - 110, OM_WIN_Y + 8, 220, OM_WIN_H, 16);
+        const wg = ctx.createLinearGradient(0, OM_WIN_Y, 0, OM_WIN_Y + OM_WIN_H); wg.addColorStop(0, '#bfe0ff'); wg.addColorStop(1, '#eef6ff');
+        ctx.fillStyle = wg; ctx.fill(); ctx.clip();
+        s.it.draw(s, cx, t);
+        ctx.restore();
+        rrect(cx - 110, OM_WIN_Y + 8, 220, OM_WIN_H, 16, null, OL, 3);
+        // the gauge between the two opposite ends
+        const gy2 = 356;
+        rrect(cx - 92, gy2 - 6, 184, 12, 6, 'rgba(255,255,255,.75)', OL, 2);
+        if (g.tier < 3) { text(s.it.lo, cx - 90, gy2 + 16, 13, '#ffffff', 'left', 800); text(s.it.hi, cx + 90, gy2 + 16, 13, '#ffffff', 'right', 800); }
+        const nx = lerp(cx - 88, cx + 88, s.v);
+        ctx.fillStyle = OL; tri(nx - 7, gy2 - 14, nx + 7, gy2 - 14, nx, gy2 - 2);
+        // controls
+        s.it.ctrlDraw(s, cx, t);
+        inkCircle(cx - 96, 186, 13, sel ? '#fff6a8' : '#ffffff', 1.5);
+        text(String(i + 1), cx - 96, 187, 15, '#5a2a6e', 'center', 800);
+        if (s.yay) { for (let k = 0; k < 6; k++) twinkle(cx - 100 + k * 40, 180 + Math.sin(t * 5 + k) * 10, 10, 0.5 + 0.5 * Math.sin(t * 8 + k), '#fff6a8'); outlined(s.it[g.goalEnd].toUpperCase() + '!', cx, 210, 30, '#ffe36b', 'center'); }
       });
+      // Fergus runs the machine
+      const fh = Math.sin(g.hop * Math.PI * 3) * 24 * g.hop;
+      drawCritter('Fergus the Frog', g.n === 2 ? 880 : 912, 540 - Math.abs(fh), 0.55, -1);
     },
   };
 
   restage('puddles', {
     bg: 'puddles_bg',
-    games: [['bootstomp', 'shell', {}], ['opposites', 'petal', {}]],
-    intro: ['N:Ribbit! Rainy days are the BEST days. Look, puddles are popping up all over the lane!', 'A:laughing:Then I need my stomping boots!', "N:Stomp them before they dry up. But don't squish my snail friends!"],
-    mid: ['N:Ribbit! Now a froggy brain game. I show you a picture, and you find its OPPOSITE!', 'A:thinking:Opposite... like up and down?', 'N:Exactly! Wet and dry, big and small. Ribbit!'],
+    games: [['bootstomp', 'shell', {}], ['oppositemachine', 'petal', {}]],
+    intro: ['N:Ribbit! Rainy days are the BEST days. That rain cloud is making puddles all over my garden!', 'A:laughing:Then I need my raincoat and my stomping boots!', "N:Little hops for small puddles, BIG jumps for big ones! And hop OVER my snail friends, please!"],
+    mid: ['N:Ribbit! Come and see my invention: the OPPOSITE MACHINE! Pumps, dials, cranks and levers!', 'A:excited:Ooh! What does it do?', 'N:I call out a word, like COLD. You work the machine to make something the opposite: a HOT kettle! Ribbit!', 'A:thinking:Cold and hot... big and small... up and down. I can do that!'],
     outro: ['N:Wet, dry, big, small... you know them all! Here, some empty snail shells and rain-soaked petals.', 'A:happy:Thank you, Fergus! Happy splashing!'],
   });
 
@@ -572,122 +1268,434 @@
     },
   };
 
-  // --- Paper Planes: aim and throw through the hoops, with a little wind -------------------------
-  const PP_START = [172, 356], PP_GRAV = 240;
-  const ppSpeed = pow => 300 + pow * 440;
-  function ppSim(p, dt, wind) { p.vx += wind * dt; p.vy += PP_GRAV * dt; p.vx *= 1 - 0.12 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
-  function drawPlane(x, y, ang, col) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-    ink(P2('M28,0 L-20,-14 L-10,0 L-20,12 Z'), '#ffffff', 1.5);
-    ink(P2('M28,0 L-10,0 L-18,8 Z'), mix(col, '#ffffff', 0.4), 1);
-    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-14, -7); ctx.lineTo(8, -2); ctx.stroke();
+  // --- Treehouse Builder: measure and saw a board, hoist it on the pulley, hammer in the nails ----
+  // the ruler: 0 at X0, U px per unit. The plank lies on the bench (PY), the ruler is on the bench's front (RY).
+  const TB = { X0: 70, U: 40, PY: 336, PH: 32, RY: 372, RH: 44, BX: 582, PX: 538, WX: 560, WY: 104, WR: 22, BY0: 474, BY1: 286, HY0: 330, HY1: 470, HX0: 652, HX1: 870, WT: 168, WB: 286, APEX: 96 };
+  const tbX = u => TB.X0 + u * TB.U;
+  const TB_WOOD = ['#eab47a', '#f2c890', '#dea468'];
+  // a wooden board with grain, a knot and a highlight
+  function tbPlank(x, y, w, h, col = '#eab47a', seed = 0) {
+    inkRect(x, y, w, h, col, 2.5, 4);
+    ctx.save(); ctx.beginPath(); ctx.rect(x + 1.5, y + 1.5, w - 3, h - 3); ctx.clip();
+    ctx.strokeStyle = mix(col, '#7a4e34', 0.35); ctx.lineWidth = 1.5;
+    if (w >= h) {
+      for (let k = 1; k < 3; k++) { const yy = y + h * k / 3; ctx.beginPath(); ctx.moveTo(x, yy); for (let xx = x; xx <= x + w + 20; xx += 20) ctx.lineTo(xx, yy + Math.sin(xx * 0.05 + seed * 2 + k) * h * 0.06); ctx.stroke(); }
+      if (w > 70) { ctx.fillStyle = mix(col, '#7a4e34', 0.45); ellipse(x + w * (0.25 + ((seed * 0.37) % 0.5)), y + h * 0.55, 5, 3); }
+      ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(x + 3, y + 3, w - 6, 3);
+    } else {
+      for (let k = 1; k < 3; k++) { const xx = x + w * k / 3; ctx.beginPath(); ctx.moveTo(xx, y); ctx.lineTo(xx, y + h); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(x + 3, y + 3, 3, h - 6);
+    }
     ctx.restore();
   }
-  function hoopHalf(x, y, r, front, col) {
-    const a0 = front ? -Math.PI / 2 : Math.PI / 2, a1 = front ? Math.PI / 2 : Math.PI * 1.5;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = OL; ctx.lineWidth = 15; ctx.beginPath(); ctx.ellipse(x, y, r * 0.34, r, 0, a0, a1); ctx.stroke();
-    ctx.strokeStyle = front ? col : mix(col, '#5b3f73', 0.3); ctx.lineWidth = 9; ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 3; ctx.setLineDash([6, 10]); ctx.stroke(); ctx.setLineDash([]);
+  // a nail poking out of the wall at (x, y); rem = how much still sticks out (0 = flat)
+  function tbNail(x, y, rem) {
+    const hx = x - rem * 9, hy = y - rem * 22;
+    if (rem > 0.02) {
+      ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.strokeStyle = '#c4c8d4'; ctx.lineWidth = 4.5; ctx.stroke();
+      ctx.fillStyle = 'rgba(60,30,40,.25)'; ellipse(x + 2, y + 2, 5, 3);
+    }
+    inkEllipse(hx, hy, 7 + rem * 4, 5 + rem * 2.5, -0.3, rem > 0.02 ? '#e2e6ee' : '#a8aebc', 1.3);
+    ctx.fillStyle = '#ffffff'; circle(hx - 2, hy - 1.5, 1.6);
   }
-  MG.paperplanes = {
-    kind: 'action', title: () => 'Paper Planes', icon: () => '✈️',
-    how: () => 'Point where to throw: farther away throws harder. Watch the wind! Click to throw the plane through the hoop. Or use the arrows and SPACE.',
+  // a hammer whose striking face is at (x, y); raise lifts it back on its swing
+  function tbHammer(x, y, raise) {
+    ctx.save(); ctx.translate(x + 34, y + 62); ctx.rotate(raise); ctx.translate(-34, -62);
+    ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 13; ctx.beginPath(); ctx.moveTo(20, 2); ctx.lineTo(36, 66); ctx.stroke();
+    ctx.strokeStyle = '#d0904e'; ctx.lineWidth = 8; ctx.stroke();
+    ctx.strokeStyle = '#e85a6a'; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(31, 46); ctx.lineTo(36, 66); ctx.stroke();
+    ink(P2('M0,-11 L30,-11 C38,-11 42,-6 46,-14 L50,-12 C46,0 42,10 30,10 L0,10 Z'), '#8a92a6', 1.5);
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(3, -8, 24, 4);
+    inkRect(-2, -12, 7, 24, '#6a7286', 1.5, 2);
+    ctx.restore();
+  }
+  // a hand saw whose teeth touch (x, y); k slides it back and forth
+  function tbSaw(x, y, k = 0) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.5); ctx.translate(k, 0);
+    ink(P2('M-8,0 L100,0 L100,-34 L-8,-14 Z'), '#e4eaf2', 1.5);
+    ctx.strokeStyle = OL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-8, 0);
+    for (let i = -8; i < 100; i += 6) { ctx.lineTo(i + 3, 5); ctx.lineTo(i + 6, 0); }
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, -6); ctx.lineTo(90, -22); ctx.stroke();
+    ink(P2('M94,-40 C108,-46 132,-44 138,-26 C142,-12 136,6 120,6 L94,6 Z'), '#ff6f7e', 1.6);
+    inkEllipse(118, -18, 9, 7, 0, '#fff2e0', 1.2);
+    ctx.fillStyle = '#a8aebc'; circle(100, -26, 2.5); circle(100, -6, 2.5);
+    ctx.restore();
+  }
+  // a cheeky squirrel; (x, y) is where its feet are
+  function tbSquirrel(x, y, s, dir = 1, t = S.t) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s);
+    const flick = Math.sin(t * 5) * 0.08;
+    ctx.save(); ctx.rotate(flick);
+    ink(P2('M-6,-8 C-30,-6 -40,-30 -32,-52 C-26,-68 -4,-72 2,-58 C-12,-58 -20,-46 -16,-34 C-12,-24 -2,-20 4,-16 Z'), '#c8743a', 1.6);
+    ctx.fillStyle = '#e09a5a'; ellipse(-24, -40, 6, 12, 0.3);
+    ctx.restore();
+    const b = new Path2D(); b.ellipse(4, -15, 13, 14, 0, 0, Math.PI * 2); b.moveTo(26, -34); b.arc(16, -34, 10, 0, Math.PI * 2); b.moveTo(18, -40); b.lineTo(14, -52); b.lineTo(10, -41);
+    ink(b, '#d8884a', 1.6);
+    ctx.fillStyle = '#ffe2c0'; ellipse(8, -12, 7, 9); ellipse(21, -31, 5, 4);
+    ctx.fillStyle = OL; circle(19, -36, 2.4); circle(26, -32, 1.8);
+    ctx.fillStyle = '#ffffff'; circle(19.8, -36.8, 0.9);
+    ctx.fillStyle = '#d8884a'; ctx.strokeStyle = OL; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(14, -16, 4, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  // the pulley bucket; by is the bottom of the bucket
+  function tbBucket(x, by) {
+    ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x - 20, by - 38); ctx.quadraticCurveTo(x, by - 66, x + 20, by - 38); ctx.stroke();
+    ctx.strokeStyle = '#a8aebc'; ctx.lineWidth = 2; ctx.stroke();
+    ink(P2(`M${x - 22},${by - 40} L${x + 22},${by - 40} L${x + 17},${by} L${x - 17},${by} Z`), '#4fa8e0', 1.5);
+    inkRect(x - 24, by - 43, 48, 7, '#7fc4f0', 1.5, 3);
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x - 15, by - 32, 5, 26);
+    ctx.fillStyle = '#2a78b8'; ctx.fillRect(x - 19, by - 18, 38, 4);
+  }
+  // the oak, its long branch, grass and far hills
+  function tbScene() {
+    bdSky('#6cc8ff', '#fff2dc');
+    bdSunburst(300, 214);
+    const drift = Math.sin(S.t * 0.15) * 14;
+    puff(140 + drift, 180, 0.62); puff(420 - drift, 240, 0.5);
+    bdHills('#b2e6a2', 400, 16, 0.007, 1);
+    drawTree(24, 412, 120, 36, 0, 0);
+    // birds gliding and a butterfly over the meadow
+    ctx.strokeStyle = OL; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const bx = (S.t * (22 + i * 6) + i * 260) % 640 - 40, by = 150 + i * 34 + Math.sin(S.t * 1.5 + i) * 10, f = Math.sin(S.t * 8 + i * 2) * 5;
+      ctx.beginPath(); ctx.moveTo(bx - 10, by - f); ctx.quadraticCurveTo(bx - 5, by - 6, bx, by); ctx.quadraticCurveTo(bx + 5, by - 6, bx + 10, by - f); ctx.stroke();
+    }
+    emoji('🦋', 230 + Math.sin(S.t * 0.7) * 90, 280 + Math.sin(S.t * 2.1) * 18, 22);
+    bdHills('#97da84', 428, 9, 0.012, 2.5);
+    ctx.fillStyle = '#86d070'; ctx.fillRect(0, 446, W, H - 446);
+    ctx.fillStyle = '#7ac464'; for (let i = 0; i < 26; i++) ellipse((i * 211) % W, 460 + (i * 37) % 76, 16, 4);
+    for (let i = 0; i < 9; i++) flower(30 + i * 108 + (i % 3) * 11, 470 + (i % 2) * 34 + (i % 3) * 10, 7, ['#ff6fae', '#fff', '#ffd84a', '#c6a2ff'][i % 4], '#ffd84a', 1.2);
+    // the big oak trunk on the right, with roots, and its long branch to the pulley
+    ink(P2(`M868,${GY + 26} C900,${GY + 6} 902,${GY - 40} 904,380 C906,280 900,170 904,40 L970,40 L970,${GY + 26} Z`), BARK, 3);
+    ctx.strokeStyle = '#7a4e34'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    for (const [x, y0, y1] of [[922, 120, 250], [936, 300, 420], [918, 330, 400], [946, 160, 260]]) { ctx.beginPath(); ctx.moveTo(x, y0); ctx.bezierCurveTo(x - 6, (y0 + y1) / 2, x + 6, (y0 + y1) / 2, x, y1); ctx.stroke(); }
+    inkEllipse(934, 220, 8, 13, 0, '#5a3a2a', 1.5);
+    ink(P2('M908,60 C820,60 700,64 520,70 C510,72 510,84 520,84 C700,82 820,80 906,96 Z'), BARK, 2.5);
+    ctx.strokeStyle = 'rgba(122,78,52,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(560, 77); ctx.lineTo(860, 72); ctx.stroke();
+    leafBlob([[926, 46, 46], [880, 64, 30], [954, 96, 30], [790, 70, 18], [652, 72, 16], [528, 74, 15]], '#4cae52');
+  }
+  const tbSlot = (g, i) => {
+    const n = g.rounds - 1, bh = (TB.WB - TB.WT) / n;
+    return i < n ? { roof: false, x0: TB.HX0, x1: TB.HX1, y0: TB.WB - (i + 1) * bh, y1: TB.WB - i * bh } : { roof: true };
+  };
+  const tbRoofPath = () => P2(`M${TB.HX0 - 24},${TB.WT + 2} L${(TB.HX0 + TB.HX1) / 2},${TB.APEX} L${TB.HX1 + 24},${TB.WT + 2} Z`);
+  function tbNailSpots(g, i) {
+    const n = [2, 3, 4][g.tier - 1], s = tbSlot(g, i), mx = (TB.HX0 + TB.HX1) / 2;
+    if (s.roof) return [...Array(n)].map((_, k) => [mx + (k - (n - 1) / 2) * (n > 3 ? 46 : 56), 146]);
+    return [...Array(n)].map((_, k) => [TB.HX0 + 26 + (k + 0.5) * (TB.HX1 - TB.HX0 - 52) / n, (s.y0 + s.y1) / 2 + 2]);
+  }
+  // one finished (or being-nailed) part of the treehouse
+  function tbPart(g, i, nails) {
+    const s = tbSlot(g, i);
+    if (s.roof) {
+      const rp = tbRoofPath();
+      ink(rp, '#e8505e', 2.5);
+      ctx.save(); ctx.clip(rp); ctx.strokeStyle = 'rgba(120,20,40,.35)'; ctx.lineWidth = 2;
+      for (let y = TB.APEX + 18; y < TB.WT; y += 16) { ctx.beginPath(); ctx.moveTo(TB.HX0 - 30, y); ctx.lineTo(TB.HX1 + 30, y); ctx.stroke(); for (let x = TB.HX0 - 30 + ((y / 16) % 2) * 14; x < TB.HX1 + 30; x += 28) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 16); ctx.stroke(); } }
+      ctx.restore();
+      ctx.fillStyle = 'rgba(255,255,255,.3)'; tri(TB.HX0 - 6, TB.WT - 4, (TB.HX0 + TB.HX1) / 2, TB.APEX + 8, (TB.HX0 + TB.HX1) / 2 - 10, TB.APEX + 18);
+    } else {
+      tbPlank(s.x0, s.y0, s.x1 - s.x0, s.y1 - s.y0, TB_WOOD[i % 3], i + 1);
+      const my = (s.y0 + s.y1) / 2, h = s.y1 - s.y0;
+      if (i === g.rounds - 2 && nails === null) {   // the top wall board gets a round window with the club teddy
+        inkCircle(TB.HX0 + 64, my, h * 0.36, '#bfe6ff', 1.5); ctx.fillStyle = '#ff8fc8'; ellipse(TB.HX0 + 64 - h * 0.2, my, h * 0.12, h * 0.3);
+        emoji('🧸', TB.HX0 + 70, my + 2, h * 0.42);
+      } else if (i === 0 && nails === null) heart(TB.HX1 - 60, my - h * 0.22, h * 0.5, '#ff8fc8');
+      else if (nails === null) flower(TB.HX1 - 60, my, h * 0.18, '#ffd84a', '#ff8fc8', 1.2);
+    }
+    const spots = tbNailSpots(g, i);
+    spots.forEach(([x, y], k) => tbNail(x, y, nails ? 1 - nails[k] : 0));
+  }
+  function tbHouse(g) {
+    const { HX0, HX1, WT, WB } = TB, n = g.rounds - 1;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = OL; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(640, 300); ctx.lineTo(902, 392); ctx.moveTo(790, 300); ctx.lineTo(902, 344); ctx.stroke();
+    ctx.strokeStyle = '#b07848'; ctx.lineWidth = 6; ctx.stroke();
+    // the open frame: shadowy inside, dashed slots still to build
+    ctx.fillStyle = 'rgba(122,78,52,.16)'; ctx.fillRect(HX0, WT, HX1 - HX0, WB - WT);
+    const cur = g.round, placed = ['nail', 'done'].includes(g.st);
+    for (let i = 0; i <= n; i++) {
+      const s = tbSlot(g, i), built = i < g.built, now = i === cur && g.st !== 'finale';
+      if (built) { tbPart(g, i, null); continue; }
+      if (now && placed) { tbPart(g, i, g.nails.map(nl => nl.d / g.need)); continue; }
+      ctx.save(); ctx.setLineDash([9, 7]); ctx.lineWidth = now ? 3.5 + Math.sin(S.t * 6) : 2;
+      ctx.strokeStyle = now ? '#ffb52a' : 'rgba(91,63,115,.45)';
+      if (s.roof) { ctx.fillStyle = now ? 'rgba(255,240,150,.35)' : 'rgba(255,255,255,.2)'; ctx.fill(tbRoofPath()); ctx.stroke(tbRoofPath()); }
+      else { ctx.fillStyle = now ? 'rgba(255,240,150,.4)' : 'rgba(255,255,255,.18)'; ctx.fillRect(s.x0 + 4, s.y0 + 3, s.x1 - s.x0 - 8, s.y1 - s.y0 - 6); ctx.strokeRect(s.x0 + 4, s.y0 + 3, s.x1 - s.x0 - 8, s.y1 - s.y0 - 6); }
+      ctx.restore();
+      if (now && ['measure', 'saw', 'drop', 'lift'].includes(g.st)) {   // a tag with the length this part needs
+        const ty = s.roof ? 140 : (s.y0 + s.y1) / 2, tx = (HX0 + HX1) / 2;
+        ctx.strokeStyle = OL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(tx - 16, ty - 22); ctx.lineTo(tx, ty - 32); ctx.lineTo(tx + 16, ty - 22); ctx.stroke();
+        inkRect(tx - 30, ty - 20, 60, 36, '#fff6c8', 2, 8);
+        text(String(g.L), tx, ty - 1, 24, '#c0306a', 'center', 800);
+      }
+    }
+    // corner posts and the top beam
+    inkRect(HX0 - 10, WT - 4, 13, WB - WT + 6, '#b07848', 2.5, 3);
+    inkRect(HX1 - 3, WT - 4, 13, WB - WT + 6, '#b07848', 2.5, 3);
+    inkRect(HX0 - 14, WT - 8, HX1 - HX0 + 28, 10, '#c98a4a', 2, 3);
+    // the platform
+    inkRect(598, WB, 316, 16, '#c98a4a', 2.5, 3);
+    ctx.strokeStyle = 'rgba(91,63,115,.35)'; ctx.lineWidth = 1.5; for (let x = 624; x < 910; x += 28) { ctx.beginPath(); ctx.moveTo(x, WB + 2); ctx.lineTo(x, WB + 14); ctx.stroke(); }
+    // the finished treehouse gets a flag and fairy lights
+    if (g.built >= g.rounds) {
+      const mx = (HX0 + HX1) / 2, wv = Math.sin(S.t * 4) * 4;
+      ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mx, TB.APEX + 2); ctx.lineTo(mx, 66); ctx.stroke();
+      ink(P2(`M${mx + 2},66 Q${mx + 24},${64 + wv} ${mx + 48},${74 + wv} Q${mx + 24},${80 - wv} ${mx + 2},86 Z`), '#ffd83a', 1.5);
+      fairyLights(HX0 - 20, WT + 4, mx, TB.APEX + 6, 6, 6, S.t);
+      fairyLights(mx, TB.APEX + 6, HX1 + 20, WT + 4, 6, 6, S.t + 1);
+    }
+  }
+  MG.treebuild = {
+    kind: 'action', title: () => 'Treehouse Builder', icon: () => '🔨',
+    how: () => 'Help Maya build the treehouse! Move the saw to the right number on the ruler and click to cut the board. Pull the rope down to lift it up. Then bonk the nails flat!',
     init(g) {
-      Object.assign(g, { planes: 8, hits: 0, target: [5, 6, 6][g.tier - 1], ang: 0.45, pow: 0.5, plane: null, wait: 0, trail: [], say: 'Throw the paper plane through the hoop!' });
-      this.newHoop(g); this.newWind(g);
+      const rounds = [3, 3, 4][g.tier - 1];
+      const pool = [[2, 3, 4, 5, 6], [3, 4, 5, 6, 7, 8, 9], [3, 4, 5, 6, 7]][g.tier - 1];
+      Object.assign(g, {
+        rounds, Ls: shuffle(pool).slice(0, rounds), round: 0, built: 0, meas: 0, hits: 0, wild: 0, need: [2, 2, 3][g.tier - 1],
+        by: TB.BY0, hy: TB.HY0, lift: 0, grab: false, spin: 0, swing: 0, cool: 0, creak: 0, nails: [], bad: null, sq: { mode: 'branch', t: 0 },
+      });
+      this.next(g);
     },
     start(g) { speak(g.say); },
-    newHoop(g) { g.hoop = { x: rand(470, 840), y: rand(150, 380), r: [62, 52, 46][g.tier - 1], ph: rand(0, 6), col: pick(['#ff5f7e', '#40b0ff', '#5adc7a', '#9c6cff', '#ffa040']), pulse: 0 }; },
-    newWind(g) { const m = [14, 34, 48][g.tier - 1]; g.wind = Math.round(rand(-m, m)); },
-    hoopY(g, t = S.t) { return g.hoop.y + (g.tier === 3 ? Math.sin(t * 1.2 + g.hoop.ph) * 46 : 0); },
-    update(g, dt) {
-      g.hoop.pulse = Math.max(0, g.hoop.pulse - dt);
-      if (!g.plane && g.wait <= 0 && g.planes > 0) {
-        if (keys.arrowup || keys.w) g.ang += 1.1 * dt;
-        if (goDown()) g.ang -= 1.1 * dt;
-        if (goRight()) g.pow += 0.7 * dt;
-        if (goLeft()) g.pow -= 0.7 * dt;
-        if (pointerMoved(g) && !goLeft() && !goRight() && !keys.arrowup && !goDown() && pointer.y > 64) {
-          const dx = pointer.x - PP_START[0], dy = PP_START[1] - pointer.y;
-          g.ang = Math.atan2(dy, Math.max(dx, 1)); g.pow = (Math.hypot(dx, dy) - 60) / 520;
-        }
-        g.ang = clamp(g.ang, -0.4, 1.25); g.pow = clamp(g.pow, 0, 1);
-        if (pressed[' '] || (pointer.clicked && pointer.y > 64)) {
-          const v = ppSpeed(g.pow);
-          g.plane = { x: PP_START[0], y: PP_START[1], vx: Math.cos(g.ang) * v, vy: -Math.sin(g.ang) * v, t: 0 };
-          g.planes--; g.trail = []; SFX.jump();
+    talk(g, s) { g.say = s; if (g.phase === 'play') speak(s); },
+    next(g) {
+      const L = g.Ls[g.round], a = g.tier === 3 ? Math.min(randInt(1, 3), 10 - L) : 0;
+      Object.assign(g, { L, a, u: a + 1, sx: tbX(a + 1), miss: 0, st: 'measure', bad: null, nails: [], lift: 0 });
+      const part = g.round === g.rounds - 1 ? 'roof' : 'wall';
+      if (g.tier === 3) this.talk(g, `The ${part} needs a board ${L} long. This board starts at ${a} on the ruler, so count ${L} more from there and cut!`);
+      else if (g.round === 0) this.talk(g, `The wall needs a board ${L} long. Move the saw to ${L} on the ruler and click to cut!${g.tier === 2 ? ' Not every number is written. Count the lines!' : ''}`);
+      else this.talk(g, `Now the ${part} needs a board ${L} long. Where do you cut?`);
+    },
+    snap(g, x) { return clamp(Math.round((x - TB.X0) / TB.U), g.a + 1, 10); },
+    cut(g) {
+      const len = g.u - g.a;
+      if (len === g.L) {
+        g.meas += [1, 0.5, 0.25][g.miss] ?? 0.1;
+        Object.assign(g, { st: 'saw', t2: 1.1, bad: null });
+        SFX.pick(); this.talk(g, `Yes! ${len} long. Saw it!`);
+      } else {
+        g.miss++; g.cool = 0.5; g.bad = { u: g.u, t: 2.2 }; SFX.miss();
+        floatText(tbX(g.u), g.tier > 1 ? 250 : 266, `${len}`, '#ff6f7e', false, 28);
+        this.talk(g, `That would be ${len} long. ${len > g.L ? 'Too long' : 'Too short'}! We need ${g.L}. ${g.a ? `Start counting at ${g.a}, where the board begins.` : 'Count the spaces from zero.'}`);
+      }
+    },
+    pull(g, dt) {
+      const before = g.lift;
+      if (!pointer.down) g.grab = false;
+      else if (!g.grab && Math.abs(pointer.x - TB.PX) < 70 && pointer.y > 150) { g.grab = true; g.gOff = g.hy - pointer.y; }
+      if (g.grab) { const ny = clamp(pointer.y + g.gOff, TB.HY0, TB.HY1); if (ny > g.hy) g.lift += ny - g.hy; g.hy = ny; }
+      else if (keys.arrowdown || keys.s || keys[' ']) { g.hy += 220 * dt; g.lift += 220 * dt; if (g.hy > TB.HY1) g.hy = TB.HY0; }
+      else g.hy = Math.max(TB.HY0, g.hy - 420 * dt);
+      const d = g.lift - before;
+      g.spin += d / TB.WR;
+      if ((g.creak -= d) < 0) { tone(260 + g.lift * 2, 0.05, 'triangle', 0.05); g.creak = 22; }
+      g.by = TB.BY0 - g.lift;
+      if (g.by <= TB.BY1) {
+        Object.assign(g, { by: TB.BY1, st: 'catch', t2: 0.9, grab: false });
+        SFX.sparkle(); burst(TB.BX + 20, TB.BY1 - 60, 16);
+        const rider = g.sq.mode === 'ride' || g.sq.mode === 'jump';
+        this.talk(g, rider ? 'Got it! And the squirrel came too! Silly squirrel!' : 'Got it! Thank you, Aubrey!');
+        if (rider) { g.sq = { mode: 'home', t: 0 }; floatText(TB.BX, TB.BY1 - 90, 'Wheee!', '#fff6a8', false, 26); }
+      }
+    },
+    hammer(g) {
+      let hit = -1;
+      if (g.cool > 0) return;
+      if (pointer.clicked && pointer.y > 64) {
+        let best = 40;
+        g.nails.forEach((nl, k) => { const dd = Math.hypot(pointer.x - nl.x, pointer.y - nl.y + 8); if (nl.d < g.need && dd < best) { best = dd; hit = k; } });
+        if (hit < 0) { g.wild++; g.swing = 0.16; g.cool = 0.18; g.whack = [pointer.x, pointer.y]; tone(110, 0.1, 'square', 0.05); floatText(pointer.x, pointer.y - 30, 'Oops!', '#ffffff', false, 20); return; }
+      }
+      if (hit < 0) for (let k = 0; k < g.nails.length; k++) if (pressed[String(k + 1)] && g.nails[k].d < g.need) hit = k;
+      if (hit < 0 && (pressed[' '] || pressed.enter)) hit = g.nails.findIndex(nl => nl.d < g.need);
+      if (hit < 0) return;
+      const nl = g.nails[hit];
+      nl.d++; g.hits++; g.swing = 0.16; g.cool = 0.12; g.whack = [nl.x, nl.y];
+      tone(150, 0.08, 'square', 0.07); tone(1300, 0.06, 'triangle', 0.05, 0.01);
+      burst(nl.x, nl.y, 6, { colors: ['#ffffff', '#ffe36b'], spread: 90, up: 40, size: [2, 4] });
+      if (nl.d >= g.need) {
+        const done = g.nails.filter(q => q.d >= g.need).length;
+        floatText(nl.x, nl.y - 40, String(done), '#fff6a8', false, 30);
+        if (done < g.nails.length) speak(NUM_WORDS[done] + '!');
+        else {
+          g.built++; g.st = 'done'; g.t2 = 2; SFX.sparkle(); burst((TB.HX0 + TB.HX1) / 2, 200, 26);
+          const last = g.built >= g.rounds;
+          this.talk(g, `${done} nails! ${last ? 'The roof is on!' : pick(['Hooray! The treehouse is growing!', 'Super strong! Next board!', 'Bonk bonk! Great building!'])}`);
         }
       }
-      if (g.plane) {
-        const p = g.plane, hx = g.hoop.x, hy = this.hoopY(g), px = p.x, py = p.y;
-        for (let k = 0; k < 2; k++) ppSim(p, dt / 2, g.wind);
-        p.t += dt;
-        if (Math.floor(p.t * 30) > g.trail.length) g.trail.push([p.x, p.y]);
-        if (px < hx && p.x >= hx) {
-          const yy = lerp(py, p.y, (hx - px) / (p.x - px));
-          if (Math.abs(yy - hy) < g.hoop.r * 0.82) {
-            g.hits++; g.hoop.pulse = 0.6; SFX.sparkle(); burst(hx, hy, 26);
-            floatText(hx, hy - g.hoop.r - 20, pick(['Swoosh!', 'Right through!', 'Yay!']), '#fff6a8', false, 26);
-            g.passed = true;
-          }
+    },
+    update(g, dt, id) {
+      g.cool = Math.max(0, g.cool - dt); g.swing = Math.max(0, g.swing - dt); g.t2 -= dt;
+      if (g.bad && (g.bad.t -= dt) <= 0) g.bad = null;
+      const moved = g.lpx !== undefined && (Math.abs(pointer.x - g.lpx) > 0.5 || Math.abs(pointer.y - g.lpy) > 0.5);
+      pointerMoved(g);
+      if (g.st === 'measure') {
+        if (moved && pointer.y > 150 && pointer.x < 520) g.u = this.snap(g, pointer.x);
+        if (pressed.arrowleft || pressed.a) g.u--;
+        if (pressed.arrowright || pressed.d) g.u++;
+        for (let k = 0; k <= 9; k++) if (pressed[String(k)]) g.u = k || 10;
+        g.u = clamp(g.u, g.a + 1, 10);
+        let cut = pressed[' '] || pressed.enter;
+        if (pointer.clicked && pointer.y > 150 && pointer.x < 520) { g.u = this.snap(g, pointer.x); cut = true; }
+        if (cut && g.cool <= 0) this.cut(g);
+      } else if (g.st === 'saw') {
+        if (Math.random() < dt * 14) burst(tbX(g.u), TB.PY + 6, 2, { colors: ['#f2d0a0', '#e0b070'], spread: 60, up: 30, size: [2, 4] });
+        if (Math.random() < dt * 6) noise(0.08, 0.03);
+        if (g.t2 <= 0) { g.st = 'drop'; g.t2 = 0.75; SFX.jump(); if (g.round === 1) g.sq = { mode: 'jump', t: 0 }; }
+      } else if (g.st === 'drop') {
+        if (g.t2 <= 0) {
+          g.st = 'lift'; g.lift = 0;
+          this.talk(g, g.round === 0 ? 'Now the pulley! Pull the rope DOWN, and the board goes UP to me!' : g.round === 1 ? 'Pull the rope down! Hey, a squirrel hopped in for a ride!' : 'Pull the rope down to send it up!');
         }
-        if (p.y > GY + 20 || p.x > W + 40 || p.x < -40 || p.t > 5) {
-          if (!g.passed) { SFX.miss(); floatText(clamp(p.x, 60, W - 60), clamp(p.y, 120, GY) - 20, 'So close!', '#ffffff', false, 22); }
-          g.plane = null; g.wait = 0.9;
+      } else if (g.st === 'lift') this.pull(g, dt);
+      else if (g.st === 'catch') {
+        if (g.t2 <= 0) {
+          g.st = 'nail'; g.nails = tbNailSpots(g, g.round).map(([x, y]) => ({ x, y, d: 0 }));
+          this.talk(g, `Bonk the ${NUM_WORDS[g.nails.length]} nails with the hammer until they are flat!`);
         }
-      } else if (g.wait > 0) {
-        g.wait -= dt;
-        if (g.wait <= 0) {
-          if (g.passed) this.newHoop(g);
-          g.passed = false; this.newWind(g);
-          if (g.planes <= 0 || g.hits >= g.target) g.done = true;
+      } else if (g.st === 'nail') this.hammer(g);
+      else if (g.st === 'done') {
+        if (g.t2 <= 0) {
+          g.round++;
+          if (g.round < g.rounds) this.next(g);
+          else { g.st = 'finale'; g.t2 = 3.2; SFX.fanfare(); this.talk(g, 'We did it! Our treehouse is finished! Measure, saw, pull and bonk. You are a real builder!'); }
         }
+      } else if (g.st === 'finale') {
+        if (Math.random() < dt * 3) burst(rand(620, 900), rand(100, 260), 12);
+        if (g.t2 <= 0) g.done = true;
       }
-      g.progress = `Hoops ${g.hits} of ${g.target} · ✈️ ${g.planes}`;
-      g.score = clamp(g.hits / g.target, 0, 1);
+      // the bucket goes back down for the next board; the rope handle springs back up
+      if (g.st !== 'lift') {
+        g.grab = false; g.hy = Math.max(TB.HY0, g.hy - 420 * dt);
+        if (g.st !== 'catch' && g.by < TB.BY0) { const d = Math.min(TB.BY0 - g.by, 150 * dt); g.by += d; g.spin -= d / TB.WR; }
+      }
+      g.sq.t += dt;
+      if (g.sq.mode === 'jump' && g.sq.t > 0.8) g.sq = { mode: 'ride', t: 0 };
+      if (g.sq.mode === 'home' && g.sq.t > 0.9) g.sq = { mode: 'branch', t: 0 };
+      g.progress = g.st === 'finale' ? 'All built!' : `Board ${g.round + 1} of ${g.rounds}`;
+      g.score = 0.8 * g.meas / g.rounds + 0.2 * (g.hits + g.wild ? g.hits / (g.hits + g.wild) : 1);
+    },
+    sqPos(g) {
+      const home = [736, 70], ride = [TB.BX + 14, g.by - 42], k = clamp(g.sq.t / (g.sq.mode === 'jump' ? 0.8 : 0.9), 0, 1);
+      const arc = (a, b) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k) - Math.sin(k * Math.PI) * 70];
+      if (g.sq.mode === 'jump') return [...arc(home, ride), -1];
+      if (g.sq.mode === 'ride') return [...ride, -1];
+      if (g.sq.mode === 'home') return [...arc([TB.BX + 14, TB.BY1 - 42], home), 1];
+      return [...home, Math.sin(S.t * 0.5) > 0 ? 1 : -1];
     },
     draw(g) {
-      const hy = this.hoopY(g), r = g.hoop.r * (1 + g.hoop.pulse * 0.25);
-      // wind sock
-      darkPanel(W / 2 - 120, 66, 240, 40, 18);
-      const wtxt = g.wind === 0 ? 'No wind' : Math.abs(g.wind) < 20 ? 'A little wind' : 'Windy!';
-      text(wtxt, W / 2 - 30, 86, 17, '#fff', 'center', 700);
-      if (g.wind) {
-        const dir = Math.sign(g.wind), len = 16 + Math.abs(g.wind) * 0.9, ax = W / 2 + 64;
-        ctx.strokeStyle = '#a6f0ff'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(ax - dir * len / 2, 86); ctx.lineTo(ax + dir * len / 2, 86); ctx.stroke();
-        ctx.fillStyle = '#a6f0ff'; tri(ax + dir * (len / 2 + 10), 86, ax + dir * len / 2 - dir * 2, 78, ax + dir * len / 2 - dir * 2, 94);
+      const { PY, PH, RY, RH, BX, PX, WX, WY, WR } = TB, st = g.st;
+      tbScene();
+      tbHouse(g);
+      drawCritter('Maya', 622, TB.WB + 2, 0.46, st === 'lift' || st === 'catch' ? -1 : 1);
+      // the pulley: hook, ropes, wheel, rope handle and the bucket
+      ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(WX, 78); ctx.lineTo(WX, WY); ctx.stroke();
+      ctx.lineCap = 'round';
+      const rope = (pts, slack) => {
+        ctx.beginPath(); ctx.moveTo(pts[0], pts[1]);
+        if (slack) ctx.quadraticCurveTo(pts[2], pts[3], pts[4], pts[5]); else ctx.lineTo(pts[2], pts[3]);
+        ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke(); ctx.strokeStyle = '#d8b07a'; ctx.lineWidth = 3; ctx.stroke();
+      };
+      rope([BX, WY, BX, g.by - 64]);
+      rope([PX, WY, PX, g.hy]);
+      rope([PX, g.hy + 6, PX + 10, g.hy + 90, 524, GY + 18], true);
+      inkEllipse(526, GY + 20, 18, 6, 0, '#d8b07a', 1.5);
+      inkCircle(WX, WY, WR, '#8a92a6', 2); inkCircle(WX, WY, WR - 7, '#c4c8d4', 1.2);
+      ctx.strokeStyle = OL; ctx.lineWidth = 2;
+      for (let k = 0; k < 3; k++) { const an = g.spin + k * Math.PI / 3; ctx.beginPath(); ctx.moveTo(WX - Math.cos(an) * 13, WY - Math.sin(an) * 13); ctx.lineTo(WX + Math.cos(an) * 13, WY + Math.sin(an) * 13); ctx.stroke(); }
+      inkCircle(WX, WY, 4, '#ffd84a', 1);
+      inkRect(PX - 20, g.hy - 7, 40, 14, '#c88a50', 2, 7);
+      // the cut board rides up in the bucket
+      const boardH = g.L * TB.U * 0.3;
+      if (['lift', 'catch'].includes(st) || (st === 'drop' && g.t2 < 0.05)) {
+        let bx = BX - 8, byy = g.by - 30 - boardH;
+        if (st === 'catch') { const k = clamp(1 - g.t2 / 0.9, 0, 1); bx = lerp(bx, 640, k); byy = lerp(byy, TB.WB - 30 - boardH, k) - Math.sin(k * Math.PI) * 30; }
+        tbPlank(bx, byy, 16, boardH, '#eab47a', g.round);
       }
-      hoopHalf(g.hoop.x, hy, r, false, g.hoop.col);
-      // aim preview
-      if (!g.plane && g.wait <= 0 && g.planes > 0) {
-        const v = ppSpeed(g.pow), p = { x: PP_START[0], y: PP_START[1], vx: Math.cos(g.ang) * v, vy: -Math.sin(g.ang) * v };
-        const steps = Math.round([1.6, 0.6, 0.4][g.tier - 1] * 60);
-        ctx.fillStyle = 'rgba(255,255,255,.9)';
-        for (let i = 0; i < steps; i++) { ppSim(p, 1 / 60, g.wind); if (p.y > GY) break; if (i % 4 === 3) { ctx.globalAlpha = 1 - i / steps * 0.7; circle(p.x, p.y, 4); } }
-        ctx.globalAlpha = 1;
-        // power meter
-        darkPanel(230, 486, 196, 40, 18); text('Power', 270, 506, 15, '#fff', 'center', 700);
-        rrect(306, 498, 106, 16, 8, 'rgba(255,255,255,.25)'); rrect(306, 498, 106 * Math.max(0.08, g.pow), 16, 8, mix('#5adc7a', '#ff5f7e', g.pow));
+      tbBucket(BX, g.by);
+      const [sx, sy, sd] = this.sqPos(g);
+      tbSquirrel(sx, sy, 0.62, sd, S.t);
+      // the workbench, the plank on it and the ruler on its front
+      for (const lx of [92, 446]) { inkRect(lx, 380, 16, GY + 26 - 380, '#a0683a', 2.5, 3); }
+      inkRect(100, 448, 352, 10, '#a0683a', 2, 3);
+      inkRect(52, 364, 448, 18, '#b07848', 2.5, 4);
+      const pend = tbX(10.4), a = g.a, ax = tbX(a), ux = tbX(g.u);
+      if (st === 'measure' || st === 'saw') {
+        if (st === 'saw' && g.t2 < 0.2) { tbPlank(ax - 6, PY, ux - ax, PH, '#eab47a', g.round); tbPlank(ux + 2, PY, pend - ux - 2, PH, '#eab47a', g.round); }
+        else tbPlank(ax, PY, pend - ax, PH, '#eab47a', g.round);
+      } else {
+        tbPlank(ux + 2, PY, pend - ux - 2, PH, '#eab47a', g.round);   // the leftover end
+        if (st === 'drop') {   // the cut piece hops into the bucket
+          const k = clamp(1 - g.t2 / 0.75, 0, 1), cx = lerp((ax + ux) / 2, BX, k), cy = lerp(PY + PH / 2, g.by - 30 - boardH / 2, k) - Math.sin(k * Math.PI) * 110;
+          ctx.save(); ctx.translate(cx, cy); ctx.rotate(-k * Math.PI / 2); const sc = lerp(1, 0.3, k), w = (ux - ax) * sc, h = lerp(PH, 16, k);
+          tbPlank(-w / 2, -h / 2, w, h, '#eab47a', g.round); ctx.restore();
+        }
       }
-      for (let i = 0; i < g.trail.length; i++) { ctx.fillStyle = `rgba(255,255,255,${0.15 + 0.4 * i / g.trail.length})`; circle(g.trail[i][0], g.trail[i][1], 2.5); }
-      // Aubrey beside the launch stump
-      drawAubrey(84, GY + 30, 'idle_front', 1, 0, 0.62);
-      ink(P2(`M126,${GY + 30} L130,374 L206,374 L210,${GY + 30} Z`), BARK, 2.5);
-      inkEllipse(168, 374, 40, 10, 0, '#e8c08a', 2);
-      ctx.strokeStyle = 'rgba(160,104,58,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(168, 374, 24, 6, 0, 0, Math.PI * 2); ctx.stroke();
-      if (g.plane) drawPlane(g.plane.x, g.plane.y, Math.atan2(g.plane.vy, g.plane.vx), '#ff6fb5');
-      else if (g.planes > 0) drawPlane(PP_START[0], PP_START[1], -g.ang, '#ff6fb5');
-      hoopHalf(g.hoop.x, hy, r, true, g.hoop.col);
+      rrect(tbX(0) - 16, RY, 10 * TB.U + 32, RH, 6, '#ffd84a', OL, 2.5);
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(tbX(0) - 12, RY + 3, 10 * TB.U + 24, 4);
+      ctx.strokeStyle = OL; ctx.lineCap = 'butt';
+      for (let k = 0; k <= 10; k++) {
+        const x = tbX(k);
+        ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, RY); ctx.lineTo(x, RY + 15); ctx.stroke();
+        if (k < 10) { ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + TB.U / 2, RY); ctx.lineTo(x + TB.U / 2, RY + 8); ctx.stroke(); }
+        if (g.tier !== 2 || k % 2 === 0) text(String(k), x, RY + 29, 19, '#5a3a2a', 'center', 800);
+        else { ctx.fillStyle = '#5a3a2a'; circle(x, RY + 29, 2.5); }
+      }
+      // where the board starts (tier 3 boards don't start at zero)
+      if (a > 0 && ['measure', 'saw'].includes(st)) {
+        ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#2a9a4a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ax, PY - 8); ctx.lineTo(ax, RY + 16); ctx.stroke(); ctx.restore();
+        outlined('start', ax, RY + RH + 13, 15, '#a6f0b8');
+      }
+      if (st === 'measure') {
+        if (g.bad) {
+          const bx = tbX(g.bad.u); ctx.globalAlpha = clamp(g.bad.t, 0, 1);
+          ctx.strokeStyle = '#ff5f6a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(bx - 8, PY + 8); ctx.lineTo(bx + 8, PY + 24); ctx.moveTo(bx + 8, PY + 8); ctx.lineTo(bx - 8, PY + 24); ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        g.sx = lerp(g.sx, ux, 0.35);
+        ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = '#e83a5a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(g.sx, PY - 4); ctx.lineTo(g.sx, RY + 16); ctx.stroke(); ctx.restore();
+        tbSaw(g.sx, PY, 0);
+        // a pencil arrow under the saw
+        ctx.fillStyle = '#e83a5a'; tri(g.sx, RY + 2, g.sx - 7, RY - 10, g.sx + 7, RY - 10);
+        // count bubbles once a cut went wrong
+        if (g.miss > 0) for (let i = 1; i <= g.L; i++) { const x = tbX(a + i - 0.5); inkCircle(x, PY - 16, 13, i === g.L ? '#ffd84a' : '#fff6c8', 1.2); text(String(i), x, PY - 15, 15, '#7a3a1a', 'center', 800); }
+      } else if (st === 'saw') {
+        tbSaw(ux, PY + clamp((1.1 - g.t2) * 30, 0, PH), Math.sin(g.t * 30) * 14);
+      }
+      // Aubrey works the rope
+      const pulling = st === 'lift' && (g.grab || keys.arrowdown || keys.s || keys[' ']);
+      drawAubrey(500, GY + 22, st === 'finale' ? 'twirl' : pulling && g.hy > (TB.HY0 + TB.HY1) / 2 ? 'crouch' : 'idle_front', 1, 0, 0.56);
+      if (st === 'lift' && !g.grab) {
+        const bob = Math.abs(Math.sin(S.t * 5)) * 12;
+        outlined('PULL', 494, 222 + bob, 20, '#fff6a8');
+        ink(P2(`M484,${238 + bob} L504,${238 + bob} L504,${262 + bob} L516,${262 + bob} L494,${286 + bob} L472,${262 + bob} L484,${262 + bob} Z`), '#ffd84a', 1.5);
+      }
+      // the hammer
+      if (st === 'nail' || st === 'done') {
+        const nx = g.nails.find(nl => nl.d < g.need);
+        const at = g.swing > 0 && g.whack ? g.whack : g.usePointer ? [pointer.x, pointer.y] : nx ? [nx.x, nx.y] : [760, 200];
+        if (st === 'nail' && nx && !g.usePointer) { ctx.strokeStyle = '#ffb52a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(nx.x, nx.y - 6, 22 + Math.sin(S.t * 6) * 2, 0, Math.PI * 2); ctx.stroke(); }
+        if (st === 'nail') tbHammer(at[0] - 2, at[1] - 8, g.swing > 0 ? -0.05 : 0.55);
+      }
+      // Maya's speech bubble
+      const lines = wrap(g.say || '', 452, 18, 600), bh = 22 + lines.length * 22;
+      ctx.fillStyle = 'rgba(255,248,252,.97)'; tri(452, 66 + bh - 4, 500, 66 + bh - 4, 600, 206);
+      panel(20, 66, 490, bh, 18);
+      ctx.fillStyle = 'rgba(255,248,252,1)'; tri(452, 66 + bh - 3, 498, 66 + bh - 3, 596, 202);
+      lines.forEach((l, i) => text(l, 38, 66 + 22 + i * 22, 18, '#5a2a6e', 'left', 600));
     },
   };
 
   restage('treehouse', {
     bg: 'treehouse_bg',
-    games: [['secretcode', 'ribbon', {}], ['paperplanes', 'berry', {}]],
+    games: [['secretcode', 'ribbon', {}], ['treebuild', 'berry', {}]],
     intro: ['N:Psst! Welcome to the secret treehouse club. To get in, you need the password.', "N:But it's written in secret code! Use the key to crack it.", 'A:focused:I LOVE secret codes.'],
-    mid: ["N:You cracked it! Now the club challenge: throw paper planes through the hoops!", 'A:determined:I will aim really carefully. And watch the wind!'],
+    mid: ["N:You cracked it! Now the club challenge: help me build our new clubhouse room! Every board has to be just the right length.", 'A:determined:I will measure really carefully. Then up they go on the pulley!'],
     outro: ["N:You're in the club! Here's the official club ribbon, and some club berries.", "A:winky:I have a secret too... but I can't tell anyone yet."],
   });
 
