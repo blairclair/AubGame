@@ -112,14 +112,20 @@ function noise(dur, vol = 0.05, when = 0) {
 }
 // read text aloud (for young players); emoji and *stage directions* markers are dropped
 let readAloud = true;
+let speakTok = 0;
 function speak(str) {
   if (!readAloud || muted || !window.speechSynthesis) return;
-  speechSynthesis.cancel();
   const clean = str.replace(/\p{Extended_Pictographic}|️|‍/gu, '').replace(/[*_]/g, '').trim();
   if (!clean) return;
   const u = new SpeechSynthesisUtterance(clean);
   u.rate = 0.92; u.pitch = 1.1;
-  speechSynthesis.speak(u);
+  // Chrome can silently drop an utterance queued straight after cancel(), and its synth sometimes sticks
+  // paused; so only cancel when something is actually talking, give it a beat, and nudge it awake first
+  const busy = speechSynthesis.speaking || speechSynthesis.pending;
+  if (busy) speechSynthesis.cancel();
+  speechSynthesis.resume();
+  const tok = ++speakTok; // a newer line wins over one still waiting out its beat
+  if (busy) setTimeout(() => { if (tok === speakTok) speechSynthesis.speak(u); }, 80); else speechSynthesis.speak(u);
 }
 const SFX = {
   pick() { tone(784, 0.1, 'triangle', 0.1); tone(1175, 0.14, 'triangle', 0.08, 0.07); },
