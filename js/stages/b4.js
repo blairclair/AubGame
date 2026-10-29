@@ -938,40 +938,75 @@
     ctx.beginPath(); ctx.moveTo(bx - 10, 150 + fl); ctx.quadraticCurveTo(bx - 4, 146, bx, 152); ctx.quadraticCurveTo(bx + 4, 146, bx + 10, 150 + fl); ctx.stroke();
   };
 
-  // ---- Salmon Leap (action): jump up the falls one ledge at a time when the water is calm
-  const SL = { lanes: [400, 560], LED: 118, base: 440 };
-  function drawSalmon(x, y, ang, s, hurt) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s);
-    ink(P2('M-30,0 L-46,-14 L-42,0 L-46,14 Z'), '#ff8a6a', 1.5);
-    ink(P2('M-32,0 C-20,-20 18,-22 34,-4 C38,0 38,2 34,6 C18,20 -20,18 -32,0 Z'), '#ff9a7a', 1.5);
-    ctx.fillStyle = '#5a7ab8'; ctx.beginPath(); ctx.moveTo(-30, -2); ctx.bezierCurveTo(-16, -18, 16, -20, 32, -4); ctx.bezierCurveTo(10, -8, -12, -6, -30, -2); ctx.fill();
-    ctx.fillStyle = '#ffd0c0'; ctx.beginPath(); ctx.ellipse(2, 7, 22, 6, 0, 0, Math.PI * 2); ctx.fill();
-    ink(P2('M-4,-14 L4,-26 L12,-14 Z'), '#ff8a6a', 1);
-    ctx.fillStyle = '#fff'; circle(22, -4, 5); ctx.fillStyle = OL;
-    if (hurt) { ctx.strokeStyle = OL; ctx.lineWidth = 2; line(19, -7, 25, -1); ctx.stroke(); line(19, -1, 25, -7); ctx.stroke(); } else circle(23, -4, 2.6);
-    ctx.fillStyle = 'rgba(255,255,255,.7)'; for (const [dx, dy] of [[-10, -6], [0, -9], [-18, -3]]) circle(dx, dy, 1.6);
+  // ---- Salmon Leap (action): Aubrey carries little Sal the salmon up the falls, one ledge at a time when the water is calm
+  const SL = { lanes: [400, 560], LED: 118, base: 440, s: 0.48, wind: 0.14 };
+  // where her chest is in each sprite frame (image pixels, as the frame faces natively)
+  const SL_CHEST = { idle_front: [48, 94], crouch: [41, 70], jump: [64, 84] };
+  // a chubby little salmon, head to the right, with a tail that wags by `wag` radians
+  function drawHeldSalmon(wag, hurt) {
+    ctx.save(); ctx.translate(-28, 0); ctx.rotate(wag);
+    ink(P2('M2,0 C-6,-4 -14,-14 -20,-16 C-17,-6 -17,6 -20,16 C-14,14 -6,4 2,0 Z'), '#ff8a6a', 1.6);
+    ctx.strokeStyle = 'rgba(200,80,60,.6)'; ctx.lineWidth = 1.2; line(-4, -2, -15, -9); ctx.stroke(); line(-4, 2, -15, 9); ctx.stroke();
+    ctx.restore();
+    ink(P2('M-30,0 C-20,-19 16,-21 32,-5 C37,0 37,3 32,7 C16,20 -20,18 -30,0 Z'), '#ff9a7a', 1.6);
+    ctx.fillStyle = '#5a7ab8'; ctx.beginPath(); ctx.moveTo(-28, -2); ctx.bezierCurveTo(-14, -17, 16, -19, 31, -5); ctx.bezierCurveTo(10, -9, -12, -7, -28, -2); ctx.fill();
+    ctx.fillStyle = '#ffd8c8'; ctx.beginPath(); ctx.ellipse(2, 8, 22, 5.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(2, -14); ctx.rotate(wag * 0.4); ink(P2('M-8,2 L-1,-9 L7,2 Z'), '#ff8a6a', 1.2); ctx.restore();
+    ctx.fillStyle = '#fff'; circle(21, -4, 5.5);
+    if (hurt) { ctx.strokeStyle = OL; ctx.lineWidth = 2; line(18, -7, 24, -1); ctx.stroke(); line(18, -1, 24, -7); ctx.stroke(); }
+    else { ctx.fillStyle = OL; circle(22.5, -4, 3); ctx.fillStyle = '#fff'; circle(23.5, -5.2, 1.1); }
+    ctx.fillStyle = 'rgba(255,120,150,.55)'; ellipse(22, 4, 4, 2.4);
+    ctx.strokeStyle = OL; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(30, 2, 3, 0.2, Math.PI * 0.8); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; for (const [dx, dy] of [[-10, -6], [0, -10], [-18, -3]]) circle(dx, dy, 1.6);
+  }
+  // Aubrey in sprite `frame`, feet at (x, gy), squashed by sq (>1 = stretched tall), tilted by rot, hugging the salmon
+  function drawAubSalmon(x, gy, ground, frame, facing, sq, rot, wag, hurt, wet) {
+    const im = IMG[frame], s = SL.s, w = im.width * s, h = im.height * s;
+    const mirror = frame === 'jump' ? (facing > 0 ? -1 : 1) : 1, [ax, ay] = SL_CHEST[frame];
+    const cx = (-w / 2 + ax * s) * mirror, cy = -h + ay * s;
+    ctx.fillStyle = 'rgba(40,20,60,.22)'; ellipse(x, ground, 22 * clamp(1 - (ground - gy) / 160, 0.4, 1), 5);
+    ctx.save(); ctx.translate(x, gy); ctx.rotate(rot); ctx.scale(1 / Math.sqrt(sq), sq);
+    ctx.save(); ctx.scale(mirror, 1); ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
+    // the salmon across her chest, wrapped in her arms
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(facing < 0 ? -0.6 : 0.6, 0.6); ctx.rotate(-0.12);
+    drawHeldSalmon(wag, hurt);
+    const skin = '#f6c9ae';
+    for (const [x0, y0, x1, y1, hx, hy] of [[-27, -4, -28, 14, -12, 14], [29, -6, 30, 14, 12, 15]]) {
+      ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x1, y1, hx, hy);
+      ctx.strokeStyle = OL; ctx.lineWidth = 9.5; ctx.stroke(); ctx.strokeStyle = skin; ctx.lineWidth = 6.5; ctx.stroke();
+      inkEllipse(hx, hy, 6, 4.6, 0, skin, 1.4);
+      ctx.strokeStyle = 'rgba(160,90,70,.6)'; ctx.lineWidth = 1; for (const d of [-2, 2]) { ctx.beginPath(); ctx.moveTo(hx + d, hy - 3); ctx.lineTo(hx + d, hy + 1); ctx.stroke(); }
+    }
+    ctx.restore();
+    // drips and shine: she is soaked from the spray
+    if (wet) {
+      ctx.fillStyle = 'rgba(160,220,255,.85)';
+      for (let i = 0; i < 4; i++) { const k = (S.t * 1.6 + i * 0.27) % 1, dx = [-14, 12, -4, 16][i]; ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.ellipse(dx, -h * 0.5 + k * h * 0.55, 2.2, 3.4, 0, 0, Math.PI * 2); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
   }
   MG.salmonleap = {
     kind: 'action', title: () => 'Salmon Leap', icon: () => '🐟',
-    how: () => 'Leap up the waterfall! Jump when the light is GREEN and the water is calm. Move left or right to dodge the falling logs! Arrow keys and space work too.',
+    how: () => 'Carry little Sal the salmon up the waterfall to her home! Leap when the light is GREEN and the water is calm. Move left or right to dodge the falling logs! Arrow keys and space work too.',
     init(g) {
       Object.assign(g, { top: [5, 7, 8][g.tier - 1], level: 0, lane: 0, fx: SL.lanes[0], st: 'idle', stT: 0, cam: 0, logs: [], logT: 3.5,
-        hits: 0, washes: 0, timeLeft: 80, w: [1.15, 1.35, 1.6][g.tier - 1], won: false, from: 0, fromX: SL.lanes[0], tt: 0 });
+        hits: 0, washes: 0, timeLeft: 80, w: [1.15, 1.35, 1.6][g.tier - 1], won: false, from: 0, fromX: SL.lanes[0], tt: 0, landT: 0 });
     },
-    start(g) { g.say = 'Jump when the light is green!'; speak(g.say); },
+    start(g) { g.say = 'Leap with Sal when the light is green!'; speak(g.say); },
     flow(g, lane, lvl) { return Math.sin(g.tt * g.w + lane * 2.6 + lvl * 1.3); },
     strong(g, lane, lvl) { return this.flow(g, lane, lvl) > -0.15; },
     ledgeY(g, k) { return SL.base - k * SL.LED + g.cam; },
+    // Aubrey's feet: she winds up on the ledge for SL.wind seconds, then flies
     fishY(g) {
-      const y0 = this.ledgeY(g, g.from) - 8, y1 = this.ledgeY(g, g.from + 1) - 8, k = g.stT;
-      if (g.st === 'jump') { const e = clamp(k / 0.6, 0, 1); return lerp(y0, y1, e) - Math.sin(e * Math.PI) * 46; }
-      if (g.st === 'wash') { const e = clamp(k / 0.8, 0, 1); return lerp(y0, this.ledgeY(g, g.level) - 8, e) - Math.sin(e * Math.PI) * SL.LED * 0.5; }
-      if (g.st === 'hurt') { const e = clamp(k / 0.5, 0, 1); return lerp(y0, this.ledgeY(g, g.level) - 8, e) - Math.sin(e * Math.PI) * 30; }
-      return this.ledgeY(g, g.level) - 8;
+      const y0 = this.ledgeY(g, g.from) + 1, y1 = this.ledgeY(g, g.from + 1) + 1, k = g.stT;
+      if (g.st === 'jump') { const e = clamp((k - SL.wind) / (0.6 - SL.wind), 0, 1); return lerp(y0, y1, e) - Math.sin(e * Math.PI) * 46; }
+      if (g.st === 'wash') { const e = clamp((k - SL.wind) / (0.8 - SL.wind), 0, 1); return lerp(y0, this.ledgeY(g, g.level) + 1, e) - Math.sin(e * Math.PI) * SL.LED * 0.5; }
+      if (g.st === 'hurt') { const e = clamp(k / 0.5, 0, 1); return lerp(y0, this.ledgeY(g, g.level) + 1, e) - Math.sin(e * Math.PI) * 30; }
+      return this.ledgeY(g, g.level) + 1;
     },
     update(g, dt, id) {
-      g.timeLeft -= dt; g.stT += dt; g.tt += dt;
+      g.timeLeft -= dt; g.stT += dt; g.tt += dt; g.landT = Math.max(0, g.landT - dt);
       g.cam = lerp(g.cam, Math.max(0, Math.min(g.top, g.level) * SL.LED - 110), Math.min(1, dt * 3));
       const busy = g.st !== 'idle' && g.st !== 'side';
       if (!g.won && g.st !== 'hurt') {
@@ -984,11 +1019,11 @@
       }
       if (g.st === 'side') { g.fx = lerp(g.fromX, SL.lanes[g.lane], smooth(g.stT / 0.22)); if (g.stT >= 0.22) { g.fx = SL.lanes[g.lane]; g.st = 'idle'; } }
       else if (g.st === 'jump' && g.stT >= 0.6) {
-        g.level++; g.st = 'idle'; SFX.pop(); burst(g.fx, this.ledgeY(g, g.level), 10, { colors: ['#ffffff', '#bfe6ff'], spread: 90, up: 40 });
-        if (g.level >= g.top) { g.won = true; g.stT = 0; SFX.sparkle(); speak('You made it to the top! Crystals!'); burst(480, 200, 40); }
+        g.level++; g.st = 'idle'; g.landT = 0.3; SFX.pop(); tone(520, 0.12, 'sine', 0.05, 0, 260); burst(g.fx, this.ledgeY(g, g.level), 16, { colors: ['#ffffff', '#bfe6ff', '#8adcff'], spread: 110, up: 70 });
+        if (g.level >= g.top) { g.won = true; g.stT = 0; SFX.sparkle(); speak('You made it to the top! Sal is home!'); burst(480, 200, 40); }
       } else if (g.st === 'wash' && g.stT >= 0.8) {
-        g.st = 'idle'; g.washes++; floatText(g.fx, this.ledgeY(g, g.level) - 60, 'Too strong!', '#bfe6ff', false, 24);
-        if (g.washes <= 2 || g.washes % 3 === 0) speak('Whoosh! The water was too strong and washed you down. Wait for the green light!');
+        g.st = 'idle'; g.landT = 0.3; g.washes++; floatText(g.fx, this.ledgeY(g, g.level) - 60, 'Too strong!', '#bfe6ff', false, 24);
+        if (g.washes <= 2 || g.washes % 3 === 0) speak('Whoosh! The water was too strong and washed you and Sal down. Wait for the green light!');
       } else if (g.st === 'hurt' && g.stT >= 1.1) g.st = 'idle';
       // falling logs: a warning at the top, then down the lane they go
       g.logT -= dt;
@@ -1000,7 +1035,7 @@
       for (const lg of g.logs) {
         if (lg.warn > 0) { lg.warn -= dt; if (lg.warn <= 0) tone(240, 0.2, 'triangle', 0.05, 0, 120); continue; }
         lg.y += 400 * dt; lg.spin += dt * 4;
-        if (!lg.hit && g.st !== 'hurt' && !g.won && Math.abs(SL.lanes[lg.lane] - g.fx) < 50 && Math.abs(lg.y - fy) < 34) {
+        if (!lg.hit && g.st !== 'hurt' && !g.won && Math.abs(SL.lanes[lg.lane] - g.fx) < 50 && Math.abs(lg.y - (fy - 44)) < 46) {
           lg.hit = true; g.hits++; g.from = g.level; g.level = Math.max(0, g.level - 1); g.st = 'hurt'; g.stT = 0;
           SFX.miss(); tone(140, 0.3, 'square', 0.05); speak('Bonk! A log! Move to the other side next time.');
         }
@@ -1060,10 +1095,28 @@
         ctx.strokeStyle = '#7a4a2a'; ctx.lineWidth = 2; line(-24, -4, 10, -4); ctx.stroke(); line(-14, 5, 22, 5); ctx.stroke();
         inkEllipse(30, 0, 7, 11, 0, '#e8b47a', 1); ctx.restore();
       }
-      // the fish
-      const fy = this.fishY(g), ang = g.st === 'jump' || g.st === 'wash' ? -Math.PI / 2 + 0.3 : g.st === 'hurt' ? Math.sin(g.stT * 20) * 0.5 : -0.25 + Math.sin(S.t * 4) * 0.08;
-      if (g.st !== 'hurt' || Math.floor(g.stT * 10) % 2) drawSalmon(g.fx, fy - 6, ang, 0.9, g.st === 'hurt');
-      if (g.won) outlined('The top! 💎', 480, 230, 48, '#fff6a8');
+      // Aubrey, hugging Sal: crouch to wind up, jump in the air, boing on landing
+      const fy = this.fishY(g), facing = g.lane ? -1 : 1, k = g.stT;
+      let frame = 'idle_front', sq = 1 + Math.sin(S.t * 3) * 0.015, rot = 0, wag = Math.sin(S.t * 6) * 0.25;
+      if (g.st === 'jump' || g.st === 'wash') {
+        if (k < SL.wind) { frame = 'crouch'; sq = 1 - 0.12 * k / SL.wind; }
+        else {
+          const e = clamp((k - SL.wind) / (g.st === 'jump' ? 0.6 - SL.wind : 0.8 - SL.wind), 0, 1);
+          frame = 'jump'; sq = 1 + 0.16 * Math.max(0, 1 - e * 3); wag = Math.sin(S.t * 22) * 0.7;
+          rot = g.st === 'wash' ? Math.sin(e * Math.PI) * -0.9 * facing : -0.08 * facing;
+        }
+      } else if (g.st === 'side') { frame = 'jump'; sq = 1.05; wag = Math.sin(S.t * 18) * 0.5; }
+      else if (g.st === 'hurt') { rot = Math.sin(g.stT * 20) * 0.2; wag = Math.sin(S.t * 26) * 0.6; }
+      else if (g.landT > 0) { const e = g.landT / 0.3; sq = 1 - 0.22 * Math.sin(e * Math.PI); wag = Math.sin(S.t * 20) * 0.5 * e; }
+      if (g.won) { frame = g.stT < 0.25 ? 'crouch' : 'jump'; sq = 1; wag = Math.sin(S.t * 16) * 0.6; }
+      const lift = g.won && g.stT >= 0.25 ? Math.abs(Math.sin((g.stT - 0.25) * 6)) * 26 : 0;
+      if (g.st !== 'hurt' || Math.floor(g.stT * 10) % 2) drawAubSalmon(g.fx, fy - lift, g.st === 'idle' || g.st === 'side' ? fy : Math.max(fy, this.ledgeY(g, Math.min(g.from, g.level)) + 1), frame, facing, sq, rot, wag, g.st === 'hurt', true);
+      if (g.landT > 0) {
+        const e = 1 - g.landT / 0.3; ctx.strokeStyle = `rgba(255,255,255,${1 - e})`; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(g.fx, fy - 2, 20 + e * 34, 5 + e * 6, 0, 0, Math.PI * 2); ctx.stroke();
+        for (const d of [-1, 1]) for (let i = 0; i < 3; i++) { ctx.fillStyle = `rgba(200,236,255,${1 - e})`; circle(g.fx + d * (16 + e * 30 + i * 8), fy - 6 - Math.sin(e * Math.PI) * (16 + i * 8), 3.5 - i * 0.8); }
+      }
+      if (g.won) outlined('Sal is home! 💎', 480, 230, 48, '#fff6a8');
       const on = !g.won && g.st !== 'hurt';
       button('sl:l', 196, 470, 96, 58, '', { on: on && g.lane === 1, color: '#40b0ff' }); emoji('⬅️', 244, 499, 32);
       button('sl:j', 400, 470, 160, 58, 'LEAP!', { on: on && g.st === 'idle', color: '#3fbf6a', size: 26 });
@@ -1193,10 +1246,12 @@
     bg: 'waterfall_bg',
     games: [['salmonleap', 'crystal', {}], ['sinkorfloat', 'shell', {}]],
     intro: ['*:A tall waterfall tumbles down the cliffs, whispering and roaring, with rainbows dancing in the mist.',
-      'N:Blub! There are crystals in the pool at the very top! Leap up the falls with me!',
-      'N:Jump when the light is green and the water is calm. And watch out for logs!',
-      'A:determined:Up, up, up we go!'],
-    mid: ['N:Blub blub! Look at all the things people dropped in my pool!',
+      'N:Blub! My little sister Sal got washed down the falls! Her home is the crystal pool at the very top.',
+      'N:Her fins are too small to leap that high. Can you carry her up?',
+      'A:determined:Hold on tight, Sal! I will leap up the falls with you in my arms!',
+      'N:Jump when the light is green and the water is calm. And watch out for logs!'],
+    mid: ['N:Sal is home! Thank you, Aubrey! Blub blub!',
+      'N:Now look at all the things people dropped in my pool!',
       'N:Some sink to the bottom and some float on top. Can you guess which is which?',
       "A:thinking:Hmm... let's do some science!"],
     outro: ['N:You are a real water scientist! Take these shiny crystals and shells. Blub!',
