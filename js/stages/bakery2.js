@@ -18,8 +18,16 @@
   // custom cupcakes: which frostings and toppings each tier offers, and how many toppings an order asks for
   const BC_FROST = { pink: '#ffb3d6', blue: '#9ad8ff', yellow: '#ffe27a', chocolate: '#a8683e' };
   const BC_FROSTS = { 1: ['pink', 'blue', 'yellow'], 2: ['pink', 'blue', 'yellow', 'chocolate'], 3: ['pink', 'blue', 'yellow', 'chocolate'] };
-  const BC_TOPS = { 1: ['sprinkles', 'cherry'], 2: ['sprinkles', 'cherry', 'star'], 3: ['sprinkles', 'cherry', 'star'] };
-  const BC_TOP_WORD = { sprinkles: 'sprinkles', cherry: 'a cherry', star: 'a star' };
+  // every base gets a colour coat (frosting, glaze, icing or drizzle) and its own toppings
+  const BC_BASES = {
+    cupcake: { coat: 'Frosting', tops: ['sprinkles', 'cherry', 'star'] },
+    donut: { coat: 'Glaze', tops: ['sprinkles', 'candy', 'drizzle'] },
+    cookie: { coat: 'Icing', tops: ['sprinkles', 'chips', 'heart'] },
+    croissant: { coat: 'Drizzle', tops: ['sugar', 'almonds', 'jam'] },
+  };
+  const BC_BASE_TIER = { 1: ['cupcake', 'donut'], 2: ['cupcake', 'donut', 'cookie'], 3: ['cupcake', 'donut', 'cookie', 'croissant'] };
+  const BC_TOP_WORD = { sprinkles: 'sprinkles', cherry: 'a cherry', star: 'a star', candy: 'candies', drizzle: 'a white drizzle', chips: 'chocolate chips', heart: 'a heart', sugar: 'powdered sugar', almonds: 'almonds', jam: 'jam' };
+  const BC_TOP_SHORT = { sugar: 'sugar', chips: 'choc chips', drizzle: 'drizzle' };
   const BC_CUSTOMERS = ['Penny the Pig', 'Millie Mouse', 'Hazel Hedgehog', 'Scamper Squirrel', 'Otto the Otter', 'Bramble the Bear', 'Pengu the Penguin', 'Fergus the Frog', 'Ruby Robin', 'Granny Owl', 'Tilly the Turtle', 'Mama Duck'];
   const BC_SPRINK = ['#ffffff', '#5fd0ff', '#ffe14a', '#7ae08a', '#c69aff', '#ff6f9a'];
   const BC_BOX = { x: 604, y: 188, w: 196, h: 108 }; // the open cake box on the counter
@@ -28,12 +36,106 @@
   const BC_COUNTER = 298;
   const BC_WRAP = 0.9;
 
-  const ccKey = (frost, tops) => `cc:${frost}:${tops.slice().sort().join('+')}`;
-  const ccParse = k => { const [, frost, t] = k.split(':'); return { frost, tops: t ? t.split('+') : [] }; };
+  // a decorated treat that looks exactly like a ready-made one counts as that one
+  const ccKey = (base, frost, tops) => {
+    const t = tops.slice().sort().join('+');
+    if (base === 'donut' && frost === 'pink' && t === 'sprinkles') return 'pinkdonut';
+    if (base === 'donut' && frost === 'chocolate' && t === 'drizzle') return 'chocdonut';
+    return `cc:${base}:${frost}:${t}`;
+  };
+  const ccParse = k => { const [, base, frost, t] = k.split(':'); return { base, frost, tops: t ? t.split('+') : [] }; };
   const andList = a => (a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0] || '');
 
   // --- a cupcake to decorate: plain baked top, then frosting (grows in), then toppings ------
-  function drawCustom(frost, tops, x, y, s = 1, grow = 1, popT = {}) {
+  const popOf = popT => k => 1 + Math.sin(Math.min(1, (popT[k] || 0) / 0.3) * Math.PI) * 0.5;
+  // a scatter of sprinkles inside an ellipse, avoiding a hole in the middle if asked
+  function sprinkleScatter(rx, ry, cy, hole, n, seed) {
+    const R = rng(seed);
+    for (let i = 0, made = 0; made < n && i < n * 6; i++) {
+      const a = R() * TAU, r = Math.sqrt(R()), sx = Math.cos(a) * rx * r, sy = cy + Math.sin(a) * ry * r;
+      if (hole && (sx * sx) / (hole[0] * hole[0]) + ((sy - hole[2]) ** 2) / (hole[1] * hole[1]) < 1) continue;
+      made++;
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(R() * 6); ctx.fillStyle = BC_SPRINK[made % BC_SPRINK.length]; ctx.fillRect(-4.5, -1.8, 9, 3.6); ctx.restore();
+    }
+  }
+  function popAt(p, x, y, fn) { ctx.save(); ctx.translate(x, y); ctx.scale(p, p); ctx.translate(-x, -y); fn(); ctx.restore(); }
+  function croissantShape() {
+    // five puffy segments in a crescent: outline them all first, then fill, so it reads as one roll
+    const seg = [[-36, 12, 13, 17, -1.0], [-20, -2, 16, 22, -0.5], [0, -8, 18, 26, 0], [20, -2, 16, 22, 0.5], [36, 12, 13, 17, 1.0]];
+    ctx.strokeStyle = OL; ctx.lineWidth = 5;
+    for (const [sx, sy, rx, ry, r] of seg) { ctx.beginPath(); ctx.ellipse(sx, sy, rx, ry, r, 0, TAU); ctx.stroke(); }
+    seg.forEach(([sx, sy, rx, ry, r], i) => { ctx.fillStyle = i === 2 ? '#f4b45a' : i % 2 ? '#eea24a' : '#e8943e'; ctx.beginPath(); ctx.ellipse(sx, sy, rx, ry, r, 0, TAU); ctx.fill(); });
+    ctx.strokeStyle = 'rgba(150,80,30,.55)'; ctx.lineWidth = 2;
+    for (const [sx, sy, rx, ry, r] of seg.slice(1, 4)) { ctx.beginPath(); ctx.ellipse(sx, sy, rx, ry, r, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,240,200,.6)'; for (const [sx, sy, , ry, r] of seg.slice(1, 4)) ellipse(sx - 4, sy - ry * 0.45, 5, 8, r);
+  }
+  // an outlined line: ink first, colour on top, so drizzles read clearly on anything
+  function inkLine(pts, col, w) {
+    for (const [c, lw] of [[OL, w + 3], [col, w]]) { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); }
+  }
+  function drawDonutC(frost, tops, grow, pop) {
+    inkEllipse(0, 6, 44, 32, 0, '#e8a860', 2.4);
+    ctx.fillStyle = 'rgba(255,230,180,.55)'; ellipse(-20, 22, 12, 4, 0.2);
+    if (frost && grow > 0) {
+      const c = BC_FROST[frost], k = 0.4 + grow * 0.6;
+      ctx.save(); ctx.scale(k, k);
+      // glaze with little drips running down the sides
+      ink(P2('M-38,0 C-42,-22 -20,-30 0,-30 C20,-30 42,-22 38,0 C37,8 33,8 31,16 C29,26 22,26 21,16 C20,10 14,14 10,18 C6,22 0,24 -4,20 C-8,16 -13,17 -17,23 C-21,30 -28,28 -27,19 C-28,12 -36,10 -38,0 Z'), c, 2.2);
+      ctx.fillStyle = 'rgba(255,255,255,.5)'; ellipse(-20, -16, 11, 5, -0.4); ellipse(24, -18, 4, 2, 0.5); ellipse(25, 16, 2, 4);
+      ctx.restore();
+    }
+    inkEllipse(0, -2, 12, 8, 0, '#c8844a', 2); ctx.fillStyle = '#a8683a'; ellipse(0, 0, 8, 4);
+    if (!frost || grow < 1) return;
+    if (tops.includes('sprinkles')) popAt(pop('sprinkles'), 0, -6, () => sprinkleScatter(32, 20, -6, [17, 12, -2], 16, 11));
+    if (tops.includes('drizzle')) popAt(pop('drizzle'), 0, -6, () => inkLine([[-34, -8], [-24, -24], [-16, 6], [-6, -28], [6, 12], [14, -28], [24, 6], [32, -16]], '#fffaf0', 3.5));
+    if (tops.includes('candy')) popAt(pop('candy'), 0, -6, () => {
+      for (const [cx, cy, col] of [[-26, -10, '#ff5a6a'], [-14, -22, '#5fd0ff'], [14, -22, '#ffe14a'], [27, -8, '#7ae08a'], [20, 8, '#c69aff'], [-20, 8, '#ff9a3a'], [0, 14, '#ff6fb5']]) {
+        inkCircle(cx, cy, 5.5, col, 1.2); ctx.fillStyle = 'rgba(255,255,255,.7)'; circle(cx - 2, cy - 2, 1.6);
+      }
+    });
+  }
+  function drawCookieC(frost, tops, grow, pop) {
+    inkCircle(0, 0, 38, '#e8b868', 2.4);
+    ctx.strokeStyle = 'rgba(160,100,40,.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-32, 14); ctx.lineTo(-27, 18); ctx.moveTo(28, -18); ctx.lineTo(33, -12); ctx.stroke();
+    if (frost && grow > 0) {
+      const c = BC_FROST[frost], k = 0.3 + grow * 0.7, p = new Path2D();
+      for (let i = 0; i <= 48; i++) { const a = i / 48 * TAU, r = (30 + Math.sin(a * 7) * 2) * k; i ? p.lineTo(Math.cos(a) * r, Math.sin(a) * r) : p.moveTo(r, 0); }
+      p.closePath(); ink(p, c, 2);
+      ctx.fillStyle = 'rgba(255,255,255,.5)'; ellipse(-12 * k, -14 * k, 10 * k, 4 * k, -0.5);
+    }
+    if (!frost || grow < 1) return;
+    if (tops.includes('sprinkles')) popAt(pop('sprinkles'), 0, 0, () => sprinkleScatter(24, 24, 0, tops.includes('heart') ? [12, 12, -2] : null, 14, 21));
+    if (tops.includes('chips')) popAt(pop('chips'), 0, 0, () => {
+      for (const [cx, cy, r] of [[-16, -12, 0.4], [8, -18, -0.3], [18, 2, 0.8], [-6, 14, 0.1], [-20, 8, -0.6], [12, 18, 0.5]]) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(r); ink(P2('M0,-6 C5,0 5,5 0,5 C-5,5 -5,0 0,-6 Z'), '#5a3020', 1); ctx.restore(); }
+    });
+    if (tops.includes('heart')) popAt(pop('heart'), 0, 0, () => { heart(0, -15, 40, OL); heart(0, -12.5, 34, '#ffffff'); heart(0, -10, 27, '#ff4a7a'); ctx.fillStyle = 'rgba(255,255,255,.6)'; circle(-6, -5, 2.5); });
+  }
+  function drawCroissantC(frost, tops, grow, pop) {
+    if (tops.includes('jam') && frost && grow >= 1) popAt(pop('jam'), 0, 10, () => {
+      // jam squishing out of both ends of the roll
+      for (const sx of [-1, 1]) { inkEllipse(sx * 46, 18, 8, 6, sx * 0.6, '#e8243a', 1.4); }
+    });
+    croissantShape();
+    if (frost && grow > 0) {
+      const pts = [[-40, 6], [-30, -16], [-20, 8], [-8, -26], [4, 4], [16, -26], [26, 6], [38, -12]];
+      inkLine(pts.slice(0, Math.max(2, Math.ceil(pts.length * grow))), BC_FROST[frost], 4);
+    }
+    if (!frost || grow < 1) return;
+    if (tops.includes('jam')) popAt(pop('jam'), 0, -30, () => { inkEllipse(0, -30, 9, 6, 0, '#e8243a', 1.4); ctx.fillStyle = 'rgba(255,255,255,.7)'; circle(-3, -32, 2); });
+    if (tops.includes('almonds')) popAt(pop('almonds'), 0, -10, () => {
+      for (const [ax, ay, r] of [[-28, -4, 0.6], [-14, -20, -0.4], [10, -24, 0.3], [26, -6, -0.7], [0, -10, 1.2], [-20, 6, 2]]) { ctx.save(); ctx.translate(ax, ay); ctx.rotate(r); inkEllipse(0, 0, 7, 3.6, 0, '#f4e0b8', 1.1); ctx.strokeStyle = 'rgba(160,110,50,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(5, 0); ctx.stroke(); ctx.restore(); }
+    });
+    if (tops.includes('sugar')) popAt(pop('sugar'), 0, -10, () => {
+      ctx.fillStyle = 'rgba(255,255,255,.75)'; ellipse(-18, -12, 12, 6, -0.4); ellipse(4, -22, 14, 6); ellipse(22, -10, 10, 5, 0.5);
+      const R = rng(7); ctx.fillStyle = '#ffffff'; for (let i = 0; i < 40; i++) circle(-38 + R() * 76, -30 + R() * 34, 1.3 + R());
+    });
+  }
+  function drawCustom(base, frost, tops, x, y, s = 1, grow = 1, popT = {}) {
+    if (base !== 'cupcake') {
+      ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ({ donut: drawDonutC, cookie: drawCookieC, croissant: drawCroissantC })[base](frost, tops, grow, popOf(popT));
+      ctx.restore(); return;
+    }
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ink(P2('M-28,40 L-34,4 L34,4 L28,40 Z'), '#fff0f6', 2.2);
     ctx.strokeStyle = '#ffb3d0'; ctx.lineWidth = 2.4; for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 9, 7); ctx.lineTo(i * 7.6, 38); ctx.stroke(); }
@@ -73,7 +175,7 @@
 
   // --- hand-drawn treats, centred on (x, y), about 90px across at s = 1 -------------------
   function drawTreat(k, x, y, s = 1) {
-    if (k.startsWith('cc:')) { const c = ccParse(k); return drawCustom(c.frost, c.tops, x, y, s); }
+    if (k.startsWith('cc:')) { const c = ccParse(k); return drawCustom(c.base, c.frost, c.tops, x, y, s); }
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     if (k === 'pinkdonut' || k === 'chocdonut') {
       const pink = k === 'pinkdonut';
@@ -97,14 +199,7 @@
       for (const [cx, cy, r] of [[-18, -12, 5], [6, -20, 4.5], [20, -2, 5.5], [-6, 4, 5], [-22, 14, 4], [12, 18, 5], [24, -20, 3.5]]) ellipse(cx, cy, r, r * 0.8, cx * 0.1);
       ctx.strokeStyle = 'rgba(160,100,40,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-30, -2); ctx.lineTo(-24, 2); ctx.moveTo(26, 14); ctx.lineTo(30, 8); ctx.stroke();
     } else if (k === 'croissant') {
-      // five puffy segments in a crescent: outline them all first, then fill, so it reads as one roll
-      const seg = [[-36, 12, 13, 17, -1.0], [-20, -2, 16, 22, -0.5], [0, -8, 18, 26, 0], [20, -2, 16, 22, 0.5], [36, 12, 13, 17, 1.0]];
-      ctx.strokeStyle = OL; ctx.lineWidth = 5;
-      for (const [sx, sy, rx, ry, r] of seg) { ctx.beginPath(); ctx.ellipse(sx, sy, rx, ry, r, 0, TAU); ctx.stroke(); }
-      seg.forEach(([sx, sy, rx, ry, r], i) => { ctx.fillStyle = i === 2 ? '#f4b45a' : i % 2 ? '#eea24a' : '#e8943e'; ctx.beginPath(); ctx.ellipse(sx, sy, rx, ry, r, 0, TAU); ctx.fill(); });
-      ctx.strokeStyle = 'rgba(150,80,30,.55)'; ctx.lineWidth = 2;
-      for (const [sx, sy, rx, ry, r] of seg.slice(1, 4)) { ctx.beginPath(); ctx.ellipse(sx, sy, rx, ry, r, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke(); }
-      ctx.fillStyle = 'rgba(255,240,200,.6)'; for (const [sx, sy, , ry, r] of seg.slice(1, 4)) ellipse(sx - 4, sy - ry * 0.45, 5, 8, r);
+      croissantShape();
     } else if (k === 'muffin') {
       ink(P2('M-30,40 L-36,4 L36,4 L30,40 Z'), '#c6a2ff', 2.2);
       ctx.strokeStyle = '#9a7ae0'; ctx.lineWidth = 2; for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 9.5, 7); ctx.lineTo(i * 8, 38); ctx.stroke(); }
@@ -145,7 +240,11 @@
   }
 
   const bcName = (k, n) => {
-    if (k.startsWith('cc:')) { const c = ccParse(k); return `${c.frost} cupcake with ${andList(c.tops.map(t => BC_TOP_WORD[t]))}`; }
+    if (k.startsWith('cc:')) {
+      const c = ccParse(k), tops = c.tops.map(t => BC_TOP_WORD[t]);
+      if (c.base === 'croissant') return `croissant with ${andList([`${c.frost} drizzle`].concat(tops))}`;
+      return `${c.frost}${{ cupcake: '', donut: ' glazed', cookie: ' iced' }[c.base]} ${c.base} with ${andList(tops)}`;
+    }
     return n === 1 ? BC_TREATS[k].one : BC_TREATS[k].many;
   };
   const bcSay = order => andList(order.map(o => `${NUM_WORDS[o.n]} ${bcName(o.k, o.n)}`)) + ', please!';
@@ -157,15 +256,15 @@
 
   MG.pipcounter = {
     kind: 'action', title: () => 'Bakery Counter', icon: () => '🧁',
-    how: () => "Customers are coming in! Tap treats to put them in the box. If they want a special cupcake, tap Decorate and make it just like the picture. Then hand the box over before they get tired of waiting!",
+    how: () => "Customers are coming in! Tap treats to put them in the box. If they want a special treat, tap Decorate and make it just like the picture. Then hand the box over before they get tired of waiting!",
     init(g) {
       const kinds = BC_KINDS[g.tier].concat('deco'), n = kinds.length;
       const gap = 10, tw = Math.min(190, (W - 36 - gap * (n - 1)) / n), x0 = (W - (tw * n + gap * (n - 1))) / 2;
       g.trays = kinds.map((k, i) => ({ k, x: x0 + i * (tw + gap), y: 334, w: tw, h: 166, bump: 0 }));
       // the station's piping bags and topping jars
-      const fr = BC_FROSTS[g.tier], tp = BC_TOPS[g.tier];
-      g.bags = fr.map((c, i) => ({ c, x: 254 + i * 80, y: 352, w: 72, h: 148, sq: 0 }));
-      g.jars = tp.map((t, i) => ({ t, x: 588 + i * 80, y: 352, w: 72, h: 148, sq: 0 }));
+      g.bags = BC_FROSTS[g.tier].map((c, i) => ({ c, x: 254 + i * 80, y: 352, w: 72, h: 148, sq: 0 }));
+      g.baseTabs = BC_BASE_TIER[g.tier].map((b, i) => ({ b, x: 22 + i * 53, y: 332, w: 49, h: 46 }));
+      this.setJars(g, 'cupcake');
       const total = [5, 6, 7][g.tier - 1];
       Object.assign(g, {
         total, served: 0, wrong: 0, missed: 0, ci: 0, box: [], msg: '', msgT: 0, endT: 0, bcState: 'walkin', coins: 0, flyCoins: [], hearts: [], wrapT: 0,
@@ -176,7 +275,7 @@
     },
     makeOrder(g) {
       const kinds = BC_KINDS[g.tier];
-      // the second customer always wants a special cupcake, so every game shows the station
+      // the second customer always wants a special treat, so every game shows the station
       const custom = g.ci === 1 || (g.ci > 1 && Math.random() < [0.5, 0.55, 0.65][g.tier - 1]);
       let [maxTypes, maxEach, minTotal, maxTotal] = [[2, 2, 1, 3], [2, 3, 2, 4], [3, 3, 3, 5]][g.tier - 1];
       if (custom) { maxTypes--; maxTotal--; minTotal = Math.max(0, minTotal - 1); }
@@ -189,8 +288,13 @@
       }
       order = order || [{ k: kinds[0], n: 1 }];
       if (custom) {
-        const tops = shuffle(BC_TOPS[g.tier].slice()).slice(0, g.tier === 3 ? 2 : 1);
-        order.unshift({ k: ccKey(pick(BC_FROSTS[g.tier]), tops), n: 1, custom: true });
+        let k = null;
+        // tier 1 is mostly cupcakes and donuts; tier 3 uses all four bases with two toppings
+        while (!k || !k.startsWith('cc:')) {
+          const base = pick(BC_BASE_TIER[g.tier]);
+          k = ccKey(base, pick(BC_FROSTS[g.tier]), shuffle(this.topsFor(g, base)).slice(0, g.tier === 3 ? 2 : 1));
+        }
+        order.unshift({ k, n: 1, custom: true });
       }
       return order;
     },
@@ -214,7 +318,10 @@
     },
     add(g, tr) {
       tr.bump = 0.25;
-      if (tr.k === 'deco') { g.decoOpen = true; g.deco = g.deco || { frost: null, tops: [], grow: 0, popT: {} }; SFX.click(); return; }
+      if (tr.k === 'deco') {
+        const want = g.cust.order.find(o => o.custom && bcCount(g, o.k) < o.n);
+        g.decoOpen = true; g.deco = g.deco || this.newDeco(g, want ? ccParse(want.k).base : 'cupcake'); SFX.click(); return;
+      }
       if (this.put(g, tr.k, tr.x + tr.w / 2, tr.y + 70)) SFX.pop();
     },
     slot(i) {
@@ -240,26 +347,30 @@
       else if (short) this.msg(g, `I need ${NUM_WORDS[short.n]} ${bcName(short.k, short.n)}!`);
       else this.msg(g, `Too many! Just ${NUM_WORDS[over.n]} ${bcName(over.k, over.n)}, please.`);
     },
-    // the decorating station: pick a frosting, add toppings, then box it
+    topsFor(g, base) { return BC_BASES[base].tops.slice(0, g.tier === 1 ? 2 : 3); },
+    setJars(g, base) { g.jars = this.topsFor(g, base).map((t, i) => ({ t, x: 588 + i * 80, y: 352, w: 72, h: 148, sq: 0 })); },
+    newDeco(g, base) { this.setJars(g, base); return { base, frost: null, tops: [], grow: 0, popT: {} }; },
+    // the decorating station: pick a base, a colour coat, add toppings, then box it
     decoInput(g, id) {
       const d = g.deco;
       if (pointer.clicked) {
-        const bag = g.bags.find(b => inRect(b)), jar = g.jars.find(j => inRect(j));
-        if (bag) {
+        const bag = g.bags.find(b => inRect(b)), jar = g.jars.find(j => inRect(j)), tab = g.baseTabs.find(t => inRect(t));
+        if (tab) { if (tab.b !== d.base) { g.deco = this.newDeco(g, tab.b); SFX.click(); } }
+        else if (bag) {
           bag.sq = 0.3; d.frost = bag.c; d.grow = 0; d.tops = []; d.popT = {};
           tone(300, 0.35, 'sine', 0.08, 0, 700);
         } else if (jar) {
           jar.sq = 0.3;
-          if (!d.frost) { SFX.miss(); this.msg(g, 'Pick a frosting first!'); }
+          if (!d.frost) { SFX.miss(); this.msg(g, `Pick a ${BC_BASES[d.base].coat.toLowerCase()} colour first!`); }
           else if (d.tops.includes(jar.t)) { d.tops = d.tops.filter(t => t !== jar.t); SFX.blip(); }
           else { d.tops.push(jar.t); d.popT[jar.t] = 0.3; SFX.pop(); burst(DS.cake[0], DS.cake[1] - 70, 6, { spread: 80, up: 60 }); }
         }
       }
-      if (id === 'bc:dreset') { g.deco = { frost: null, tops: [], grow: 0, popT: {} }; SFX.blip(); }
+      if (id === 'bc:dreset') { g.deco = this.newDeco(g, d.base); SFX.blip(); }
       if (id === 'bc:dback') g.decoOpen = false;
       if (id === 'bc:dbox') {
-        if (!d.frost) { SFX.miss(); this.msg(g, 'Pick a frosting first!'); }
-        else if (this.put(g, ccKey(d.frost, d.tops), DS.cake[0], DS.cake[1] - 30)) {
+        if (!d.frost) { SFX.miss(); this.msg(g, `Pick a ${BC_BASES[d.base].coat.toLowerCase()} colour first!`); }
+        else if (this.put(g, ccKey(d.base, d.frost, d.tops), DS.cake[0], DS.cake[1] - 30)) {
           SFX.sparkle(); g.deco = null; g.decoOpen = false;
         }
       }
@@ -397,18 +508,18 @@
       g.trays.forEach((tr, i) => {
         const deco = tr.k === 'deco';
         const hover = g.bcState === 'order' && inRect(tr), lift = tr.bump > 0 ? -Math.sin(tr.bump / 0.25 * Math.PI) * 8 : hover ? -3 : 0;
-        // the decorate tray glows when the order wants a special cupcake
+        // the decorate tray glows when the order wants a special treat
         const want = deco && g.bcState === 'order' && g.cust?.order.some(o => o.custom && bcCount(g, o.k) < o.n);
         if (want) { ctx.save(); ctx.shadowColor = '#ff6fb5'; ctx.shadowBlur = 14 + Math.sin(S.t * 6) * 8; rrect(tr.x, tr.y + lift, tr.w, tr.h, 18, '#ffffff'); ctx.restore(); }
         rrect(tr.x, tr.y + lift, tr.w, tr.h, 18, deco ? (hover ? '#f6eaff' : '#efe0ff') : hover ? '#fffdf4' : '#fff6ea', OL, 2.5);
         const cx = tr.x + tr.w / 2, cy = tr.y + 76 + lift;
         if (deco) {
-          drawCustom(null, [], cx - 12, cy - 4, 0.72);
+          drawCustom('donut', null, [], cx - 22, cy + 8, 0.5); drawCustom('cupcake', null, [], cx - 2, cy - 6, 0.66);
           // a little piping bag leaning in
           ctx.save(); ctx.translate(cx + 30, cy - 30); ctx.rotate(0.6 + Math.sin(S.t * 3) * 0.08);
           ink(P2('M-12,-26 L12,-26 L3,18 L-3,18 Z'), '#ff9ac8', 1.6); inkRect(-13, -32, 26, 8, '#ffffff', 1.4, 3); ctx.restore();
           text('Decorate', cx, tr.y + 128 + lift, 16, '#7a3aa0', 'center', 800);
-          text('a cupcake', cx, tr.y + 146 + lift, 13, '#7a3aa0', 'center', 700);
+          text('a treat', cx, tr.y + 146 + lift, 13, '#7a3aa0', 'center', 700);
         } else {
           ctx.fillStyle = '#ffffff'; for (let a = 0; a < 16; a++) circle(cx + Math.cos(a / 16 * TAU) * 46, cy + Math.sin(a / 16 * TAU) * 22, 9);
           ellipse(cx, cy, 46, 22);
@@ -426,12 +537,17 @@
       ctx.fillStyle = 'rgba(160,220,190,.35)'; for (let x = 20; x < W - 20; x += 36) ctx.fillRect(x, DS.y + 4, 16, DS.h - 8);
       // the cupcake on its spinning stand
       const [kx, ky] = DS.cake;
-      inkEllipse(kx, ky + 22, 82, 16, 0, '#ffffff', 2);
-      ctx.strokeStyle = 'rgba(255,140,190,.6)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.lineDashOffset = -S.t * 20; ctx.beginPath(); ctx.ellipse(kx, ky + 22, 70, 11, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-      drawCustom(d.frost, d.tops, kx, ky - 22, 1.3, d.grow, d.popT);
-      text('Make it match!', kx, DS.y + 18, 16, '#2f7a5a', 'center', 800);
+      inkEllipse(kx, ky + 26, 82, 14, 0, '#ffffff', 2);
+      ctx.strokeStyle = 'rgba(255,140,190,.6)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.lineDashOffset = -S.t * 20; ctx.beginPath(); ctx.ellipse(kx, ky + 26, 70, 9, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      drawCustom(d.base, d.frost, d.tops, kx, ky - 26, 1.12, d.grow, d.popT);
+      // the base tabs: which treat are we decorating?
+      for (const t of g.baseTabs) {
+        const on = d.base === t.b;
+        rrect(t.x, t.y, t.w, t.h, 10, on ? '#fff6c8' : 'rgba(255,255,255,.8)', on ? '#ff6fb5' : OL, on ? 3.5 : 1.8);
+        drawCustom(t.b, null, [], t.x + t.w / 2, t.y + t.h / 2 + (t.b === 'cupcake' ? 0 : 3), 0.38);
+      }
       // piping bags
-      text('Frosting', 254 + g.bags.length * 40 - 4, DS.y + 14, 14, '#2f7a5a', 'center', 800);
+      text(BC_BASES[d.base].coat, 254 + g.bags.length * 40 - 4, DS.y + 14, 14, '#2f7a5a', 'center', 800);
       for (const b of g.bags) {
         const on = d.frost === b.c, hov = inRect(b), sq = b.sq > 0 ? Math.sin(b.sq / 0.3 * Math.PI) : 0;
         rrect(b.x, b.y, b.w, b.h, 14, on ? '#fff6c8' : hov ? '#ffffff' : 'rgba(255,255,255,.75)', on ? '#ff6fb5' : OL, on ? 4 : 2);
@@ -453,8 +569,15 @@
         inkRect(jx - 29, jy - 2, 58, 12, '#ff8fb8', 1.6, 4);
         if (j.t === 'sprinkles') { for (let i = 0; i < 18; i++) { ctx.save(); ctx.translate(jx - 18 + (i * 13) % 36, jy + 26 + (i * 7) % 40); ctx.rotate(i); ctx.fillStyle = BC_SPRINK[i % 6]; ctx.fillRect(-4, -1.5, 8, 3); ctx.restore(); } }
         else if (j.t === 'cherry') { for (const [dx, dy] of [[-10, 52], [10, 54], [0, 36], [-12, 30], [12, 32]]) { inkCircle(jx + dx, jy + dy, 8, '#ff2f4a', 1.2); ctx.fillStyle = 'rgba(255,255,255,.7)'; circle(jx + dx - 3, jy + dy - 3, 2); } }
-        else for (const [dx, dy] of [[-10, 52], [10, 50], [0, 32]]) vecStar(jx + dx, jy + dy, 10, '#ffd23a', 1.4);
-        text(bcCap(j.t), jx, j.y + j.h - 22, 14, '#5a2a6e', 'center', 800);
+        else if (j.t === 'star') for (const [dx, dy] of [[-10, 52], [10, 50], [0, 32]]) vecStar(jx + dx, jy + dy, 10, '#ffd23a', 1.4);
+        else if (j.t === 'candy') { [[-12, 54, '#ff5a6a'], [0, 56, '#5fd0ff'], [12, 54, '#ffe14a'], [-6, 42, '#7ae08a'], [8, 42, '#c69aff'], [0, 30, '#ff9a3a']].forEach(([dx, dy, col]) => inkCircle(jx + dx, jy + dy, 6, col, 1.1)); }
+        else if (j.t === 'drizzle') { rrect(jx - 23, jy + 34, 46, 34, 8, '#fffaf0'); inkLine([[jx - 18, jy + 30], [jx - 8, jy + 18], [jx, jy + 30], [jx + 8, jy + 18], [jx + 18, jy + 30]], '#fffaf0', 3); }
+        else if (j.t === 'chips') { for (let i = 0; i < 9; i++) { ctx.save(); ctx.translate(jx - 14 + (i % 3) * 14, jy + 58 - Math.floor(i / 3) * 13); ink(P2('M0,-6 C5,0 5,5 0,5 C-5,5 -5,0 0,-6 Z'), '#5a3020', 1); ctx.restore(); } }
+        else if (j.t === 'heart') { for (const [dx, dy, sz] of [[-10, 40, 20], [10, 44, 18], [0, 22, 22]]) heart(jx + dx, jy + dy, sz, '#ff4a7a'); }
+        else if (j.t === 'sugar') { ink(P2(`M${jx - 22},${jy + 68} C${jx - 18},${jy + 40} ${jx + 18},${jy + 40} ${jx + 22},${jy + 68} Z`), '#ffffff', 1.2); ctx.fillStyle = 'rgba(200,200,220,.6)'; for (let i = 0; i < 8; i++) circle(jx - 14 + (i * 9) % 28, jy + 50 + (i * 5) % 16, 1.2); }
+        else if (j.t === 'almonds') { for (let i = 0; i < 7; i++) { ctx.save(); ctx.translate(jx - 14 + (i % 3) * 14, jy + 58 - Math.floor(i / 3) * 12); ctx.rotate(i * 0.9); inkEllipse(0, 0, 7, 3.6, 0, '#f4e0b8', 1.1); ctx.restore(); } }
+        else if (j.t === 'jam') { rrect(jx - 23, jy + 26, 46, 42, 8, '#e8243a'); ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(jx - 18, jy + 30, 5, 30); }
+        text(bcCap(BC_TOP_SHORT[j.t] || j.t), jx, j.y + j.h - 22, 14, '#5a2a6e', 'center', 800);
         if (on) text('✅', j.x + j.w - 12, j.y + 12, 16, '#000', 'center');
       }
       button('bc:dbox', DS.btnX, 336, 108, 74, 'Box it!', { on: !!d.frost, color: '#5fb87a', size: 20 });
@@ -553,8 +676,8 @@
         for (let p = 0; p < pics; p++) drawTreat(o.k, bx + 78 + p * 50, y + (o.custom ? 6 : 2), o.custom ? 0.5 : 0.44);
         if (o.custom) {
           const cc = ccParse(o.k);
-          text('Decorate:', bx + 110, y - 9, 12, '#7a3aa0', 'left', 800);
-          text(`${cc.frost === 'chocolate' ? 'choco' : cc.frost} + ${cc.tops.join(' + ')}`, bx + 110, y + 9, 13, '#5a2a6e', 'left', 800);
+          text(`Decorate a ${cc.base}:`, bx + 110, y - 9, 12, '#7a3aa0', 'left', 800);
+          text(`${cc.frost === 'chocolate' ? 'choco' : cc.frost} + ${cc.tops.map(t => BC_TOP_SHORT[t] || t).join(' + ')}`, bx + 110, y + 9, 13, '#5a2a6e', 'left', 800);
         } else if (g.tier > 1) text(bcName(o.k, o.n), bx + 110, y, 15, '#5a2a6e', 'left', 800);
         if (g.tier === 1 && bcCount(g, o.k) === o.n) text('✅', bx + bw - 24, y, 20, '#000', 'center');
       });
@@ -571,7 +694,7 @@
     games: [['pipcounter', 'ribbon', {}], ['bakewithpip', 'berry', {}]],
     intro: [
       "N:Oh, Aubrey, thank goodness! It's party day, and the whole village is lining up at my counter!",
-      'N:Fill each box with the treats they ask for. And if someone wants a special cupcake, decorate it just like their picture!',
+      'N:Fill each box with the treats they ask for. And if someone wants a special treat, decorate it just like their picture!',
       'A:determined:I got this!',
     ],
   });
