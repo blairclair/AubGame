@@ -781,23 +781,50 @@
   const RR_BOAT = P2('M0,-46 C16,-34 22,-6 20,30 C14,42 -14,42 -20,30 C-22,-6 -16,-34 0,-46 Z');
   const drawTopBoat = (x, y, col, rider, oarL = 0, oarR = 0, tilt = 0) => {
     ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
-    // oars sweep back as they pull
+    // oars sweep back as they pull; each oar's inboard handle is where the rower holds it
     ctx.lineCap = 'round';
+    const grips = {};
     for (const [side, k] of [[-1, oarL], [1, oarR]]) {
       const a = side * (0.5 - k * 1.1);
       const ex = side * 18 + Math.sin(a) * side * 36, ey = 4 + Math.cos(a) * 30;
       ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(side * 14, 0); ctx.lineTo(ex, ey); ctx.stroke();
       ctx.strokeStyle = '#d8a46a'; ctx.lineWidth = 3; ctx.stroke();
       inkEllipse(ex, ey, 5, 10, a * side, '#d8a46a', 1.5);
+      grips[side] = [side * 17, -9 + 10 * k]; // hands reach forward, then pull back with the stroke
     }
     INK = OL; ink(RR_BOAT, col, 2.5);
     ctx.fillStyle = mix(col, '#2a1a3a', 0.25); ellipse(0, 0, 13, 28);
     inkRect(-13, 12, 26, 6, mix(col, '#ffffff', 0.3), 1.2, 2);
     glow(0, -40, 34, '255,210,120', 0.7); inkCircle(0, -40, 6, '#ffe08a', 1.5);
-    rider();
+    // oar handles poke in over the gunwales
+    for (const side of [-1, 1]) { const [hx, hy] = grips[side]; ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(side * 14, 0); ctx.lineTo(hx, hy); ctx.stroke(); ctx.strokeStyle = '#b8824a'; ctx.lineWidth = 3; ctx.stroke(); }
+    rider(grips, oarL, oarR);
     ctx.restore();
   };
-  const aubTop = () => { inkEllipse(0, -2, 13, 9, 0, '#ff8fc8', 1.5); inkCircle(0, -6, 9, '#7a4a2a', 1.5); ctx.fillStyle = '#ffd8b8'; ellipse(0, -11, 5, 3); ctx.fillStyle = '#ff6fb5'; circle(6, -4, 3); };
+  // Aubrey seen from above: pink dress, arms out to the oar handles, curly hair with a bow.
+  // She leans into each pull and turns her head toward the way she's steering.
+  const aubTop = (grips, oarL, oarR, steer = 0) => {
+    const lean = -3 * Math.max(oarL, oarR);
+    ctx.save(); ctx.translate(0, lean);
+    // arms first, so the dress and head sit on top of the shoulders
+    for (const side of [-1, 1]) {
+      const [hx, hy] = grips[side], sx = side * 9, sy = 3;
+      ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 7.5; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hx, hy - lean); ctx.stroke();
+      ctx.strokeStyle = '#ffd8b8'; ctx.lineWidth = 4.5; ctx.stroke();
+      inkCircle(hx, hy - lean, 3.6, '#ffd8b8', 1.2);
+    }
+    inkEllipse(0, 4, 14, 10, 0, '#ff8fc8', 1.5);
+    ctx.strokeStyle = '#ffd0e8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 4, 11, 7, 0, 0.2, Math.PI - 0.2); ctx.stroke();
+    ctx.save(); ctx.translate(0, -5); ctx.rotate(clamp(steer, -0.6, 0.6));
+    ctx.fillStyle = '#ffd8b8'; ellipse(0, -8, 5.5, 3.5);
+    const curls = [[0, 0, 8.5], [-6, -3, 4.5], [6, -3, 4.5], [-7, 3, 4.5], [7, 3, 4.5], [-3, 7, 4.5], [3, 7, 4.5], [0, 9, 4]];
+    ctx.fillStyle = OL; for (const [cx, cy, r] of curls) circle(cx, cy, r + 1.5);
+    for (const [cx, cy, r] of curls) { ctx.fillStyle = '#8a5530'; circle(cx, cy, r); }
+    ctx.fillStyle = '#a8703f'; for (const [cx, cy, r] of curls) circle(cx - r * 0.3, cy - r * 0.3, r * 0.4);
+    inkCircle(5, 2, 3, '#ff6fb5', 1); inkCircle(8, 0, 2.2, '#ff6fb5', 1);
+    ctx.restore();
+    ctx.restore();
+  };
   MG.rowrace = {
     kind: 'action', title: () => 'Row Race', icon: () => '🚣',
     how: () => 'Row the lantern boat! Tap LEFT, then RIGHT, then LEFT, then RIGHT to zoom ahead. Tap one side twice to steer that way, and go round the lily pads!',
@@ -896,7 +923,7 @@
         const y = sy(r.d); if (y < -60 || y > H + 60) continue;
         drawTopBoat(r.x, y, r.col, () => emoji(r.icon, 0, -2, 28), (Math.sin(S.t * 6) + 1) / 2, (Math.sin(S.t * 6 + Math.PI) + 1) / 2);
       }
-      drawTopBoat(g.x, RR.y, '#ff8a6a', aubTop, g.oar[0], g.oar[1], g.vx * 0.0015 + (g.wob ? Math.sin(g.wob * 30) * 0.1 : 0));
+      drawTopBoat(g.x, RR.y, '#ff8a6a', (gr, l, r) => aubTop(gr, l, r, g.vx * 0.008), g.oar[0], g.oar[1], clamp(g.vx * 0.004, -0.35, 0.35) + (g.wob ? Math.sin(g.wob * 30) * 0.1 : 0));
       // race track at the side: who is where
       darkPanel(W - 58, 70, 40, 300, 18);
       const ty = w => 356 - clamp(w / g.L, 0, 1) * 272;
