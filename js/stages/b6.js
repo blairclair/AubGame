@@ -146,11 +146,41 @@
     for (let i = 0; i < 2; i++) drawBat(((t * 38 + i * 520) % (W + 200)) - 100, 120 + i * 50 + Math.sin(t * 2 + i) * 10, t + i, 0.35, 1, '#4a3270', '#33204f');
   };
 
+  // Aubrey as a bat: her own 'jump' sprite (mirrored to fly right) with flapping membrane wings from
+  // her back and pointy bat ears on her head, so she's still clearly Aubrey
+  const AB_S = 0.36, AB_ROOT = [84, 70], AB_HEAD = [-30, 30]; // sprite px: wing root on her back; head centre from image centre/top
+  const AB_WING = P2('M0,0 C8,-34 40,-58 78,-52 C72,-40 70,-30 72,-20 C62,-26 52,-24 46,-14 C40,-20 30,-18 24,-6 C18,-8 10,-4 0,6 Z');
+  const batWing = (a, col, bone) => {
+    ctx.save(); ctx.rotate(a);
+    ink(AB_WING, col, 1.6);
+    ctx.strokeStyle = bone; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+    for (const [x, y] of [[78, -52], [72, -20], [46, -14], [24, -6]]) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(x * 0.45, y * 0.75, x, y); ctx.stroke(); }
+    inkCircle(78, -52, 2.6, bone, 0.8);
+    ctx.restore();
+  };
+  const aubBat = (x, y, t, tilt = 0) => {
+    const im = IMG.jump, w = im.width * AB_S, h = im.height * AB_S, f = Math.sin(t * 14);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(-1, 1);
+    ctx.save(); ctx.translate(-w / 2 + AB_ROOT[0] * AB_S, -h / 2 + AB_ROOT[1] * AB_S);
+    ctx.save(); ctx.scale(0.85, 0.9); batWing(-0.2 - f * 0.5, '#4a3080', '#2a1a4a'); ctx.restore();
+    batWing(-0.4 - f * 0.6, '#7a5ac0', '#3a2560');
+    ctx.restore();
+    ctx.drawImage(im, -w / 2, -h / 2, w, h);
+    // bat ears poking up out of her curls
+    // small and set back on her curls (+x is behind her here) so they never cover her face
+    const hx = AB_HEAD[0] * AB_S + 5, hy = -h / 2 + AB_HEAD[1] * AB_S - 6;
+    for (const d of [-1, 1]) {
+      const ex = hx + d * 4.5;
+      ink(P2(`M${ex - 3.5},${hy + 3} L${ex + d * 2},${hy - 10} L${ex + 4},${hy + 2} Z`), '#7a5ac0', 1.1);
+      ctx.fillStyle = '#ff9ad0'; tri(ex - 1.5, hy + 1.5, ex + d * 1.6, hy - 5.5, ex + 2, hy + 1.5);
+    }
+    ctx.restore();
+  };
   // --- Echo Flight: squeak to light up a dark winding tunnel, steer the bat through -----------
   const EB_X = 220;
   MG.echoflight = {
     kind: 'action', title: () => 'Echo Flight', icon: () => '🦇',
-    how: () => 'It is dark! Press Space or click to squeak and light up the walls. Steer Echo with the arrows or the mouse, and grab the crystals!',
+    how: () => 'It is dark! Press Space or click to squeak and light up the walls. Aubrey is a bat! Steer her with the arrows or the mouse, and grab the crystals!',
     init(g) {
       const gap = [240, 210, 186][g.tier - 1], speed = [140, 160, 182][g.tier - 1], seg = 160;
       const len = speed * 40, n = Math.ceil((len + W + 400) / seg), lo = 72 + gap / 2, hi = H - 14 - gap / 2;
@@ -249,7 +279,7 @@
         crystal(x - 7, y + 14, 36, 15, m.col, -0.22); crystal(x + 8, y + 14, 26, 12, mix(m.col, '#ffffff', 0.3), 0.3);
       }
       glow(EB_X, g.by, 95, '#b8a0ff', 0.28);
-      if (g.inv <= 0 || Math.floor(g.inv * 12) % 2 === 0) drawBat(EB_X, g.by, S.t, 1.1);
+      if (g.inv <= 0 || Math.floor(g.inv * 12) % 2 === 0) aubBat(EB_X, g.by, S.t, 0.12 + Math.sin(S.t * 3) * 0.05);
       // how far to the way out
       const k = clamp(g.dist / g.len, 0, 1);
       rrect(300, H - 30, 360, 12, 6, 'rgba(255,255,255,.2)');
