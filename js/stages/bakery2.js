@@ -25,7 +25,8 @@
     cookie: { coat: 'Icing', tops: ['sprinkles', 'chips', 'heart'] },
     croissant: { coat: 'Drizzle', tops: ['sugar', 'almonds', 'jam'] },
   };
-  const BC_BASE_TIER = { 1: ['cupcake', 'donut'], 2: ['cupcake', 'donut', 'cookie'], 3: ['cupcake', 'donut', 'cookie', 'croissant'] };
+  // every level can decorate all four treats; harder levels just use more colours and toppings
+  const BC_BASE_TIER = { 1: ['cupcake', 'donut', 'cookie', 'croissant'], 2: ['cupcake', 'donut', 'cookie', 'croissant'], 3: ['cupcake', 'donut', 'cookie', 'croissant'] };
   const BC_TOP_WORD = { sprinkles: 'sprinkles', cherry: 'a cherry', star: 'a star', candy: 'candies', drizzle: 'a white drizzle', chips: 'chocolate chips', heart: 'a heart', sugar: 'powdered sugar', almonds: 'almonds', jam: 'jam' };
   const BC_TOP_SHORT = { sugar: 'sugar', chips: 'choc chips', drizzle: 'drizzle' };
   const BC_CUSTOMERS = ['Penny the Pig', 'Millie Mouse', 'Hazel Hedgehog', 'Scamper Squirrel', 'Otto the Otter', 'Bramble the Bear', 'Pengu the Penguin', 'Fergus the Frog', 'Ruby Robin', 'Granny Owl', 'Tilly the Turtle', 'Mama Duck'];
@@ -276,7 +277,7 @@
     makeOrder(g) {
       const kinds = BC_KINDS[g.tier];
       // the second customer always wants a special treat, so every game shows the station
-      const custom = g.ci === 1 || (g.ci > 1 && Math.random() < [0.5, 0.55, 0.65][g.tier - 1]);
+      const custom = g.ci === 1 || (g.ci > 1 && Math.random() < [1, 0.65, 0.7][g.tier - 1]);
       let [maxTypes, maxEach, minTotal, maxTotal] = [[2, 2, 1, 3], [2, 3, 2, 4], [3, 3, 3, 5]][g.tier - 1];
       if (custom) { maxTypes--; maxTotal--; minTotal = Math.max(0, minTotal - 1); }
       let order = null;
@@ -289,9 +290,11 @@
       order = order || [{ k: kinds[0], n: 1 }];
       if (custom) {
         let k = null;
-        // tier 1 is mostly cupcakes and donuts; tier 3 uses all four bases with two toppings
+        // special orders take turns through a shuffled bag of bases, so a game shows all four treats
+        // (cupcake, donut, cookie, croissant) instead of repeating one; tier 3 asks for two toppings
+        if (!g.baseBag?.length) g.baseBag = shuffle(BC_BASE_TIER[g.tier].slice());
+        const base = g.baseBag.pop();
         while (!k || !k.startsWith('cc:')) {
-          const base = pick(BC_BASE_TIER[g.tier]);
           k = ccKey(base, pick(BC_FROSTS[g.tier]), shuffle(this.topsFor(g, base)).slice(0, g.tier === 3 ? 2 : 1));
         }
         order.unshift({ k, n: 1, custom: true });
@@ -477,9 +480,11 @@
       rrect(840, 100, 100, 76, 3, '#2f4a42');
       text('MENU', 890, 112, 13, '#ffffff', 'center', 800);
       ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(852, 121); ctx.lineTo(928, 121); ctx.stroke();
-      ctx.strokeStyle = '#ffb3d0'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(858, 138, 7, 0, TAU); ctx.stroke();
-      ctx.strokeStyle = '#ffe08a'; ctx.beginPath(); ctx.arc(858, 160, 7, 0, TAU); ctx.stroke();
-      text('donuts', 872, 138, 11, '#ffb3d0', 'left', 700); text('cupcakes', 872, 160, 11, '#c8f0b0', 'left', 700);
+      // all four treats you can decorate
+      [['cupcakes', '#c8f0b0'], ['donuts', '#ffb3d0'], ['cookies', '#ffe08a'], ['croissants', '#ffd0a0']].forEach(([w, c], i) => {
+        ctx.fillStyle = c; circle(853, 130 + i * 12, 3);
+        text(w, 862, 130 + i * 12, 10, c, 'left', 700);
+      });
       ctx.fillStyle = '#fff'; ctx.fillRect(900, 178, 14, 4);
       this.drawLamp(270, 28); this.drawLamp(704, 34);
     },
