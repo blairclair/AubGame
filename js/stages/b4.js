@@ -1081,9 +1081,11 @@
     ['🧽', 'a sponge', 1, 'Sponges are full of air holes. They float!'], ['📎', 'a paperclip', 0, 'Paperclips are metal, so they sink.'],
     ['🏐', 'a ball', 1, 'A ball full of air floats!'], ['🔩', 'a bolt', 0, 'Bolts are heavy metal. They sink.'], ['✏️', 'a pencil', 1, 'Wooden pencils float.']];
   const SF = { x0: 310, x1: 650, top: 190, surf: 252, bot: 436 };
+  // Aubrey stands on a step stool by the tank, holding each thing out, then lobs it in
+  const SF_AX = 704, SF_STEP = 254, SF_AH = 132, SF_HAND = [674, 196], SF_DROP = 540, SF_TOSS = 0.4;
   MG.sinkorfloat = {
     kind: 'learn', title: () => 'Sink or Float?', icon: () => '🫧',
-    how: () => 'Will it sink to the bottom, or float on top? Make your guess, then watch it splash into the water!',
+    how: () => 'Aubrey has something to drop in the water! Will it sink to the bottom, or float on top? Make your guess, then she tosses it in. Splash!',
     init(g) {
       const rounds = [6, 7, 8][g.tier - 1], half = Math.floor(rounds / 2);
       const sink = shuffle(SF_THINGS.filter(t => !t[2])), float = shuffle(SF_THINGS.filter(t => t[2]));
@@ -1095,7 +1097,7 @@
     start(g) { speak(g.say); },
     next(g) {
       g.item = g.items[g.round];
-      Object.assign(g, { st: 'guess', stT: 0, oy: 140, ovy: 0, splashed: false, guess: -1, rot: 0 });
+      Object.assign(g, { st: 'guess', stT: 0, ox: SF_HAND[0], oy: SF_HAND[1], ovy: 0, splashed: false, guess: -1, rot: 0 });
       g.say = `Will ${g.item[1]} sink or float?`;
       if (g.phase === 'play') speak(g.say);
     },
@@ -1111,20 +1113,24 @@
         if (k >= 0) { g.guess = k; g.st = 'drop'; g.stT = 0; SFX.click(); tone(800, 0.4, 'sine', 0.05, 0, 300); }
       } else if (g.st === 'drop') {
         const floats = g.item[2] === 1;
-        if (!g.splashed) {
-          g.ovy += 900 * dt; g.oy += g.ovy * dt;
+        if (g.stT < SF_TOSS) {
+          // Aubrey lobs it from her hands up and over the glass
+          const k = g.stT / SF_TOSS;
+          g.ox = lerp(SF_HAND[0], SF_DROP, k); g.oy = lerp(SF_HAND[1], 150, k) - Math.sin(k * Math.PI) * 60; g.rot = -k * 1.2; g.ovy = 0;
+        } else if (!g.splashed) {
+          g.ox = SF_DROP; g.ovy += 900 * dt; g.oy += g.ovy * dt;
           if (g.oy >= SF.surf) {
             g.splashed = true; noise(0.25, 0.06); tone(300, 0.2, 'sine', 0.08, 0, 120);
-            burst(480, SF.surf, 18, { colors: ['#ffffff', '#bfe6ff', '#8adcff'], spread: 120, up: 120 });
+            burst(g.ox, SF.surf, 18, { colors: ['#ffffff', '#bfe6ff', '#8adcff'], spread: 120, up: 120 });
             g.ovy = floats ? 120 : 70;
           }
         } else if (floats) {
           g.ovy += (SF.surf - 4 - g.oy) * 30 * dt - g.ovy * 4 * dt; g.oy += g.ovy * dt;
         } else {
           g.oy = Math.min(SF.bot - 24, g.oy + 80 * dt); g.rot += dt * 0.6;
-          if (Math.random() < dt * 8 && g.oy < SF.bot - 30) g.bubbles.push({ x: 480 + rand(-10, 10), y: g.oy - 10, v: 70, r: 3 });
+          if (Math.random() < dt * 8 && g.oy < SF.bot - 30) g.bubbles.push({ x: g.ox + rand(-10, 10), y: g.oy - 10, v: 70, r: 3 });
         }
-        if (g.stT > (floats ? 1.3 : 2.1)) {
+        if (g.stT > SF_TOSS + (floats ? 1.3 : 2.1)) {
           const ok = g.guess === g.item[2];
           if (ok) { g.total++; SFX.hit(); burst(480, 300, 18); }
           else SFX.miss();
@@ -1153,17 +1159,26 @@
       ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5;
       for (const b of g.bubbles) { ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.stroke(); }
       const fx = 480 + Math.sin(S.t * 0.6) * 120; ctx.save(); ctx.translate(fx, 380); ctx.scale(Math.cos(S.t * 0.6) > 0 ? -1 : 1, 1); emoji('🐠', 0, 0, 30); ctx.restore();
+      // Aubrey on her step stool beside the tank: holding the thing out, then tossing it in
+      inkRect(658, SF_STEP, 92, 12, '#c98a4a', 2, 4);
+      for (const lx of [666, 734]) inkRect(lx, SF_STEP + 10, 9, SF.bot + 26 - SF_STEP - 10, '#b07a40', 1.6, 2);
+      inkRect(668, SF_STEP + 70, 74, 8, '#b07a40', 1.4, 2);
+      const tossing = g.st === 'drop' && g.stT < SF_TOSS + 0.3, ok = g.st === 'show' && g.guess === g.item[2];
+      const fr = tossing ? 'cast' : g.st === 'show' ? (ok ? 'twirl' : 'idle_front') : 'idle_front';
+      const hop = ok ? Math.abs(Math.sin(g.stT * 7)) * 10 : 0;
+      drawAubrey(SF_AX, SF_STEP, fr, -1, hop, SF_AH / IMG.idle_front.height);
+      if (g.st === 'show' && !ok && g.stT < 2) outlined('Whoa!', SF_AX, SF_STEP - SF_AH - 14, 22, '#fff6a8');
       // the thing
-      const bob = g.st === 'guess' ? Math.sin(S.t * 3) * 6 : 0;
-      ctx.save(); ctx.translate(480, g.oy + bob); ctx.rotate(g.rot); emoji(g.item[0], 0, 0, 72); ctx.restore();
+      const held = g.st === 'guess', bob = held ? Math.sin(S.t * 3) * 3 : 0;
+      ctx.save(); ctx.translate(g.ox, g.oy + bob); ctx.rotate(g.rot); emoji(g.item[0], 0, 0, held ? 54 : 64); ctx.restore();
       ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(SF.x0 + 14, SF.top + 10, 12, SF.bot - SF.top - 30);
       ctx.lineWidth = 3; ctx.strokeStyle = OL; ctx.beginPath(); ctx.roundRect(SF.x0, SF.top, SF.x1 - SF.x0, SF.bot - SF.top, 10); ctx.stroke();
       // guess buttons either side
       const on = g.st === 'guess', pickedCol = k => (g.guess === k ? '#ffd23f' : '#c9bcd4');
-      button('sf:0', 50, 230, 220, 120, '', { on, color: on ? '#ff8a5a' : pickedCol(0), key: '1' });
-      emoji('⬇️', 160, 268, 44); text('Sinks', 160, 318, 30, '#fff', 'center', 800);
-      button('sf:1', 690, 230, 220, 120, '', { on, color: on ? '#40b0ff' : pickedCol(1), key: '2' });
-      emoji('🛟', 800, 268, 44); text('Floats', 800, 318, 30, '#fff', 'center', 800);
+      button('sf:0', 60, 290, 190, 116, '', { on, color: on ? '#ff8a5a' : pickedCol(0), key: '1' });
+      emoji('⬇️', 155, 326, 42); text('Sinks', 155, 374, 28, '#fff', 'center', 800);
+      button('sf:1', 762, 290, 186, 116, '', { on, color: on ? '#40b0ff' : pickedCol(1), key: '2' });
+      emoji('🛟', 855, 326, 42); text('Floats', 855, 374, 28, '#fff', 'center', 800);
       if (g.st === 'show') {
         const ok = g.guess === g.item[2];
         panel(150, 452, 660, 76, 20);
