@@ -34,8 +34,10 @@ function frame(now) {
 }
 
 // ?jump=<where> skips ahead while iterating, e.g. ?jump=stages (the stage picker), ?jump=map, ?jump=place&id=volcano, ?jump=game&type=count&tier=2
+// add &pet=dino to any jump for the baby-dinosaur route; the dino* jumps set it themselves
 function debugJump(where, q = new URLSearchParams(location.search)) {
-  S = newGame();
+  const pet = where.startsWith('dino') || q.get('pet') === 'dino' ? 'dino' : 'unicorn';
+  S = newGame(pet);
   S.shine = 100;
   for (const k of MAT_ORDER) S.mats[k] = +(q.get('mats') ?? 4);
   saveCheckpoint();
@@ -59,9 +61,26 @@ function debugJump(where, q = new URLSearchParams(location.search)) {
     night: () => setScene('night'),
     end: () => setScene('end'),
     stages: () => setScene('stages'),
+    // the pet picker and the baby-dinosaur route
+    pick: () => setScene('title'),
+    dinofind: () => startWorld('explore'),
+    dinofollow: () => startWorld('follow'),
+    dinonight: () => { S.day = +(q.get('day') || 2); dinoDressed(q); setScene('dinonight', { onDone: bedtime }); },
+    dinohide: () => { S.day = 2; dinoDressed(q); setScene('hide', () => setScene('dinonight', { onDone: bedtime })); },
+    dinocraft: () => setScene('style', { mode: 'craft', onDone: () => setScene('map') }),
+    dinosleep: () => { dinoDressed(q); setScene('night'); },
+    dinohop: () => { S.day = SHOW_DAY; dinoDressed(q); setScene(SCENES.dinohop ? 'dinohop' : 'map'); },
+    dinodefense: () => { S.day = SHOW_DAY; dinoDressed(q); setScene(SCENES.dinodefense ? 'dinodefense' : 'map'); },
+    dinoend: () => { S.day = SHOW_DAY; dinoDressed(q); setScene('dinoend', { reunited: q.get('lost') ? false : true }); },
   }[where];
   (go || (() => setScene('map')))();
   if (scene === 'world' && q.get('x')) WS.a.x = +q.get('x');
+}
+
+// a few dino things already made, for testing (&bare=1 to skip)
+function dinoDressed(q) {
+  if (q.get('bare')) return;
+  for (const id of ['d_beanie', 'd_scarf', 'd_backpack', 'd_tailbow', 'd_boots']) { S.owned[id] = true; S.equip[ITEM[id].slot] = id; }
 }
 
 setScene('loading');

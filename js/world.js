@@ -67,11 +67,25 @@ function nearestInteract() {
 // --- story hooks ----------------------------------------------------------------------
 function spotted(n) {
   SFX.fail();
+  if (isDino()) {
+    const saw = n.kind === 'mom' ? 'Aubrey?! Is that a... LIZARD? A great big green LIZARD?!' : n.kind === 'ranger' ? 'Whoa! Is that a real live baby DINOSAUR?!' : 'Goodness gracious, is that a DINOSAUR in the petunias?!';
+    return say([[n.kind, 'shock', saw], ['narrator', null, `Quick as a wink, ${S.name} dives into a bush, and the grown-up rubs their eyes. "I must need a nap..." Phew! Let's try that again, more sneakily. No grown-up can see him!`]], () => startWorld(WS.kind));
+  }
   const what = n.kind === 'mom' ? 'Aubrey?! Is that... a PONY? With a HORN?!' : n.kind === 'ranger' ? 'Whoa! Is that a real live UNICORN?!' : 'Goodness gracious, is that a UNICORN?!';
   say([[n.kind, 'shock', what], ['fairy', '🧚', "Quick! I'll make them think it was a dream. But we have to try again — no grown-up can see her before the show!"]], () => startWorld(WS.kind));
 }
 function arriveHome() {
   setPose('idle_back', 0.6);
+  if (isDino()) return say([
+    ['narrator', null, `You slip into the old garden shed and make ${S.name} a cosy nest in the hay. He sniffles, and curls up a tiny bit.`, () => SFX.sparkle()],
+    ['aubrey', 'excited', "This is your secret hideout! Just until we find your mama."],
+    ['aubrey', 'thinking', `Okay, here's the plan. I have ${SHOW_DAY} days to gather supplies for the journey. Each day I can go on THREE adventures.`],
+    ['aubrey', 'determined', "Every place has friends to help and games to play. The better I do, the more supplies they'll give me."],
+    ['aubrey', 'happy', 'And every night I\'ll come back here to feed you, dress you up warm, give you cuddles, and tuck you in.'],
+    ['aubrey', 'focused', 'Easy places have common things. HARD places have LEGENDARY treasures. The more I gather, the more tricks we\'ll have for the journey!'],
+    ['dino', 'sad', '*a small, hopeful squeak*'],
+    ['aubrey', 'winky', `On the morning after day ${SHOW_DAY}, we set off for Dinosaur Valley. Shh... it's our secret.`],
+  ], () => { S.day = 1; S.visitsToday = 0; saveCheckpoint(); setScene('map'); });
   say([
     ['narrator', null, `You slip into the old garden shed and give ${S.name} a bubble bath. Under all that mud, she SPARKLES!`, () => { S.shine = 100; SFX.sparkle(); }],
     ['aubrey', 'excited', "This is your new home! Well, until the show. Then it's your FOREVER home."],
@@ -84,6 +98,22 @@ function arriveHome() {
 }
 function findUnicorn() {
   setPose('crouch', 0.1);
+  if (isDino()) return say([
+    ['aubrey', 'surprised', 'Wait... is something moving under that bush?'],
+    ['narrator', null, 'A baby dinosaur peeks out! He is small and green, with little pink spikes on his back, and he is shaking like a leaf.'],
+    ['aubrey', 'happy', "Hi there, little guy... it's okay. I won't hurt you."],
+    ['dino', 'scared', '*a tiny, wobbly squeak* ...Mama?'],
+    ['narrator', null, 'He looks all around for his mama, but she is nowhere to be seen. He must have wandered much too far from home.'],
+    ['aubrey', 'determined', "Don't worry. I'm going to help you get back to your mama!"],
+    ['narrator', null, 'The baby dino points his little nose at the faraway hills, past the creek. That must be where home is.'],
+    ['aubrey', 'thinking', "That's a LONG way. I'll need supplies for the journey: snacks, warm things, and maybe a few surprises."],
+    ['aubrey', 'thinking', 'And you need somewhere safe to stay while I gather them. No grown-up would EVER let me keep a baby dinosaur...'],
+    ['aubrey', 'winky', 'I know! The old garden shed. Nobody ever goes in there.'],
+    ['narrator', null, 'The baby dino sniffles and nuzzles your hand. What will you call him?'],
+  ], () => askName(() => say([
+    ['aubrey', 'happy', `${S.name}. Come on, ${S.name}, let's get you somewhere safe.`],
+    ['narrator', null, `Lead ${S.name} home to the garden shed. He'll follow you. Grown-ups notice anything in their yellow look-cones — hold the down arrow inside a bush and you'll BOTH hide.`],
+  ], () => { saveCheckpoint(); startWorld('follow'); })));
   say([
     ['aubrey', 'surprised', 'Wait... is something moving under that bush?'],
     ['narrator', null, 'A baby unicorn peeks out. Her coat is muddy, her mane is a tangled mess, and she looks very, very lost.'],
@@ -203,9 +233,9 @@ function drawWorld() {
   if (vis(STAGE_X)) drawStage(STAGE_X - cam, GY, WS.kind === 'shownight');
 
   if (worldTarget()) for (const n of WS.npcs) if (vis(n.x)) drawVisionCone(n, cam);
-  if (WS.kind === 'explore') drawUnicorn(FIND_X + 40 - cam, GY, 0.5, uniLook(), { facing: -1, pose: 'sit', mood: 'sad' });
+  if (WS.kind === 'explore') drawPet(FIND_X + 40 - cam, GY, 0.5, petLook(), { facing: -1, pose: 'sit', mood: isDino() ? 'scared' : 'sad' });
   const u = WS.uni;
-  if (u) drawUnicorn(u.x - cam, GY, 0.55, uniLook(), { facing: u.facing, pose: u.hidden ? 'sit' : 'stand', moving: u.moving, glow: WS.dusk * 0.6 });
+  if (u) drawPet(u.x - cam, GY, 0.55, petLook(), { facing: u.facing, pose: u.hidden ? 'sit' : 'stand', moving: u.moving, glow: WS.dusk * 0.6 });
   for (const n of WS.npcs) if (vis(n.x)) drawPerson(n.kind, n.x - cam, GY, n.dir, n.wait > 0 || n.seeing ? 0 : n.walk, n.seeing, 0.92);
 
   const a = WS.a;

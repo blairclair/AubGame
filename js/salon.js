@@ -150,8 +150,9 @@ const TIER_COLORS = { 0: '#b9aac4', 1: '#5fb87a', 2: '#4fa8e0', 3: '#9a6ae0' };
 const WS_UNI = [168, 0.9]; // the unicorn's x and scale beside the crafting panel
 SCENES.style = {
   enter({ mode = 'peek', onDone } = {}) {
-    Object.assign(this, { mode, onDone, tab: this.tab || 'mane', shake: 0, joy: 0 });
-    if (mode === 'craft') speak(`Workshop time! Use your treasures to make things for ${S.name}.`);
+    Object.assign(this, { mode, onDone, shake: 0, joy: 0 });
+    if (!petSlots().some(sl => sl.id === this.tab)) this.tab = petSlots()[0].id;
+    if (mode === 'craft') speak(isDino() ? `Dress-up time! Use your supplies to make cosy things for ${S.name}.` : `Workshop time! Use your treasures to make things for ${S.name}.`);
   },
   update(dt) {
     this.shake = Math.max(0, this.shake - dt); this.joy = Math.max(0, this.joy - dt);
@@ -170,7 +171,7 @@ SCENES.style = {
       pay(it.cost); S.owned[it.id] = true; S.equip[it.slot] = it.id;
       SFX.sparkle(); this.joy = 1.2;
       burst(WS_UNI[0], 300, 30);
-      floatText(WS_UNI[0], 160, `Made: ${it.name}! +${it.pts} points`, '#fff6a8', false, 24);
+      floatText(WS_UNI[0], 160, isDino() ? `Made: ${it.name}!` : `Made: ${it.name}! +${it.pts} points`, '#fff6a8', false, 24);
       speak(`You made the ${it.name}!`);
     } else if (canAfford(it.cost)) {
       SFX.click();
@@ -185,35 +186,44 @@ SCENES.style = {
     buttons = [];
     drawShedInterior(0.15);
     // she stands in the open space left of the crafting panel (it starts at x 340), so none of her is hidden
-    drawUnicorn(WS_UNI[0], 428, WS_UNI[1], uniLook(), { facing: 1, mood: this.joy > 0 ? 'joy' : undefined, glow: 0.5 });
+    drawPet(WS_UNI[0], 428, WS_UNI[1], petLook(), { facing: 1, mood: this.joy > 0 ? 'joy' : undefined, glow: 0.5 });
     const craft = this.mode === 'craft';
     darkPanel(12, 12, 316, 46, 23);
     emoji(craft ? '🔨' : '📖', 36, 35, 22);
-    text(craft ? `Workshop · Night ${S.day}` : 'Outfit Plans', 56, 35, 19, '#fff', 'left', 700);
-    // outfit score against the rivals
-    const score = outfitScore();
+    const dino = isDino(), slots = petSlots();
+    text(craft ? `${dino ? 'Dress-up' : 'Workshop'} · Night ${S.day}` : dino ? 'Dress-up Ideas' : 'Outfit Plans', 56, 35, 19, '#fff', 'left', 700);
     darkPanel(12, 66, 316, 68, 18);
-    text(`Show score: ${score}`, 28, 88, 18, '#fff6a8', 'left', 700);
-    RIVALS.forEach((r, i) => {
-      const x = 28 + i * 100, beat = score > r.score;
-      emoji(r.icon, x + 12, 116, 20);
-      text(String(r.score), x + 28, 117, 15, beat ? '#9ff0b8' : 'rgba(255,255,255,.7)', 'left', 700);
-      if (beat) text('✓', x + 56, 117, 14, '#9ff0b8', 'left', 700);
-    });
+    if (dino) {
+      // the journey kit: everything she has made for him so far
+      const kit = dinoKit();
+      text(`Journey kit: ${kit.length} thing${kit.length === 1 ? '' : 's'}`, 28, 88, 18, '#fff6a8', 'left', 700);
+      if (kit.length) kit.slice(0, 11).forEach((it, i) => emoji(it.icon, 38 + i * 26, 116, 20));
+      else text('Make him something cosy!', 28, 116, 14, 'rgba(255,255,255,.8)', 'left', 600);
+    } else {
+      // outfit score against the rivals
+      const score = outfitScore();
+      text(`Show score: ${score}`, 28, 88, 18, '#fff6a8', 'left', 700);
+      RIVALS.forEach((r, i) => {
+        const x = 28 + i * 100, beat = score > r.score;
+        emoji(r.icon, x + 12, 116, 20);
+        text(String(r.score), x + 28, 117, 15, beat ? '#9ff0b8' : 'rgba(255,255,255,.7)', 'left', 700);
+        if (beat) text('✓', x + 56, 117, 14, '#9ff0b8', 'left', 700);
+      });
+    }
 
     const px = 340, pw = W - px - 12;
     panel(px, 12, pw, H - 84, 18);
-    SLOTS.forEach((sl, i) => {
-      const tx = px + 10 + i * ((pw - 20) / 7), tw = (pw - 20) / 7 - 6, on = this.tab === sl.id;
+    slots.forEach((sl, i) => {
+      const n = slots.length, tx = px + 10 + i * ((pw - 20) / n), tw = (pw - 20) / n - 6, on = this.tab === sl.id;
       const b = { id: `tab:${sl.id}`, x: tx, y: 22, w: tw, h: 52, on: true, key: String(i + 1) };
       buttons.push(b);
       rrect(tx, 22, tw, 52, 12, on ? '#ff6fb5' : inRect(b) ? '#ffd1ec' : '#f3e6fb', on ? null : '#e2c6f5', 2);
       emoji(sl.icon, tx + tw / 2, 42, 22);
       const eq = S.equip[sl.id] && ITEM[S.equip[sl.id]].pts;
-      if (eq) { rrect(tx + tw - 22, 18, 26, 18, 9, '#ffc83d'); text(String(eq), tx + tw - 9, 27, 11, '#5a2a00', 'center', 700); }
+      if (eq && !dino) { rrect(tx + tw - 22, 18, 26, 18, 9, '#ffc83d'); text(String(eq), tx + tw - 9, 27, 11, '#5a2a00', 'center', 700); }
       text(sl.name.split(' ')[0], tx + tw / 2, 66, 11, on ? '#fff' : '#7a5a8a', 'center', 600);
     });
-    const slot = SLOTS.find(s => s.id === this.tab);
+    const slot = slots.find(s => s.id === this.tab);
     text(slot.name, px + 18, 96, 19, '#5a2a6e', 'left', 700);
     text(craft ? 'Tap to craft or wear' : 'Craft these at night in the shed', px + pw - 16, 96, 13, '#9a7aaa', 'right', 500);
 
@@ -240,7 +250,7 @@ SCENES.style = {
       ctx.globalAlpha = owned || afford ? 1 : 0.6;
       text(it.name, cx + 66 + shakeX, cy + 22, 15, '#4a2060', 'left', 700);
       ctx.globalAlpha = 1;
-      if (it.pts) { rrect(cx + cw - 52, cy + 8, 44, 22, 11, TIER_COLORS[it.tier]); text(`+${it.pts}`, cx + cw - 30, cy + 19, 13, '#fff', 'center', 700); }
+      if (it.pts && !dino) { rrect(cx + cw - 52, cy + 8, 44, 22, 11, TIER_COLORS[it.tier]); text(`+${it.pts}`, cx + cw - 30, cy + 19, 13, '#fff', 'center', 700); }
       let status, col;
       if (worn) { status = 'Wearing ✓'; col = '#d0407e'; }
       else if (owned) { status = 'Tap to wear'; col = '#7a5a8a'; }
@@ -249,7 +259,7 @@ SCENES.style = {
       text(status, cx + 66 + shakeX, cy + 50, 14, col, 'left', 600);
     });
     drawMats(12, H - 52, 316, 2);
-    const doneLabel = !craft ? 'Back to the map' : S.day === SHOW_DAY ? 'To the show! ✨' : 'Bedtime 😴';
+    const doneLabel = !craft ? 'Back to the map' : dino ? `Back to ${S.name} 🦕` : S.day === SHOW_DAY ? 'To the show! ✨' : 'Bedtime 😴';
     button('done', W - 222, H - 64, 210, 52, doneLabel, { color: craft ? '#ff6fb5' : '#9a6ae0', size: 17 });
     drawFx(false);
   },
@@ -267,7 +277,7 @@ SCENES.hide = {
       items: spots.map(([x, y]) => ({ x, y, icon: pick(icons), gone: false, fly: 0 })),
     });
     SFX.alert();
-    speak(`Oh no! Mom is coming! Click everything sparkly, and click ${S.name} to hide her under the tarp!`);
+    speak(`Oh no! Mom is coming! Click everything sparkly, and click ${S.name} to hide ${isDino() ? 'him' : 'her'} under the tarp!`);
   },
   update(dt) {
     if (this.result) return;
@@ -279,7 +289,7 @@ SCENES.hide = {
       const it = this.items.find(i => !i.gone && Math.hypot(pointer.x - i.x, pointer.y - i.y) < 40);
       if (it) { it.gone = true; SFX.pick(); }
       else if (!this.tarp && Math.abs(pointer.x - (HUB_UNI.x + 20)) < 130 && pointer.y > 200 && pointer.y < 500) {
-        this.tarp = true; SFX.hush(); burst(HUB_UNI.x, HUB_UNI.y - 120, 12, { colors: ['#9aa870', '#7a8a5a'] });
+        this.tarp = true; SFX.pop(); burst(HUB_UNI.x, HUB_UNI.y - 120, 12, { colors: ['#9aa870', '#7a8a5a'] });
       }
     }
     const allDone = this.tarp && this.items.every(i => i.gone);
@@ -292,7 +302,7 @@ SCENES.hide = {
     buttons = [];
     drawShedInterior();
     if (this.tarp) drawTarp(HUB_UNI.x + 20, HUB_UNI.y, 1.15);
-    else drawUnicorn(HUB_UNI.x, HUB_UNI.y, HUB_UNI.s, uniLook(), { facing: 1, mood: 'wow' });
+    else drawPet(HUB_UNI.x, HUB_UNI.y, HUB_UNI.s, petLook(), { facing: 1, mood: isDino() ? 'scared' : 'wow' });
     inkRect(850, 448, 90, 56, '#c99a5a', 3, 10);
     ctx.strokeStyle = 'rgba(91,63,115,.4)'; ctx.lineWidth = 2;
     for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(850 + i * 18, 450); ctx.lineTo(850 + i * 18, 502); ctx.stroke(); }
@@ -305,7 +315,7 @@ SCENES.hide = {
     const left = this.items.filter(i => !i.gone).length;
     panel(W / 2 - 270, 14, 540, 92, 18);
     outlined("Mom's coming! Hide everything!", W / 2, 40, 24, '#ff6fb5', 'center', '#fff');
-    text(`Click the sparkly things (${left} left)${this.tarp ? '' : ` and click ${S.name} to throw a tarp over her!`}`, W / 2, 68, 14, '#5a2a6e', 'center', 600);
+    text(`Click the sparkly things (${left} left)${this.tarp ? '' : ` and click ${S.name} to throw a tarp over ${isDino() ? 'him' : 'her'}!`}`, W / 2, 68, 14, '#5a2a6e', 'center', 600);
     bar(W / 2 - 240, 84, 480, 12, (this.time / this.max) * 100, this.time / this.max < 0.35 ? '#ff5a5a' : '#ffb15c');
     const k = 1 - clamp(this.time / this.max, 0, 1);
     ctx.save(); ctx.beginPath(); ctx.rect(86, 74, 144, 108); ctx.clip();
@@ -333,8 +343,10 @@ function momVisitFail(onDone) {
     lost = ` Mom took away ${n} ${MATS[k].name} ${MATS[k].icon}.`;
   }
   say([
-    ['mom', 'shock', 'Aubrey, why is there GLITTER all over the floor? And is that a... hoofprint?'],
-    ['aubrey', 'serious', "It's for a school project! About... horses. Sparkly horses."],
+    isDino() ? ['mom', 'shock', 'Aubrey, why are there LEAVES all over the floor? And is that a... tiny three-toed footprint?']
+      : ['mom', 'shock', 'Aubrey, why is there GLITTER all over the floor? And is that a... hoofprint?'],
+    isDino() ? ['aubrey', 'serious', "It's for a school project! About... dinosaurs. Pretend ones."]
+      : ['aubrey', 'serious', "It's for a school project! About... horses. Sparkly horses."],
     ['mom', null, "Hmm. I'm tidying up this mess, missy."],
     ['narrator', null, `Phew — she didn't spot ${S.name}!${lost}`],
   ], onDone);

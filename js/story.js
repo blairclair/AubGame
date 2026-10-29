@@ -1,8 +1,8 @@
 'use strict';
 // Story flow: title, nights, the fashion show, and the ending.
 
-function startGame() {
-  S = newGame();
+function startGame(pet = 'unicorn') {
+  S = newGame(pet);
   parts.length = 0; floats.length = 0;
   startWorld('explore');
   saveCheckpoint();
@@ -12,8 +12,17 @@ function startGame() {
     ['narrator', null, 'Walk with the arrow keys. Jump with the up arrow or Space. Head right, into the woods!'],
   ]);
 }
-// after the last day: bounce up through the Fairy Kingdom to the show (js/kingdom.js)
-function showTime() { setScene('kingdom'); }
+// after the last day: bounce up through the Fairy Kingdom to the show (js/kingdom.js);
+// on the dino route, set off on the journey home instead: Dino Hop (js/dinohop.js), then the maze (js/dinodefense.js)
+function showTime() {
+  if (!isDino()) return setScene('kingdom');
+  say([
+    ['narrator', null, `Morning comes. The supplies are all packed, and ${S.name} is wide awake and wiggly.`],
+    ['aubrey', 'determined', `Today's the day, ${S.name}. We're taking you HOME!`],
+    ['dino', 'joy', '*an excited little squeak*'],
+    ['narrator', null, `The path to Dinosaur Valley goes over a river of big, friendly dinosaurs. Aubrey puts ${S.name} on her back and gets ready to hop!`],
+  ], () => setScene(SCENES.dinohop ? 'dinohop' : SCENES.dinodefense ? 'dinodefense' : 'dinoend'));
+}
 
 // --- night ---------------------------------------------------------------------------
 SCENES.night = {
@@ -24,6 +33,7 @@ SCENES.night = {
   },
   countdown() {
     const left = daysLeft() + 1;
+    if (isDino()) return left === 1 ? `Tomorrow we take ${S.name} HOME!` : `${left} more days of gathering supplies. Then the big journey home!`;
     return left === 1 ? 'Tomorrow is SHOW DAY!' : `${left} more days of adventures until the show.`;
   },
   update() { if (clickedButton() === 'next' || advancePressed()) setScene('map'); },
@@ -35,12 +45,17 @@ SCENES.night = {
     bdStars(70);
     bdMoon(800, 90, '#1e1c48');
     ctx.fillStyle = '#2a2a50'; ellipse(W / 2, H + 40, 700, 140);
-    drawUnicorn(330, 470, 1.0, uniLook(), { facing: 1, pose: 'sit', mood: 'sleep', glow: 0.5 });
+    if (isDino()) { drawShedInterior(0.55); drawDinoTucked(330, 480, 1.0); }
+    else drawUnicorn(330, 470, 1.0, uniLook(), { facing: 1, pose: 'sit', mood: 'sleep', glow: 0.5 });
     outlined('z', 470 + Math.sin(S.t * 2) * 6, 250 - (S.t * 20) % 40, 26, '#fff');
     outlined('Z', 490 + Math.sin(S.t * 2 + 1) * 6, 215 - (S.t * 20) % 40, 34, '#fff');
     panel(560, 130, 370, 280, 22);
     outlined(`Day ${S.day - 1} is over`, 745, 168, 30, '#ff6fb5', 'center', '#fff');
-    const lines = [
+    const lines = isDino() ? [
+      `${S.name} is snuggled up under his quilt, dreaming of his mama.`,
+      `Things made for the journey: ${dinoKit().length}`,
+      this.countdown(),
+    ] : [
       `${S.name} curls up in the hay, wearing her new things, and dreams sparkly dreams.`,
       `Show score so far: ${outfitScore()}`,
       this.countdown(),
@@ -261,29 +276,73 @@ function dreamy(top, bottom) {
   for (let i = 0; i < 46; i++) star((i * 197) % W, (i * 89) % (H - 140), 2 + (i % 3), `rgba(255,255,255,${0.3 + 0.7 * Math.abs(Math.sin(S.t * 1.5 + i))})`);
 }
 SCENES.loading = { update() {}, draw() { dreamy('#3b1d6e', '#ff9ec7'); outlined('Loading...', W / 2, H / 2, 28, '#fff'); } };
+// the title screen is also the pet picker: a unicorn or a baby dinosaur
+const PET_CHOICES = [
+  { id: 'unicorn', label: 'A Unicorn', say: 'A sparkly unicorn!', x: 70 },
+  { id: 'dino', label: 'A Baby Dinosaur', say: 'A baby dinosaur!', x: 560 },
+];
+const TITLE_DINO = { head: 'd_flowers', neck: 'd_bandana', back: null, tail: 'd_tailbow', feet: null };
 SCENES.title = {
-  update() {
-    if (clickedButton() === 'stages') return setScene('stages');
-    if (advancePressed() || pointer.clicked) { audioInit(); startGame(); }
+  enter() {
+    this.sel = this.sel ?? null; this.t = 0;
+    speak("Aubrey's Secret Pet! Who will your secret pet be? Press 1 for a unicorn, or 2 for a baby dinosaur.");
+  },
+  choose(i) {
+    const c = PET_CHOICES[i];
+    audioInit(); SFX.sparkle();
+    startGame(c.id);
+  },
+  update(dt) {
+    this.t += dt;
+    const id = clickedButton();
+    if (id === 'stages') return setScene('stages');
+    if (id?.startsWith('pet:')) return this.choose(+id.slice(4));
+    const hover = PET_CHOICES.findIndex(c => inRect({ x: c.x, y: 168, w: 330, h: 330 }));
+    if (hover >= 0 && hover !== this.hover) { this.sel = hover; }
+    this.hover = hover;
+    const was = this.sel;
+    if (pressed.arrowleft || pressed.a) this.sel = 0;
+    if (pressed.arrowright || pressed.d) this.sel = 1;
+    if (this.sel !== was && this.sel !== null) { SFX.click(); speak(PET_CHOICES[this.sel].say); }
+    if ((advancePressed()) && this.sel !== null) return this.choose(this.sel);
+    if (advancePressed()) { this.sel = 0; speak(PET_CHOICES[0].say); }
   },
   draw() {
     buttons = [];
     dreamy('#3b1d6e', '#ff9ec7');
     ctx.fillStyle = '#7fbf75'; ellipse(W / 2, H + 60, 720, 150);
     ctx.fillStyle = '#8fcf85'; ellipse(W / 2, H + 80, 640, 130);
-    drawAubrey(250, 500, 'twirl', 1, 0, 0.82);
-    drawUnicorn(670, 500, 1.05, TITLE_LOOK, { facing: -1, glow: 0.9, t: S.t });
-    outlined('Aubrey', W / 2, 66, 60, '#fff');
-    outlined('& the Secret Unicorn', W / 2, 122, 36, '#ffd1ec');
-    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(S.t * 4);
-    outlined('Click or press Space to begin', W / 2, 176, 22, '#fff6a8');
+    outlined("Aubrey's", W / 2, 50, 44, '#fff');
+    outlined('Secret Pet', W / 2, 100, 50, '#ffd1ec');
+    ctx.globalAlpha = 0.7 + 0.3 * Math.sin(S.t * 4);
+    outlined('Who will your secret pet be?', W / 2, 146, 22, '#fff6a8');
     ctx.globalAlpha = 1;
+    PET_CHOICES.forEach((c, i) => {
+      const on = this.sel === i, x = c.x, y = 168, w = 330, h = 330;
+      const lift = on ? -6 - Math.abs(Math.sin(S.t * 3)) * 4 : 0;
+      ctx.save();
+      ctx.shadowColor = on ? 'rgba(255,240,150,.9)' : 'rgba(40,10,60,.4)'; ctx.shadowBlur = on ? 26 : 10; ctx.shadowOffsetY = 4;
+      rrect(x, y + lift, w, h, 26, i ? '#e6fbe0' : '#fbe9ff');
+      ctx.restore();
+      rrect(x, y + lift, w, h, 26, null, on ? '#ffd23f' : 'rgba(255,255,255,.9)', on ? 6 : 4);
+      ctx.save(); ctx.beginPath(); ctx.roundRect(x + 8, y + lift + 8, w - 16, h - 78, 20); ctx.clip();
+      const bg = ctx.createLinearGradient(0, y, 0, y + h); bg.addColorStop(0, i ? '#c8f0ff' : '#ffe3f3'); bg.addColorStop(1, i ? '#a6e09a' : '#e8d6ff');
+      ctx.fillStyle = bg; ctx.fillRect(x, y + lift, w, h);
+      if (i) drawBabyDino(x + 150, y + lift + 238, 0.92, TITLE_DINO, { facing: 1, mood: on ? 'joy' : undefined, moving: on, glow: on ? 0.6 : 0, t: S.t });
+      else drawUnicorn(x + 150, y + lift + 250, 0.82, TITLE_LOOK, { facing: 1, glow: on ? 0.9 : 0.4, mood: on ? 'joy' : undefined, moving: on, t: S.t });
+      ctx.restore();
+      button(`pet:${i}`, x + 24, y + lift + h - 62, w - 48, 50, c.label, { color: i ? '#3fae6a' : '#c86ae8', size: 21, key: String(i + 1) });
+    });
+    drawAubrey(W / 2, 512, 'twirl', 1, 0, 0.5);
+    text('Tap a card, press 1 or 2, or use ← → and Space', W / 2, H - 22, 14, 'rgba(255,255,255,.85)', 'center', 600);
     if (DEV) button('stages', 14, H - 52, 160, 38, 'Pick a stage', { icon: '🧪', color: '#9a6ae0', size: 15 });
   },
 };
 // testing only (?dev): jump straight to any story stage or adventure place
 const STAGE_JUMPS = [['explore', '🔍', 'Find unicorn'], ['follow', '🦄', 'Follow home'], ['map', '🗺️', 'Map'], ['craft', '✂️', 'Crafting'],
-  ['hide', '🙈', 'Hide'], ['night', '🌙', 'Night'], ['kingdom', '🏰', 'Kingdom bounce'], ['show', '👑', 'Fashion show'], ['end', '🏆', 'The end']];
+  ['hide', '🙈', 'Hide'], ['night', '🌙', 'Night'], ['kingdom', '🏰', 'Kingdom bounce'], ['show', '👑', 'Fashion show'], ['end', '🏆', 'The end'],
+  ['pick', '🐾', 'Pet picker'], ['dinofind', '🦕', 'Dino: find'], ['dinonight', '🛖', 'Dino: shed night'], ['dinohide', '🙈', 'Dino: hide'], ['dinohop', '🦖', 'Dino Hop'],
+  ['dinodefense', '🛡️', 'Dino defence'], ['dinoend', '💚', 'Dino: the end']];
 SCENES.stages = {
   enter() { this.tier ??= 1; },
   update() {
@@ -300,10 +359,10 @@ SCENES.stages = {
     dreamy('#3b1d6e', '#ff9ec7');
     outlined('Pick a stage', W / 2, 34, 30, '#fff');
     button('back', 14, 14, 90, 36, 'Back', { color: '#9a6ae0', size: 15 });
-    STAGE_JUMPS.forEach(([id, icon, label], i) => button(id, 20 + (i % 5) * 186, 64 + Math.floor(i / 5) * 46, 178, 38, label, { icon, color: '#4fa8e0', size: 14 }));
-    [1, 2, 3].forEach(t => button(`tier:${t}`, W / 2 - 225 + (t - 1) * 154, 166, 142, 34, `Places ${'★'.repeat(t)}`, { color: t === this.tier ? '#ff6fb5' : '#c9a6d8', size: 14 }));
+    STAGE_JUMPS.forEach(([id, icon, label], i) => button(id, 20 + (i % 6) * 155, 60 + Math.floor(i / 6) * 42, 148, 36, label, { icon, color: id.startsWith('dino') ? '#3fae6a' : '#4fa8e0', size: 13 }));
+    [1, 2, 3].forEach(t => button(`tier:${t}`, W / 2 - 225 + (t - 1) * 154, 194, 142, 32, `Places ${'★'.repeat(t)}`, { color: t === this.tier ? '#ff6fb5' : '#c9a6d8', size: 14 }));
     LOCATIONS.filter(l => l.tier === this.tier).forEach((l, i) =>
-      button(`loc:${l.id}`, 20 + (i % 4) * 232, 212 + Math.floor(i / 4) * 52, 224, 44, l.name, { icon: l.icon, size: 13 }));
+      button(`loc:${l.id}`, 20 + (i % 4) * 232, 236 + Math.floor(i / 4) * 50, 224, 42, l.name, { icon: l.icon, size: 13 }));
   },
 };
 SCENES.end = {

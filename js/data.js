@@ -75,6 +75,38 @@ const WARDROBE = [
   { id: 'hoof_pearl', value: 'pearl', slot: 'hooves', name: 'Pearl Polish',  cost: { shell: 2, silk: 1 } },
   { id: 'hoof_gold',  value: 'gold',  slot: 'hooves', name: 'Gold Polish',   cost: { honey: 2, crystal: 1 } },
   { id: 'hoof_star',  value: 'star',  slot: 'hooves', name: 'Phoenix Polish', cost: { ember: 2, stardust: 1 } },
+
+  // --- the baby dinosaur's wardrobe (dino route): the same treasures, made into things for the journey home ---
+  { id: 'd_flowers',  pet: 'dino', slot: 'dhead', name: 'Daisy Crown',     cost: { petal: 3 }, icon: '🌼' },
+  { id: 'd_beanie',   pet: 'dino', slot: 'dhead', name: 'Cosy Beanie',     cost: { ribbon: 2, silk: 1 }, icon: '🧢' },
+  { id: 'd_explorer', pet: 'dino', slot: 'dhead', name: 'Explorer Hat',    cost: { feather: 2, ribbon: 1, honey: 1 }, icon: '🤠' },
+  { id: 'd_crown',    pet: 'dino', slot: 'dhead', name: 'Star Crown',      cost: { stardust: 2, crystal: 1 }, icon: '👑' },
+
+  { id: 'd_bandana',  pet: 'dino', slot: 'dneck', name: 'Red Bandana',     cost: { ribbon: 2 }, icon: '🧣' },
+  { id: 'd_shells',   pet: 'dino', slot: 'dneck', name: 'Shell Necklace',  cost: { shell: 3 }, icon: '🐚' },
+  { id: 'd_scarf',    pet: 'dino', slot: 'dneck', name: 'Stripy Scarf',    cost: { silk: 2, berry: 1 }, icon: '🧶' },
+  { id: 'd_medal',    pet: 'dino', slot: 'dneck', name: 'Brave Medal',     cost: { honey: 2, crystal: 1 }, icon: '🏅' },
+
+  { id: 'd_backpack', pet: 'dino', slot: 'dback', name: 'Little Backpack', cost: { ribbon: 2, berry: 2 }, icon: '🎒' },
+  { id: 'd_blanket',  pet: 'dino', slot: 'dback', name: 'Blanket Cape',    cost: { petal: 2, silk: 2 }, icon: '🛏️' },
+  { id: 'd_wings',    pet: 'dino', slot: 'dback', name: 'Feather Wings',   cost: { feather: 3, rainbow: 1 }, icon: '🪽' },
+  { id: 'd_starcape', pet: 'dino', slot: 'dback', name: 'Starry Cape',     cost: { moonbeam: 2, stardust: 1, silk: 1 }, icon: '🌌' },
+
+  { id: 'd_tailbow',  pet: 'dino', slot: 'dtail', name: 'Tail Bow',        cost: { ribbon: 2 }, icon: '🎀' },
+  { id: 'd_bell',     pet: 'dino', slot: 'dtail', name: 'Jingle Bell',     cost: { shell: 2, honey: 1 }, icon: '🔔' },
+  { id: 'd_comet',    pet: 'dino', slot: 'dtail', name: 'Comet Streamers', cost: { ember: 2, stardust: 1 }, icon: '☄️' },
+
+  { id: 'd_boots',    pet: 'dino', slot: 'dfeet', name: 'Rain Boots',      cost: { berry: 3 }, icon: '🥾' },
+  { id: 'd_socks',    pet: 'dino', slot: 'dfeet', name: 'Stripy Socks',    cost: { silk: 1, petal: 2 }, icon: '🧦' },
+  { id: 'd_goldboots',pet: 'dino', slot: 'dfeet', name: 'Gold Boots',      cost: { honey: 2, crystal: 1 }, icon: '✨' },
+];
+// the baby dinosaur's slots (the unicorn's SLOTS stay as they are)
+const DINO_SLOTS = [
+  { id: 'dhead', name: 'Hat',    icon: '🎩' },
+  { id: 'dneck', name: 'Neck',   icon: '🧣' },
+  { id: 'dback', name: 'Back',   icon: '🎒' },
+  { id: 'dtail', name: 'Tail',   icon: '🎀' },
+  { id: 'dfeet', name: 'Feet',   icon: '🥾' },
 ];
 // an item's points are the rarity points of everything it took to make
 for (const it of WARDROBE) {

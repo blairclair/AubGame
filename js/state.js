@@ -12,13 +12,14 @@ function setScene(name, data) {
   SCENES[name].enter?.(data);
 }
 
-function newGame() {
+function newGame(pet = 'unicorn') {
   const deck = {};
   for (const t of [1, 2, 3]) deck[t] = shuffle(LOCATIONS.filter(l => l.tier === t).map(l => l.id));
   return {
     t: 0, day: 1, visitsToday: 0, deck, log: [],
-    name: 'Sparkle',
-    equip: { mane: 'natural', style: 'flowing', head: null, neck: null, back: null, tail: null, hooves: null },
+    pet, // 'unicorn' | 'dino' — chosen on the title screen; saves without it are unicorn games
+    name: pet === 'dino' ? 'Sprout' : 'Sparkle',
+    equip: { mane: 'natural', style: 'flowing', head: null, neck: null, back: null, tail: null, hooves: null, dhead: null, dneck: null, dback: null, dtail: null, dfeet: null },
     owned: Object.fromEntries(WARDROBE.filter(i => i.free).map(i => [i.id, true])),
     mats: Object.fromEntries(MAT_ORDER.map(k => [k, 0])),
     shine: 8,
@@ -31,6 +32,45 @@ function uniLook(extra = {}) {
   const v = slot => { const id = S.equip[slot]; return id ? (ITEM[id].value || id) : null; };
   return { mane: v('mane'), style: v('style'), head: v('head'), neck: v('neck'), back: v('back'), tail: v('tail'), hooves: v('hooves'), shine: S.shine, ...extra };
 }
+// --- the secret pet: a unicorn, or a baby dinosaur (js/pet.js) ---------------------------------
+const isDino = () => !!S && S.pet === 'dino';
+const petSlots = () => (isDino() ? DINO_SLOTS : SLOTS);
+function dinoLook(extra = {}) {
+  const v = slot => (S.equip?.[slot] ? (ITEM[S.equip[slot]]?.value || S.equip[slot]) : null);
+  return { head: v('dhead'), neck: v('dneck'), back: v('dback'), tail: v('dtail'), feet: v('dfeet'), ...extra };
+}
+const petLook = (extra = {}) => (isDino() ? dinoLook(extra) : uniLook(extra));
+// how many dino things she has made (the journey kit)
+const dinoKit = () => WARDROBE.filter(i => i.pet === 'dino' && S.owned[i.id]);
+// on the dino route, story and place dialog that was written for the unicorn is gently rewritten
+const PET_SWAPS = [
+  [/could stay forever/g, 'could get home to his mama'],
+  [/Good luck at the show!/g, 'Good luck on the journey home!'],
+  [/Go win that show!/g, 'Get him home safe!'],
+  [/You know about the show\?!/g, 'You know about our secret journey?!'],
+  [/May the best creature win!/g, 'Safe travels, little one!'],
+  [/\bat the show\b/g, 'on the journey'],
+  [/\bunicorns\b/gi, 'baby dinos'],
+  [/\bunicorn\b/gi, 'baby dino'],
+  [/\bmanes\b/gi, 'spikes'],
+  [/\bmane\b/gi, 'spikes'],
+  [/\bhooves\b/gi, 'feet'],
+  [/\bhoofprints?\b/gi, m => (m.endsWith('s') ? 'footprints' : 'footprint')],
+  [/\bhoof\b/gi, 'foot'],
+  [/\bwhinnies\b/gi, 'happy squeaks'],
+  [/\bwhinny\b/gi, 'happy squeak'],
+  [/\bneighs?\b/gi, 'squeak'],
+];
+function petText(str) {
+  if (!isDino() || typeof str !== 'string') return str;
+  for (const [re, to] of PET_SWAPS) {
+    str = str.replace(re, m => {
+      const out = typeof to === 'function' ? to(m) : to;
+      return m[0] === m[0].toUpperCase() && m[0] !== m[0].toLowerCase() ? out[0].toUpperCase() + out.slice(1) : out;
+    });
+  }
+  return str;
+}
 const outfitScore = () => SLOTS.reduce((sum, s) => sum + (S.equip[s.id] ? ITEM[S.equip[s.id]].pts : 0), 0);
 const canAfford = cost => Object.entries(cost).every(([k, n]) => S.mats[k] >= n);
 function pay(cost) { for (const [k, n] of Object.entries(cost)) S.mats[k] -= n; }
@@ -42,9 +82,10 @@ const daysLeft = () => SHOW_DAY - S.day;
 // lines: [speaker, face, text, onShow?]
 // ---------------------------------------------------------------------------
 let dlg = null;
-const SPEAKERS = { aubrey: 'Aubrey', mom: 'Mom', ranger: 'Ranger Rosa', neighbor: 'Mrs. Pickett', fairy: 'Fairy Fizzlewick', narrator: '' };
+const SPEAKERS = { mamadino: 'Mama Dino', papadino: 'Papa Dino', aubrey: 'Aubrey', mom: 'Mom', ranger: 'Ranger Rosa', neighbor: 'Mrs. Pickett', fairy: 'Fairy Fizzlewick', narrator: '' };
 function say(lines, done) {
-  dlg = { lines: lines.filter(Boolean), i: 0, chars: 0, done };
+  // the dino route swaps unicorn words in story/place lines (petText is a no-op for the unicorn)
+  dlg = { lines: lines.filter(Boolean).map(l => (isDino() ? [l[0], l[1], petText(l[2]), l[3]] : l)), i: 0, chars: 0, done };
   showLine();
 }
 function showLine() {
@@ -70,11 +111,16 @@ function drawPortrait(who, face, x, y) {
   rrect(x - 3, y - 3, w + 6, h + 6, 15, '#ff8fc8');
   ctx.save(); ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.clip();
   if (who === 'aubrey') ctx.drawImage(IMG[`face_${face || 'neutral'}`], x, y, w, h);
-  else if (who === 'unicorn') {
+  else if (who === 'mamadino' || who === 'papadino') {
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#fff2c8'); g.addColorStop(1, '#c8f0c0');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    const s = 0.85;
+    drawBabyDino(x + 54 - 68 * s, y + 66 + 157 * s, s, {}, { grown: true, mood: 'joy', palette: who === 'mamadino' ? MAMA_PAL : PAPA_PAL });
+  } else if (who === 'unicorn' || who === 'dino') {
     const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#ffe3f3'); g.addColorStop(1, '#e8d6ff');
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
-    const s = 1.05;
-    drawUnicorn(x + 50 - 92 * s, y + 66 + 176 * s, s, uniLook(), { mood: face || undefined });
+    if (isDino()) { const s = 0.8; drawBabyDino(x + 54 - 76 * s, y + 70 + 165 * s, s, dinoLook(), { mood: face || undefined }); }
+    else { const s = 1.05; drawUnicorn(x + 50 - 92 * s, y + 66 + 176 * s, s, uniLook(), { mood: face || undefined }); }
   } else if (who === 'mom' || who === 'ranger' || who === 'neighbor') drawPersonPortrait(who, x, y, w, h, face === 'shock');
   else if (!drawCritterPortrait(who, x, y, w, h)) {
     const g = ctx.createRadialGradient(x + w / 2, y + h / 2, 5, x + w / 2, y + h / 2, 80);
@@ -102,7 +148,7 @@ function drawDialog() {
   if (who !== 'narrator') {
     drawPortrait(who, face, x + 16, y + 15);
     tx = x + 146;
-    const name = who === 'unicorn' ? S.name : (SPEAKERS[who] ?? who);
+    const name = who === 'unicorn' || who === 'dino' ? S.name : (SPEAKERS[who] ?? who);
     text(name, tx, y + 28, 20, '#c2407e', 'left', 700);
   }
   const italic = who === 'narrator';
@@ -123,11 +169,13 @@ function drawDialog() {
 function askName(done) {
   const box = document.getElementById('nameBox'), form = document.getElementById('nameForm'), input = document.getElementById('nameInput');
   box.hidden = false;
+  box.querySelector('h2').textContent = isDino() ? 'What will you name him?' : 'What will you name her?';
+  box.querySelector('button').textContent = isDino() ? "That's his name!" : "That's her name!";
   input.value = S.name;
   setTimeout(() => { input.focus(); input.select(); }, 30);
   form.onsubmit = e => {
     e.preventDefault();
-    S.name = input.value.trim().slice(0, 14) || 'Sparkle';
+    S.name = input.value.trim().slice(0, 14) || (isDino() ? 'Sprout' : 'Sparkle');
     box.hidden = true;
     form.onsubmit = null;
     done();

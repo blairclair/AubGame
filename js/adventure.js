@@ -78,7 +78,7 @@ SCENES.map = {
       });
     });
     drawMats(12, H - 52, 600);
-    button('plans', 626, H - 58, 150, 48, 'Outfit plans', { icon: '📖', color: '#9a6ae0', size: 15 });
+    button('plans', 626, H - 58, 150, 48, isDino() ? 'Dress-up ideas' : 'Outfit plans', { icon: '📖', color: '#9a6ae0', size: 15 });
     if (!left) button('home', 784, H - 60 - Math.abs(Math.sin(S.t * 4)) * 4, 172, 52, 'Head home', { icon: '🌙', color: '#ff6fb5', size: 17, key: 'Enter' });
     drawFx(false);
   },
@@ -135,8 +135,9 @@ function playPlaceGame(i) {
 
 // --- dusk: home to the shed, maybe a visit from Mom, then crafting ------------------------------
 function goHome() {
-  const craft = () => setScene('style', { mode: 'craft', onDone: bedtime });
-  say([['narrator', null, `The sun is setting. Aubrey hurries home to ${S.name} with her treasures.`]], () => {
+  // the dino route spends each night in the shed with him: feed, dress up, cuddle, sleep (js/pet.js)
+  const craft = isDino() ? () => setScene('dinonight', { onDone: bedtime }) : () => setScene('style', { mode: 'craft', onDone: bedtime });
+  say([['narrator', null, isDino() ? `The sun is setting. Aubrey hurries home to the shed with her supplies. ${S.name} will be waiting!` : `The sun is setting. Aubrey hurries home to ${S.name} with her treasures.`]], () => {
     // Mom gets curious on a couple of evenings
     if (S.day === 2 || S.day === 4) setScene('hide', craft);
     else craft();
