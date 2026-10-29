@@ -2088,17 +2088,12 @@
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), s = Math.min(w / (x1 - x0), h / (y1 - y0));
     return pts.map(([x, y]) => [cx + (x - (x0 + x1) / 2) * s, cy + (y - (y0 + y1) / 2) * s]);
   }
-  function tinySpider(x, y, s, t) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    ctx.strokeStyle = OL; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
-    for (let i = 0; i < 4; i++) for (const d of [-1, 1]) { const w = Math.sin(t * 10 + i) * 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(d * 14, -8 + i * 5, d * 20, -2 + i * 6 + w); ctx.stroke(); }
-    inkCircle(0, 2, 11, '#7a5ac8', 1.5); inkCircle(0, -9, 7, '#7a5ac8', 1.5);
-    ctx.fillStyle = '#fff'; circle(-3, -10, 2.6); circle(3, -10, 2.6); ctx.fillStyle = '#ff6fae'; circle(0, 4, 3);
-    ctx.restore();
-  }
+  // Aubrey is the spinner: she runs from dot to dot (keys, or she follows your finger), trailing silk from
+  // the last dot she tied off; touching the next number ties the thread there
+  const WEB_BOX = [306, 126, 734, 488], WEB_AH = 76;
   MG.webdots = {
     kind: 'learn', title: () => 'Web Dot-to-Dot', icon: () => '🕸️',
-    how: g => (g.tier === 3 ? 'Count by twos! Click the dots in order, 2, 4, 6, 8... to spin a silk picture.' : 'Click the dots in number order, 1, 2, 3... to spin a silk picture with Silvie!'),
+    how: g => `Help Aubrey spin a silk picture! Move her with the arrow keys, or lead her with your finger, and run to the dots in order: ${g.tier === 3 ? '2, 4, 6, 8... count by twos!' : '1, 2, 3...'}`,
     init(g) {
       Object.assign(g, { round: 0, rounds: 3, total: 0, pics: shuffle(WEB_SETS[g.tier - 1]).slice(0, 3), step: g.tier === 3 ? 2 : 1, shake: {} });
       this.next(g);
@@ -2106,28 +2101,38 @@
     start(g) { speak(g.say); },
     next(g) {
       const [name, col, fn] = WEB_PICS[g.pics[g.round]];
-      Object.assign(g, { name, col, dots: fitPts(fn(), 520, 300, 400, 330), got: 1, wrong: 0, idle: 0, state: 'join', t2: 0, sx: 0, sy: 0, spin: 1 });
-      [g.sx, g.sy] = g.dots[0];
-      g.say = `Start at ${g.step}. Then find ${NUM_WORDS[g.step * 2]}!`;
+      Object.assign(g, { name, col, dots: fitPts(fn(), 520, 306, 380, 320), got: 1, wrong: 0, idle: 0, state: 'join', t2: 0, spin: 1, vx: 0, vy: 0, face: 1, twirl: 0, onWrong: -1, run: 0 });
+      [g.ax, g.ay] = g.dots[0];
+      g.say = `Aubrey starts at ${g.step}. Now run to ${NUM_WORDS[g.step * 2]}!`;
       if (g.phase === 'play') speak(g.say);
     },
     label: (g, i) => (i + 1) * g.step,
     update(g, dt) {
       g.idle += dt; tickDown(g.shake, dt);
-      g.spin = Math.min(1, g.spin + dt * 5);
-      if (g.state === 'join' && pointer.clicked) {
-        let best = -1, bd = 34;
-        g.dots.forEach(([x, y], i) => { const d = Math.hypot(pointer.x - x, pointer.y - y); if (d < bd) { bd = d; best = i; } });
+      g.spin = Math.min(1, g.spin + dt * 5); g.twirl = Math.max(0, g.twirl - dt);
+      if (g.state === 'join') {
+        // move: keys push her, the pointer leads her
+        const sp = 300, kx = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), ky = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
+        if (kx || ky) { g.vx = lerp(g.vx, kx * sp, dt * 8); g.vy = lerp(g.vy, ky * sp, dt * 8); }
+        else if (pointerMoved(g) || g.usePointer) { g.vx = clamp((pointer.x - g.ax) * 5, -sp, sp); g.vy = clamp((pointer.y - g.ay) * 5, -sp, sp); }
+        else { g.vx *= 1 - dt * 5; g.vy *= 1 - dt * 5; }
+        g.ax = clamp(g.ax + g.vx * dt, WEB_BOX[0], WEB_BOX[2]); g.ay = clamp(g.ay + g.vy * dt, WEB_BOX[1], WEB_BOX[3]);
+        if (Math.abs(g.vx) > 25) g.face = Math.sign(g.vx);
+        g.run = Math.hypot(g.vx, g.vy) > 40 ? g.run + dt : 0;
+        // which dot is she standing on?
+        let best = -1, bd = 26;
+        g.dots.forEach(([x, y], i) => { const d = Math.hypot(g.ax - x, g.ay - y); if (d < bd) { bd = d; best = i; } });
         if (best === g.got) {
-          g.got++; g.idle = 0; g.spin = 0; tone(500 + g.got * 30, 0.1, 'triangle', 0.08);
+          g.got++; g.idle = 0; g.spin = 0; g.twirl = 0.45; g.onWrong = -1;
+          tone(500 + g.got * 30, 0.1, 'triangle', 0.08); burst(g.dots[best][0], g.dots[best][1], 8, { colors: ['#ffffff', '#e8dcff', '#fff6a8'], spread: 50 });
           if (g.got >= g.dots.length) {
             g.state = 'done'; g.t2 = 0; g.total += Math.max(0.3, 1 - 0.12 * g.wrong); SFX.sparkle();
-            speak(`You spun a ${g.name}!`); burst(520, 300, 30, { colors: ['#ffffff', g.col, '#fff6a8'] });
+            speak(`Aubrey spun a ${g.name}!`); burst(520, 300, 30, { colors: ['#ffffff', g.col, '#fff6a8'] });
           }
-        } else if (best > g.got) {
-          g.wrong++; g.shake[best] = 0.4; g.idle = 99; SFX.miss();
+        } else if (best > g.got && best !== g.onWrong) {
+          g.onWrong = best; g.wrong++; g.shake[best] = 0.4; g.idle = 99; SFX.miss();
           speak(`That's ${NUM_WORDS[this.label(g, best)] || this.label(g, best)}. Find ${NUM_WORDS[this.label(g, g.got)] || this.label(g, g.got)}!`);
-        }
+        } else if (best < 0) g.onWrong = -1;
       } else if (g.state === 'done' && (g.t2 += dt) > 2.6) {
         g.round++;
         if (g.round >= g.rounds) g.done = true; else this.next(g);
@@ -2138,9 +2143,13 @@
     draw(g) {
       drawCritter('Silvie the Spider', 120, 480, 0.85, 1);
       panel(290, 104, 460, 400, 28);
+      // a faint web behind the picture, so it feels like Aubrey is spinning on a real web
+      ctx.strokeStyle = 'rgba(184,160,224,.25)'; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12; ctx.beginPath(); ctx.moveTo(520, 304); ctx.lineTo(520 + Math.cos(a) * 240, 304 + Math.sin(a) * 210); ctx.stroke(); }
+      for (let r = 40; r < 230; r += 42) { ctx.beginPath(); for (let i = 0; i <= 12; i++) { const a = i * TAU / 12; ctx.lineTo(520 + Math.cos(a) * r * 1.05, 304 + Math.sin(a) * r * 0.9); } ctx.stroke(); }
       const D = g.dots, n = D.length, done = g.state === 'done', fill = done ? clamp(g.t2 / 0.8, 0, 1) : 0;
       if (fill) { ctx.globalAlpha = fill; ctx.fillStyle = g.col; ctx.fill(ptsPath(D)); ctx.globalAlpha = 1; }
-      // silk thread so far, the newest bit being spun
+      // silk tied off between the dots so far, the newest bit snapping tight
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       const path = () => {
         ctx.beginPath(); ctx.moveTo(D[0][0], D[0][1]);
@@ -2157,16 +2166,24 @@
       D.forEach(([x, y], i) => {
         const next = i === g.got && !done, joined = i < g.got, sx = shakeX(g.shake, i);
         if (next && g.idle > 5) { ctx.strokeStyle = `rgba(255,111,181,${0.5 + 0.5 * Math.sin(S.t * 8)})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 20 + Math.sin(S.t * 8) * 3, 0, Math.PI * 2); ctx.stroke(); }
-        inkCircle(x + sx, y, joined ? 8 : 10, joined ? '#c6a2ff' : '#ffffff', 1.5);
+        inkCircle(x + sx, y, joined ? 8 : next ? 12 : 10, joined ? '#c6a2ff' : next ? '#fff6c8' : '#ffffff', 1.5);
         if (done) return;
         const d = Math.hypot(x - cx, y - cy) || 1, lx = x + (x - cx) / d * 26 + sx, ly = y + (y - cy) / d * 24;
         text(String(this.label(g, i)), lx, ly, i === g.got ? 22 : 18, joined ? '#b8a0c8' : i === g.got ? '#ff3f8f' : '#5a2a6e', 'center', 800);
       });
-      // Silvie's little helper spider rides the end of the thread
-      const li = Math.max(0, g.got - 1), pv = D[Math.max(0, li - 1)], k = done ? 1 : g.spin;
-      tinySpider(lerp(pv[0], D[li][0], li ? k : 1), lerp(pv[1], D[li][1], li ? k : 1) - 4, 0.9, S.t);
+      if (!done) {
+        // the loose silk from the last tied dot to Aubrey's hand, sagging a little and glinting
+        const [lx, ly] = D[g.got - 1], hx = g.ax + g.face * 10, hy = g.ay - 2, mx = (lx + hx) / 2, my = (ly + hy) / 2 + Math.min(30, Math.hypot(hx - lx, hy - ly) * 0.12);
+        for (const [c, w] of [['rgba(184,160,224,.8)', 5], ['#ffffff', 2.2]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo(mx, my, hx, hy); ctx.stroke(); }
+        const gk = (S.t * 0.8) % 1; star(lerp(lerp(lx, mx, gk), lerp(mx, hx, gk), gk), lerp(lerp(ly, my, gk), lerp(my, hy, gk), gk), 3, '#ffffff', 4);
+      }
+      // Aubrey: running between dots, twirling when she ties one off, cheering when the picture is done
+      const fr = done ? 'twirl' : g.twirl > 0 ? 'twirl' : g.run > 0 ? `run${1 + (Math.floor(g.run * 11) % 5)}` : 'idle_front';
+      const hop = done ? Math.abs(Math.sin(g.t2 * 7)) * 10 : g.twirl > 0 ? Math.sin(g.twirl / 0.45 * Math.PI) * 8 : 0;
+      ctx.fillStyle = 'rgba(40,20,60,.18)'; ellipse(g.ax, g.ay + WEB_AH * 0.5, 16, 4);
+      drawAubrey(g.ax, g.ay + WEB_AH * 0.5, fr, g.face, hop, WEB_AH / IMG.idle_front.height);
       if (done) outlined(`A ${g.name}!`, 520, 140, 34, g.col);
-      else text(`Next: ${this.label(g, g.got)}`, 520, 482, 20, '#8a5aa0', 'center', 700);
+      else text(`Next: ${this.label(g, g.got)}`, 520, 492, 20, '#8a5aa0', 'center', 700);
     },
   };
 
