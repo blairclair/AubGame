@@ -4,7 +4,6 @@
   const DIRW = { R: 'RIGHT', L: 'LEFT', U: 'UP', D: 'DOWN' };
   const DV = { R: [1, 0], L: [-1, 0], U: [0, -1], D: [0, 1] };
   const BACK = { R: 'L', L: 'R', U: 'D', D: 'U' };
-  const KEYDIR = { arrowright: 'R', arrowleft: 'L', arrowup: 'U', arrowdown: 'D' };
   const LETTERS = 'ABCDE';
   const plural = (n, w) => `${NUM_WORDS[n]} ${w}${n === 1 ? '' : 's'}`;
   const still = (key, paint) => blit(sprite(key, W, H, 0, 0, paint), 0, 0);
@@ -147,8 +146,8 @@
 
   // =====================================================================================
   // LEARN: Captain's Treasure Map. Follow the Captain's clue and dig in the right square.
-  // Clues: start at a landmark and take some steps; follow a chain of arrow cards one
-  // square at a time; or read grid coordinates like C 3.
+  // Clues: start at a landmark and take some steps; follow a chain of arrow cards in your
+  // head to where it ends; or read grid coordinates like C 3. Always one dig per guess.
   // =====================================================================================
   const TM = { x0: 252, y0: 112, w: 496, h: 312 }; // the grid inside the parchment
   const MAP = { x0: 206, x1: 768, y0: 64, y1: 452 };
@@ -325,13 +324,12 @@
         }
         if (!cands.length) continue;
         const q = pick(cands);
-        Object.assign(g, { marks, q, tre: q.tre, kind, dug: [], tries: 0, state: 'ask', dig: null, t2: 0, traced: 0 });
-        if (kind === 'chain') g.cur = [q.from.c, q.from.r];
+        Object.assign(g, { marks, q, tre: q.tre, kind, dug: [], tries: 0, state: 'ask', dig: null, t2: 0, demoT: 0, routeT: 0 });
         break;
       }
       const q = g.q;
       if (g.kind === 'coord') g.say = `Dig at square ${coordName(...g.tre)}! Find the letter ${LETTERS[g.tre[0]]} on top, and the number ${g.tre[1] + 1} on the side.`;
-      else if (g.kind === 'chain') g.say = `Start at the ${MARKS[q.from.k][0]}. Follow the arrows, one square each: ${q.steps.map(d => DIRW[d].toLowerCase()).join(', ')}. Tap each square as you go!`;
+      else if (g.kind === 'chain') g.say = `Start at the ${MARKS[q.from.k][0]}. Follow the arrows, one square for each: ${q.steps.map(d => DIRW[d].toLowerCase()).join(', ')}. Then dig where they end!`;
       else {
         const steps = q.moves.map(([d, n]) => `go ${plural(n, 'step')} ${DIRW[d]}`).join(', then ');
         g.say = `Start at the ${MARKS[q.from.k][0]}. Then ${steps}. Dig there!`;
@@ -340,23 +338,11 @@
     },
     miss(g, c, r, from, words) {
       g.tries++; SFX.miss();
-      const h = hintFor(from, g.kind === 'chain' ? g.q.path[g.traced + 1] : g.tre);
+      const h = hintFor(from, g.tre);
+      if (g.q.path && g.tries < 3) g.routeT = 2.2; // briefly trace the route from the landmark (stopping one square short)
       g.fx.push({ c, r, t: 2.4, hint: h });
-      if (g.tries >= 3 && g.kind !== 'chain') speak('Arr, so close! Look for the sparkles, matey!');
+      if (g.tries >= 3) speak('Arr, so close! Look for the sparkles, matey!');
       else speak(words || `Not here, matey! Go ${h.map(d => DIRW[d]).join(' and ')}.`);
-    },
-    // chain rounds: tap (or press the arrow key for) the next square along the arrows
-    trace(g, c, r) {
-      const q = g.q, want = q.path[g.traced + 1], here = q.path[g.traced];
-      if (sameCell([c, r], here)) return;
-      if (sameCell([c, r], want)) {
-        g.traced++; g.cur = [c, r];
-        tone(520 + g.traced * 90, 0.12, 'triangle', 0.08);
-        burst(cellCx(g, c), cellCy(g, r) + 10, 6, { colors: ['#ff8a6a', '#fff6a8'] });
-        if (g.traced === q.steps.length) { this.startDig(g, c, r); return; }
-        const d = q.steps[g.traced];
-        speak(`${pick(['Yes!', 'Good!', 'Aye!'])} Now ${DIRW[d].toLowerCase()}.`);
-      } else this.miss(g, here[0], here[1], here, `Follow the arrow, matey! Go ${DIRW[q.steps[g.traced]].toLowerCase()}, one square.`);
     },
     startDig(g, c, r) {
       g.dig = { c, r, t: 0 }; g.cur = [c, r];
@@ -390,6 +376,7 @@
       for (const f of g.fx) f.t -= dt;
       g.fx = g.fx.filter(f => f.t > 0);
       for (const p of [...g.coins, ...g.clods]) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; p.life -= dt; if (p.spin != null) p.spin += dt * 9; }
+      g.demoT += dt; g.routeT = Math.max(0, g.routeT - dt);
       g.coins = g.coins.filter(p => p.life > 0); g.clods = g.clods.filter(p => p.life > 0);
       g.progress = `🪙 Treasure ${g.round + (g.state === 'yay' ? 1 : 0)} of ${g.rounds}`;
       if (g.dig) { if ((g.dig.t += dt) > 0.7) this.resolve(g); return; }
@@ -402,15 +389,6 @@
         return;
       }
       const at = cellAt(g, pointer.x, pointer.y);
-      if (g.kind === 'chain') {
-        // arrow keys trace the chain directly
-        for (const k in KEYDIR) if (pressed[k]) {
-          const here = g.q.path[g.traced], d = KEYDIR[k];
-          return this.trace(g, here[0] + DV[d][0], here[1] + DV[d][1]);
-        }
-        if (pointer.clicked && at && !id) this.trace(g, ...at);
-        return;
-      }
       // keyboard: arrows move the spade, Enter or Space digs
       const [cc, cr] = g.cur;
       if (pressed.arrowleft) g.cur = [Math.max(0, cc - 1), cr];
@@ -428,28 +406,29 @@
       const cw = cellW(g), ch = cellH(g), s = Math.min(cw / 100, ch / 84) * 0.95, q = g.q, chain = g.kind === 'chain';
       const [hc, hr] = g.cur, showLab = g.tier > 1;
       // highlight the square under the spade (or, when tracing, where the explorer stands)
-      if (g.state === 'ask' && !g.dig) rrect(TM.x0 + hc * cw + 4, TM.y0 + hr * ch + 4, cw - 8, ch - 8, 10, chain ? 'rgba(255,220,120,.45)' : 'rgba(255,255,255,.5)');
+      if (g.state === 'ask' && !g.dig) rrect(TM.x0 + hc * cw + 4, TM.y0 + hr * ch + 4, cw - 8, ch - 8, 10, 'rgba(255,255,255,.5)');
       if (showLab) {
         for (let c = 0; c < g.cols; c++) {
-          const on = c === hc && !chain; if (on) inkCircle(cellCx(g, c), 95, 14, '#ffd23a', 1.4);
+          const on = c === hc; if (on) inkCircle(cellCx(g, c), 95, 14, '#ffd23a', 1.4);
           text(LETTERS[c], cellCx(g, c), 96, on ? 22 : 19, '#6a3a1a', 'center', 800);
         }
         for (let r = 0; r < g.rows; r++) {
-          const on = r === hr && !chain; if (on) inkCircle(232, cellCy(g, r), 14, '#ffd23a', 1.4);
+          const on = r === hr; if (on) inkCircle(232, cellCy(g, r), 14, '#ffd23a', 1.4);
           text(String(r + 1), 232, cellCy(g, r) + 1, on ? 22 : 19, '#6a3a1a', 'center', 800);
         }
       }
-      // trails: traced so far, or the whole route once the treasure is found
-      if (q.path) dotted(g, q.path, g.state === 'yay' ? q.path.length : chain ? g.traced + 1 : 0);
+      // trails: the whole route, drawn out from the landmark once the treasure is found;
+      // after a miss, a brief trace that stops one square short of the treasure
+      if (q.path && g.state === 'yay') dotted(g, q.path, Math.min(q.path.length, 1 + Math.floor(g.t2 * 6)));
+      else if (q.path && g.routeT > 0) {
+        ctx.save(); ctx.globalAlpha = clamp(g.routeT, 0, 1);
+        dotted(g, q.path, Math.min(q.path.length - 1, 1 + Math.floor((2.2 - g.routeT) * 5)));
+        ctx.restore();
+      }
       for (const m of g.marks) {
         const glow = q.from === m && g.state === 'ask';
         if (glow) { ctx.fillStyle = `rgba(255,240,150,${0.35 + Math.sin(S.t * 4) * 0.15})`; circle(cellCx(g, m.c), cellCy(g, m.r), Math.min(cw, ch) * 0.46); }
         drawMark(m.k, cellCx(g, m.c), cellCy(g, m.r), s * (glow ? 1 + Math.sin(S.t * 5) * 0.04 : 1));
-      }
-      if (chain && g.state === 'ask' && g.traced > 0) {
-        // a little footprint marker where the explorer stands
-        const [c, r] = q.path[g.traced];
-        inkCircle(cellCx(g, c), cellCy(g, r) + 10, 9, '#ff8a6a', 1.6); ctx.fillStyle = '#fff'; circle(cellCx(g, c) - 2, cellCy(g, r) + 7, 3);
       }
       for (const [c, r] of g.dug) {
         const x = cellCx(g, c), y = cellCy(g, r) + 8;
@@ -457,7 +436,7 @@
         inkEllipse(x, y, 30 * s, 14 * s, 0, '#8a5a34', 1.6); ctx.fillStyle = '#5a3a24'; ellipse(x, y + 2, 23 * s, 9 * s);
         ctx.fillStyle = 'rgba(0,0,0,.2)'; ellipse(x, y - 3, 22 * s, 5 * s);
       }
-      if (g.tries >= 3 && g.state === 'ask' && !chain) {
+      if (g.tries >= 3 && g.state === 'ask') {
         for (let i = 0; i < 4; i++) { const a = S.t * 2 + i * TAU / 4; star(cellCx(g, g.tre[0]) + Math.cos(a) * 26, cellCy(g, g.tre[1]) + Math.sin(a) * 20, 8, '#fff6a8', 4); }
       }
       if (g.dig) {
@@ -476,7 +455,7 @@
         chest(x, y - k * 6, s * (0.65 + 0.4 * k), Math.min(1, g.t2 * 2));
         const ty = cellCy(g, g.tre[1]) - ch / 2 - 2;
         outlined('Treasure!', x, ty < TM.y0 + 10 ? y + 22 : ty + 4, 22, '#ffd23a');
-      } else if (g.state === 'ask' && !chain && !g.dig) {
+      } else if (g.state === 'ask' && !g.dig) {
         const x = cellCx(g, hc), y = cellCy(g, hr);
         if (!g.marks.some(m => m.c === hc && m.r === hr)) { ctx.globalAlpha = 0.55; text('✕', x, y, 32, '#d04040', 'center', 800); ctx.globalAlpha = 1; }
       }
@@ -506,7 +485,7 @@
         text(`the ${MARKS[q.from.k][0]}`, 862, 212, 15, '#5a2a6e', 'center', 800);
         if (chain) {
           text('Follow the arrows', 862, 240, 14, '#ff6fb5', 'center', 800);
-          text('below! 👇', 862, 260, 14, '#ff6fb5', 'center', 800);
+          text('below, then dig! 👇', 862, 260, 14, '#ff6fb5', 'center', 800);
         } else q.moves.forEach(([d, n], i) => {
           const y = q.moves.length > 1 ? 252 + i * 54 : 266;
           text(String(n), 820, y, 30, '#ff6a4a', 'center', 800);
@@ -514,15 +493,15 @@
           text(DIRW[d], 872, y + 24, 12, '#5a2a6e', 'center', 800);
         });
       }
-      // chain rounds: a row of big arrow cards that light up as they're traced
+      // chain rounds: a row of big arrow cards; they light up one by one as Pinch reads them out
       if (chain) {
         const n = q.steps.length, cwd = 70, gap = 10, x0 = 487 - (n * cwd + (n - 1) * gap) / 2;
         q.steps.forEach((d, i) => {
-          const x = x0 + i * (cwd + gap), done = i < g.traced || g.state === 'yay', now = i === g.traced && g.state === 'ask' && !g.dig;
+          const x = x0 + i * (cwd + gap), demo = Math.floor((g.demoT - 1.4) / 0.8), now = i === demo, done = g.state === 'yay';
           const lift = now ? Math.sin(S.t * 6) * 3 : 0;
           if (now) { ctx.fillStyle = 'rgba(255,240,150,.7)'; rrect(x - 6, 456 - 6 + lift, cwd + 12, 80, 18, 'rgba(255,236,140,.75)'); }
-          rrect(x, 456 + lift, cwd, 68, 14, done ? '#8fdc9a' : now ? '#fff6d0' : '#f4e8d8', OL, 2.5);
-          arrow(d, x + cwd / 2, 484 + lift, 24, done ? '#3fae5a' : now ? '#ff8a3a' : '#c8a888');
+          rrect(x, 456 + lift, cwd, 68, 14, done ? '#8fdc9a' : now ? '#fff1a8' : '#fffaf0', OL, 2.5);
+          arrow(d, x + cwd / 2, 484 + lift, 24, done ? '#3fae5a' : '#ff8a3a');
           text(DIRW[d], x + cwd / 2, 512 + lift, 11, done ? '#1f6a3a' : '#7a5a4a', 'center', 800);
           if (done) { inkCircle(x + cwd - 6, 460 + lift, 9, '#3fae5a', 1.2); text('✓', x + cwd - 6, 461 + lift, 12, '#fff', 'center', 800); }
         });
@@ -531,282 +510,324 @@
   };
 
   // =====================================================================================
-  // ACTION: Turtle Guard. Baby sea turtles hatch and crawl down to the sea. A gull swoops
-  // at one, and its shadow grows on the sand: scuttle Captain Pinch onto the shadow to
-  // shoo the gull away before it lands!
+  // LEARN: Sandcastle Lab. Build the castle on Captain Pinch's plan, one sand shape at a
+  // time: pick the mold (cube, cylinder, cone, pyramid), get the sand just wet enough
+  // (squeeze test!), then flip the mold. Teaches 3D shape names and why damp sand sticks.
   // =====================================================================================
-  const TG_SEA = 402, TG_TOP = 408, TG_BOT = 528, TG_REACH = 62;
-  const TG_NESTS = [180, 480, 780], TG_NEST_Y = 512;
-  const sandTop = x => 396 + Math.sin(x * 0.012) * 4;
-  const TG_PLAN = { // turtles, seconds between hatchings, gulls at once, gap between gulls, warning seconds, time
-    1: { n: 8, every: 3.0, gulls: 1, gap: 1.5, warn: 2.8, time: 46, speed: 17 },
-    2: { n: 10, every: 2.6, gulls: 2, gap: 1.8, warn: 2.5, time: 46, speed: 19 },
-    3: { n: 12, every: 2.2, gulls: 2, gap: 1.2, warn: 2.0, time: 48, speed: 21 },
+  const SC_X = 450, SC_GY = 392; // the castle's middle and the sand it stands on
+  const SHAPE_INFO = {
+    cube: { name: 'cube', col: '#ff6a6a', fact: 'A cube has six flat faces, and every face is a square.' },
+    cylinder: { name: 'cylinder', col: '#4fa8f0', fact: 'A cylinder has two flat circles, one on the top and one on the bottom, and a curved side.' },
+    cone: { name: 'cone', col: '#ffc23a', fact: 'A cone has one flat circle at the bottom, and goes up to a point.' },
+    pyramid: { name: 'pyramid', col: '#5ac87a', fact: 'A pyramid has a square at the bottom, and triangle sides that meet at a point.' },
   };
-  function hatchling(x, y, s, t) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    ctx.fillStyle = 'rgba(80,50,30,.2)'; ellipse(1, 11, 18, 5);
-    const k = Math.sin(t * 10) * 4;
-    const flips = [[-14, -6, -0.7, k], [14, -6, 0.7, -k], [-12, 9, 0.5, -k], [12, 9, -0.5, k]];
-    for (const [fx, fy, rot, dk] of flips) inkAt(fx, fy + dk * 0.6, rot + dk * 0.05, P2('M-8,-3 C-5,-9 5,-9 8,-3 C5,4 -5,4 -8,-3 Z'), '#6ac87a', 1.4);
-    ink(P2('M-3,-12 C-4,-20 4,-20 3,-12 Z'), '#7ad88a', 1.2); // neck
-    inkCircle(0, -19, 7, '#7ad88a', 1.6);
-    ctx.fillStyle = '#fff'; circle(-3, -21, 2.4); circle(3, -21, 2.4);
-    ctx.fillStyle = '#2a1a2a'; circle(-3, -21.5, 1.4); circle(3, -21.5, 1.4);
-    ctx.fillStyle = '#ff9aa8'; circle(-5, -16, 1.4); circle(5, -16, 1.4);
-    inkEllipse(0, 0, 15, 13, 0, '#3a9a5a', 1.8);
-    // shell plates
-    ctx.fillStyle = '#5ab86a'; ellipse(0, -1, 10.5, 9);
-    ctx.strokeStyle = '#2a7a4a'; ctx.lineWidth = 1.3;
-    ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i * TAU / 6; ctx.lineTo(Math.cos(a) * 5, -1 + Math.sin(a) * 4.5); } ctx.closePath(); ctx.stroke();
-    for (let i = 0; i < 6; i++) { const a = i * TAU / 6; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 5, -1 + Math.sin(a) * 4.5); ctx.lineTo(Math.cos(a) * 10, -1 + Math.sin(a) * 8.5); ctx.stroke(); }
-    ctx.fillStyle = '#a8e8a0'; for (let i = 0; i < 10; i++) { const a = i * TAU / 10; circle(Math.cos(a) * 13, Math.sin(a) * 11, 1.1); }
-    ctx.fillStyle = 'rgba(255,255,255,.4)'; ellipse(-5, -6, 5, 2.5, -0.4);
-    ctx.restore();
+  // castle pieces: shape, middle x, bottom y, width, height, what to call it
+  const SC_PIECE = {
+    base: ['cube', SC_X, SC_GY, 124, 100, 'big cube in the middle'],
+    towerL: ['cylinder', SC_X - 116, SC_GY, 76, 150, 'cylinder tower on the left'],
+    towerR: ['cylinder', SC_X + 116, SC_GY, 76, 150, 'cylinder tower on the right'],
+    coneL: ['cone', SC_X - 116, SC_GY - 154, 88, 74, 'cone roof on the left tower'],
+    coneR: ['cone', SC_X + 116, SC_GY - 154, 88, 74, 'cone roof on the right tower'],
+    pyr: ['pyramid', SC_X - 2, SC_GY - 114, 96, 70, 'pyramid on top of the cube'],
+  };
+  function scPlan(tier) {
+    const side = pick(['L', 'R']), other = side === 'L' ? 'R' : 'L';
+    if (tier === 1) return ['base', 'tower' + side, pick(['cone' + side, 'pyr'])];
+    if (tier === 2) return ['base', 'tower' + side, 'tower' + other, pick(['cone' + side, 'pyr'])];
+    return ['base', 'tower' + side, 'tower' + other, 'pyr', 'cone' + pick([side, other])];
   }
-  function gull(x, y, s, t, dir = 1, swoop = 0, legs = false) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s * dir, s);
-    const f = Math.sin(t * (swoop ? 4 : 9)) * (swoop ? 6 : 16);
-    if (legs) { ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-2, 8); ctx.lineTo(-6, 22); ctx.moveTo(6, 8); ctx.lineTo(4, 22); ctx.stroke(); ctx.strokeStyle = '#ffb83a'; ctx.lineWidth = 2; ctx.stroke(); }
-    const wing = d => P2(`M${d * 4},-4 C${d * 18},${-16 - f} ${d * 34},${-22 - f} ${d * 50},${-12 - f * 1.4} C${d * 34},${-6 - f * 0.5} ${d * 18},0 ${d * 4},4 Z`);
-    ink(wing(-1), '#c0c8da', 1.8);
-    ctx.save(); ctx.clip(wing(-1)); ctx.fillStyle = '#3a3a4a'; circle(-50, -12 - f * 1.4, 12); ctx.restore();
-    const body = P2('M-26,2 C-20,-10 18,-10 24,0 C18,10 -18,12 -26,2 Z'), tail = P2('M-24,2 L-38,-4 L-36,8 Z');
-    ink(tail, '#c0c8da', 1.4);
-    ink(body, '#ffffff', 2);
-    ctx.save(); ctx.clip(body); ctx.fillStyle = 'rgba(160,170,200,.35)'; ellipse(-4, 8, 26, 6); ctx.restore();
-    ink(wing(1), '#e4e8f2', 1.8);
-    ctx.save(); ctx.clip(wing(1)); ctx.fillStyle = '#3a3a4a'; circle(50, -12 - f * 1.4, 12); ctx.fillStyle = '#fff'; circle(44, -14 - f * 1.3, 2); ctx.restore();
-    inkCircle(24, -6, 10, '#ffffff', 1.8);
-    ink(P2('M32,-9 L48,-5 L44,-1 L32,-1 Z'), '#ffc23a', 1.4);
-    ctx.fillStyle = '#ff4a3a'; circle(42, -2.5, 1.8);
-    ctx.fillStyle = '#2a1a2a'; circle(27, -9, 2.4); ctx.fillStyle = '#fff'; circle(27.8, -9.8, 0.9);
-    ctx.strokeStyle = '#5a4a6a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(21, -14); ctx.lineTo(31, -12); ctx.stroke(); // grumpy brow
-    ctx.restore();
-  }
-  // the sand strip the game is played on, painted once over the beach backdrop
-  function tgSand() {
-    const top = new Path2D(); top.moveTo(0, H);
-    for (let x = 0; x <= W; x += 10) top.lineTo(x, sandTop(x));
-    top.lineTo(W, H); top.closePath();
-    const sd = ctx.createLinearGradient(0, 394, 0, H);
-    sd.addColorStop(0, '#c9a46a'); sd.addColorStop(0.16, '#dcbb80'); sd.addColorStop(0.3, '#f2d8a0'); sd.addColorStop(1, '#fbe6b6');
-    ctx.fillStyle = sd; ctx.fill(top);
-    ctx.save(); ctx.clip(top);
-    // the wet band shines
-    ctx.fillStyle = 'rgba(255,255,255,.18)'; for (let x = 0; x < W; x += 60) ellipse(x + 20, 412 + Math.sin(x) * 3, 24, 2.5);
-    // ripples and texture
-    const R = rng(23);
-    ctx.strokeStyle = 'rgba(190,140,80,.35)'; ctx.lineWidth = 2;
-    for (let i = 0; i < 26; i++) { const x = R() * W, y = 440 + R() * 90, w = 20 + R() * 30; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + w / 2, y - 5, x + w, y); ctx.stroke(); }
-    ctx.fillStyle = 'rgba(170,120,60,.3)'; for (let i = 0; i < 420; i++) circle(R() * W, 410 + R() * 130, 0.7 + R() * 1.2);
-    ctx.fillStyle = 'rgba(255,255,255,.45)'; for (let i = 0; i < 160; i++) circle(R() * W, 420 + R() * 120, 0.6 + R() * 0.9);
-    // pebbles, shells, a starfish, seaweed
-    for (let i = 0; i < 12; i++) inkEllipse(R() * W, 446 + R() * 86, 3 + R() * 3, 2 + R() * 2, R() * 3, ['#b8a8b8', '#a89888', '#d0c0c8'][i % 3], 1);
-    for (const [x, y, c, r] of [[90, 478, '#ffb3c8', 9], [340, 528, '#c8b8ff', 8], [622, 470, '#ffd0a8', 9], [700, 532, '#ffb3c8', 7], [930, 520, '#bfe6ff', 8]]) smallShell(x, y, r, c, R() - 0.5);
-    starfish(296, 452, 10, '#ff7a5a', 0.3); starfish(872, 456, 8, '#c06ae0', -0.4);
-    ctx.strokeStyle = '#4a9a6a'; ctx.lineWidth = 3;
-    for (const x of [40, 640, 920]) { ctx.beginPath(); ctx.moveTo(x, 424); ctx.quadraticCurveTo(x + 10, 418, x + 20, 426); ctx.quadraticCurveTo(x + 30, 432, x + 40, 424); ctx.stroke(); }
-    ctx.restore();
-    // umbrella poles carry on down into the sand
-    ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(91.7, 392); ctx.lineTo(96, 452); ctx.stroke();
-    ctx.strokeStyle = '#f4f0f8'; ctx.lineWidth = 3; ctx.stroke();
-    inkEllipse(96, 452, 14, 4, 0, '#e8c888', 1.2);
-    // a small sandcastle on the right
-    const cx = 900;
-    inkRect(cx - 30, 470, 60, 34, '#e8c070', 2.2, 4);
-    for (const dx of [-32, 16]) { inkRect(cx + dx, 448, 16, 56, '#e8c070', 2.2, 3); for (let i = 0; i < 3; i++) inkRect(cx + dx + i * 5.5, 443, 4, 7, '#e8c070', 1.2, 1); }
-    ctx.fillStyle = 'rgba(150,100,40,.25)'; ctx.fillRect(cx + 4, 472, 24, 30);
-    inkRect(cx - 7, 486, 14, 18, '#b88a4a', 1.8, 7);
-    smallShell(cx - 14, 480, 5, '#ffb3c8'); smallShell(cx + 14, 482, 5, '#c8b8ff');
-    ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 24, 443); ctx.lineTo(cx - 24, 420); ctx.stroke();
-    // nests: a ring of seaweed and sticks, cracked eggs, a little sign
-    for (const x of TG_NESTS) {
-      const y = TG_NEST_Y;
-      ctx.fillStyle = 'rgba(120,80,40,.22)'; ellipse(x + 3, y + 6, 52, 14);
-      inkEllipse(x, y, 48, 17, 0, '#e2bc78', 1.6);
-      ctx.fillStyle = '#a87a40'; ellipse(x, y - 2, 32, 10);
-      ctx.fillStyle = '#8a5e30'; ellipse(x, y, 26, 7);
-      ctx.strokeStyle = '#5a8a4a'; ctx.lineWidth = 3;
-      for (let i = 0; i < 9; i++) { const a = i * TAU / 9 + 0.3, px = x + Math.cos(a) * 40, py = y + Math.sin(a) * 13; ctx.beginPath(); ctx.moveTo(px - 6, py); ctx.quadraticCurveTo(px, py - 5, px + 6, py); ctx.stroke(); }
-      ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 2.5;
-      for (const [dx, dy, l, a] of [[-38, -4, 18, 0.3], [30, 6, 16, -0.4], [-10, 12, 14, 0.1]]) { ctx.beginPath(); ctx.moveTo(x + dx, y + dy); ctx.lineTo(x + dx + Math.cos(a) * l, y + dy + Math.sin(a) * l); ctx.stroke(); }
-      for (let i = 0; i < 5; i++) {
-        const ex = x - 22 + i * 11, ey = y - 3 + Math.sin(i * 1.3) * 3;
-        inkEllipse(ex, ey, 6.5, 5, i * 0.4, '#fffaf0', 1);
-        ctx.strokeStyle = '#c8b8a0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(ex - 5, ey - 1); ctx.lineTo(ex - 2, ey - 3); ctx.lineTo(ex, ey); ctx.lineTo(ex + 3, ey - 3); ctx.lineTo(ex + 5, ey - 1); ctx.stroke();
+  const SC_WET = { 1: [0.36, 0.72], 2: [0.4, 0.68], 3: [0.44, 0.64] }; // "just right" dampness
+  const sandCol = w => (w > 1 ? '#a08050' : mix('#f8e2a8', '#b8925a', clamp(w, 0, 1)));
+
+  // a 3D shape seen a little from the right; fill==null draws a plan outline only
+  function solid(shape, x, bottom, w, h, fill, opts = {}) {
+    const d = w * 0.2, dy = d * 0.6, lw = opts.lw ?? 2.2;
+    const draw = (p, f) => { if (fill) ink(p, f, lw); else { ctx.strokeStyle = opts.line || '#ffffff'; ctx.lineWidth = lw; ctx.stroke(p); } };
+    if (shape === 'cube') {
+      const x0 = x - w / 2, x1 = x + w / 2 - d, top = bottom - h;
+      draw(P2(`M${x0},${top} L${x0 + d},${top - dy} L${x1 + d},${top - dy} L${x1},${top} Z`), fill && mix(fill, '#ffffff', 0.3));
+      draw(P2(`M${x1},${top} L${x1 + d},${top - dy} L${x1 + d},${bottom - dy} L${x1},${bottom} Z`), fill && mix(fill, '#5a3a20', 0.22));
+      draw(P2(`M${x0},${top} L${x1},${top} L${x1},${bottom} L${x0},${bottom} Z`), fill);
+    } else if (shape === 'cylinder') {
+      const rx = w / 2, ry = w * 0.17, top = bottom - h;
+      const body = P2(`M${x - rx},${top} L${x - rx},${bottom} A${rx},${ry} 0 0 0 ${x + rx},${bottom} L${x + rx},${top} Z`);
+      draw(body, fill);
+      if (fill) {
+        ctx.save(); ctx.clip(body);
+        const gr = ctx.createLinearGradient(x - rx, 0, x + rx, 0); gr.addColorStop(0, 'rgba(255,255,255,.25)'); gr.addColorStop(0.45, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(70,40,10,.25)');
+        ctx.fillStyle = gr; ctx.fillRect(x - rx, top - ry, w, h + ry * 2); ctx.restore();
       }
-      // little nest sign
-      ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + 52, y + 4); ctx.lineTo(x + 52, y - 30); ctx.stroke();
-      ctx.strokeStyle = '#b07a44'; ctx.lineWidth = 2.5; ctx.stroke();
-      inkRect(x + 38, y - 44, 28, 18, '#e8b878', 1.4, 3);
-      inkEllipse(x + 52, y - 35, 6, 5, 0, '#4fb86a', 0.8); ctx.fillStyle = '#4fb86a'; circle(x + 52, y - 41, 2.5);
+      const lid = new Path2D(); lid.ellipse(x, top, rx, ry, 0, 0, TAU);
+      draw(lid, fill && mix(fill, '#ffffff', 0.3));
+    } else if (shape === 'cone') {
+      const rx = w / 2, ry = w * 0.17;
+      const p = P2(`M${x - rx},${bottom} L${x},${bottom - h} L${x + rx},${bottom} A${rx},${ry} 0 0 1 ${x - rx},${bottom} Z`);
+      draw(p, fill);
+      if (fill) {
+        ctx.save(); ctx.clip(p);
+        const gr = ctx.createLinearGradient(x - rx, 0, x + rx, 0); gr.addColorStop(0, 'rgba(255,255,255,.3)'); gr.addColorStop(0.45, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(70,40,10,.28)');
+        ctx.fillStyle = gr; ctx.fillRect(x - rx, bottom - h, w, h + ry + 2); ctx.restore();
+      }
+    } else if (shape === 'pyramid') {
+      const ax = x + d * 0.3, ay = bottom - h, fl = x - w / 2, fr = x + w / 2 - d, br = x + w / 2;
+      draw(P2(`M${fr},${bottom} L${br},${bottom - dy} L${ax},${ay} Z`), fill && mix(fill, '#5a3a20', 0.22));
+      draw(P2(`M${fl},${bottom} L${fr},${bottom} L${ax},${ay} Z`), fill);
     }
   }
+  // a finished sand piece, with grains, a window or two and pressed-in shells
+  function sandPiece(key, k = 1, col = '#d8b478') {
+    const [shape, x, b, w, h] = SC_PIECE[key];
+    ctx.save(); ctx.translate(x, b); ctx.scale(k, k); ctx.translate(-x, -b);
+    solid(shape, x, b, w, h, col);
+    const R = rng(key.length * 7 + w);
+    ctx.fillStyle = 'rgba(120,80,30,.28)';
+    for (let i = 0; i < 26; i++) {
+      const px = x - w / 2 + 6 + R() * (w - 14), py = b - 6 - R() * (h - 10);
+      if (shape === 'cone' || shape === 'pyramid') { const f = (b - py) / h; if (Math.abs(px - x) > (w / 2) * (1 - f) - 4) continue; }
+      circle(px, py, 1 + R() * 1.2);
+    }
+    if (key.startsWith('tower')) {
+      ink(P2(`M${x - 9},${b - 70} L${x - 9},${b - 88} A9,9 0 0 1 ${x + 9},${b - 88} L${x + 9},${b - 70} Z`), '#6a4a2a', 1.4);
+      smallShell(x, b - 30, 9, '#ffb3c8');
+    }
+    if (key === 'base') {
+      ink(P2(`M${x - 28},${b} L${x - 28},${b - 34} A18,18 0 0 1 ${x + 8},${b - 34} L${x + 8},${b} Z`), '#6a4a2a', 1.6);
+      smallShell(x - 40, b - 72, 8, '#c8b8ff', -0.3); starfish(x + 20, b - 74, 9, '#ff7a5a', 0.2);
+    }
+    if (key.startsWith('cone')) { ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, b - h); ctx.lineTo(x, b - h - 26); ctx.stroke(); ink(P2(`M${x},${b - h - 26} L${x + 20},${b - h - 20} L${x},${b - h - 14} Z`), '#ff5f7e', 1.2); }
+    if (key === 'pyr') starfish(x, b - h + 2, 8, '#ffd23a');
+    ctx.restore();
+  }
+  // a plastic mold (the bucket shape), as a big button icon or carried over the castle
+  function mold(shape, x, bottom, s) {
+    const info = SHAPE_INFO[shape], w = { cube: 74, cylinder: 54, cone: 64, pyramid: 70 }[shape] * s, h = { cube: 58, cylinder: 62, cone: 58, pyramid: 54 }[shape] * s;
+    solid(shape, x, bottom, w, h, info.col, { lw: 2 });
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ellipse(x - w * 0.22, bottom - h * 0.5, w * 0.06, h * 0.22);
+  }
+  function hand(x, y, s, open = 1) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    for (let i = 0; i < 4; i++) inkEllipse(-24 + i * 16, -6 - 14 * open, 8, 16, 0, '#ffd2b8', 1.6);
+    inkEllipse(36, 4, 9, 15, -0.9, '#ffd2b8', 1.6);
+    inkEllipse(0, 10, 38, 22, 0, '#ffd2b8', 1.8);
+    ctx.fillStyle = 'rgba(200,120,100,.25)'; ellipse(0, 14, 24, 10);
+    ctx.restore();
+  }
 
-  MG.turtleguard = {
-    kind: 'action', title: () => 'Turtle Guard', icon: () => '🐢',
-    how: () => 'Baby turtles are crawling to the sea! When a hungry gull flies over a turtle, its shadow grows on the sand. Scuttle Captain Pinch onto the shadow to shoo it away! Move with the mouse or the arrow keys.',
+  MG.sandcastlelab = {
+    kind: 'learn', title: () => 'Sandcastle Lab', icon: () => '🏰',
+    how: g => `Build the castle on Captain Pinch's plan! For each part, pick the mold with the right shape. Then make the sand just wet enough: add water or dry sand, and do a squeeze test. If it makes a ball, flip it!`,
     init(g) {
-      const p = TG_PLAN[g.tier];
-      Object.assign(g, { p, turtles: [], gulls: [], tracks: [], puffs: [], splashes: [], hatched: 0, saved: 0, points: 0, snatched: 0, shoos: 0, hatchT: 0.6, gullT: 2.6, timeLeft: p.time,
-        x: W / 2, y: 470, facing: 1, walk: 0, firstGull: true, puffT: 0 });
-      g.say = 'Stand on the gull shadows to keep the baby turtles safe!';
+      const [lo, hi] = SC_WET[g.tier];
+      Object.assign(g, { plan: scPlan(g.tier), i: 0, built: [], lo, hi, total: 0, drops: [], grains: [], fx: null, sq: null, flip: null, endT: 0, helped: 0 });
+      g.rounds = g.plan.length;
+      g.molds = g.tier === 1 ? ['cube', 'cylinder', 'cone', 'pyramid'].filter(s => s !== 'pyramid' || g.plan.includes('pyr')) : ['cube', 'cylinder', 'cone', 'pyramid'];
+      if (g.tier === 1 && g.molds.length === 4) g.molds = g.molds.filter(s => s !== 'cone');
+      this.piece(g);
     },
     start(g) { speak(g.say); },
-    hatch(g, t) {
-      const nx = t ? t.nest : pick(TG_NESTS);
-      const o = { scared: t ? t.scared : false, x: nx + rand(-14, 14), y: TG_NEST_Y - 8, nest: nx, drift: rand(-14, 14), ph: rand(0, 6), sp: g.p.speed * rand(0.9, 1.1), state: 'walk', t: 0, wait: 0.6, lx: 0, ly: 0 };
-      o.lx = o.x; o.ly = o.y;
-      if (t) Object.assign(t, o, { wait: 1.2 }); else g.turtles.push(o);
-      burst(o.x, o.y, 6, { colors: ['#fffaf0', '#e2bc78'] });
+    piece(g) {
+      const key = g.plan[g.i], [shape, , , , , where] = SC_PIECE[key];
+      Object.assign(g, { key, shape, step: 'mold', wet: rand(0, 0.14), wrongMold: 0, fails: 0, shake: {} });
+      g.say = `Next, the ${where}. Which mold makes a ${SHAPE_INFO[shape].name}?`;
+      if (g.phase === 'play') speak(g.say);
     },
-    update(g, dt) {
-      const p = g.p;
-      g.timeLeft -= dt;
-      // move Captain Pinch
-      const bx = g.x, by = g.y, sp = 360;
-      const mx = (goRight() ? 1 : 0) - (goLeft() ? 1 : 0), my = (goDown() ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
-      if (mx || my) { const l = Math.hypot(mx, my); g.x += mx / l * sp * dt; g.y += my / l * sp * dt; }
-      else if (pointerMoved(g)) {
-        const dx = pointer.x - g.x, dy = clamp(pointer.y, TG_TOP, TG_BOT) - g.y, d = Math.hypot(dx, dy);
-        if (d > 2) { const st = Math.min(d, sp * dt); g.x += dx / d * st; g.y += dy / d * st; }
+    act(g, a) {
+      const [lo, hi] = [g.lo, g.hi];
+      if (a === 'water') {
+        g.wet += rand(0.1, 0.15); for (let i = 0; i < 8; i++) g.drops.push({ x: 120 + rand(-30, 30), y: 230 + rand(-10, 10), vy: rand(60, 140), life: 0.6 });
+        tone(rand(500, 700), 0.12, 'sine', 0.06, 0, 300); g.sq = null;
+      } else if (a === 'sand') {
+        g.wet = Math.max(0, g.wet - rand(0.1, 0.14)); for (let i = 0; i < 10; i++) g.grains.push({ x: 120 + rand(-26, 26), y: 220 + rand(-6, 6), vy: rand(80, 150), life: 0.5 });
+        tone(300, 0.15, 'triangle', 0.04, 0, 200); g.sq = null;
+      } else if (a === 'squeeze') {
+        const res = g.wet < lo ? 'dry' : g.wet > hi ? 'wet' : 'ok';
+        g.sq = { t: 0, res };
+        SFX.pop();
+        speak({ dry: 'It crumbles! Too dry. Dry sand has no water to stick the grains together. Add some water.',
+          wet: 'It drips! Too wet. Too much water makes sand runny, like mud. Add some dry sand.',
+          ok: 'It holds a ball! Just right. A little water makes tiny bridges that glue the grains together. Flip it!' }[res]);
+      } else if (a === 'flip') {
+        g.flip = { t: 0, res: g.wet < lo ? 'dry' : g.wet > hi ? 'wet' : 'ok' }; g.step = 'flip'; g.sq = null;
+        SFX.jump();
       }
-      g.x = clamp(g.x, 40, W - 40); g.y = clamp(g.y, TG_TOP + 6, TG_BOT);
-      const moved = Math.hypot(g.x - bx, g.y - by);
-      if (moved > 0.3) {
-        g.walk += dt; if (Math.abs(g.x - bx) > 0.3) g.facing = Math.sign(g.x - bx);
-        if ((g.puffT -= dt) <= 0) { g.puffT = 0.08; g.puffs.push({ x: g.x + rand(-20, 20), y: g.y + 14, r: rand(4, 8), life: 0.5 }); }
+    },
+    update(g, dt, id) {
+      for (const p of [...g.drops, ...g.grains]) { p.y += p.vy * dt; p.vy += 500 * dt; p.life -= dt; }
+      g.drops = g.drops.filter(p => p.life > 0); g.grains = g.grains.filter(p => p.life > 0);
+      for (const k in g.shake) if ((g.shake[k] -= dt) <= 0) delete g.shake[k];
+      if (g.sq) g.sq.t += dt;
+      if (g.fx) { g.fx.t += dt; if (g.fx.t > 1.6) g.fx = null; }
+      g.progress = `🏰 Part ${Math.min(g.i + 1, g.rounds)} of ${g.rounds}`;
+      if (g.step === 'end') {
+        g.endT += dt;
+        if (g.endT > 3.2) { g.score = g.total / g.rounds; g.done = true; }
+        return;
       }
-      for (const f of g.puffs) { f.life -= dt; f.r += dt * 14; f.y -= dt * 10; }
-      g.puffs = g.puffs.filter(f => f.life > 0);
-      for (const sp2 of g.splashes) sp2.t += dt;
-      g.splashes = g.splashes.filter(s2 => s2.t < 1);
-      for (const tr of g.tracks) tr.age += dt;
-      g.tracks = g.tracks.filter(tr => tr.age < 7);
-      // hatch
-      if (g.hatched < p.n && (g.hatchT -= dt) <= 0) { g.hatchT = p.every; g.hatched++; this.hatch(g); tone(660, 0.08, 'sine', 0.06); tone(880, 0.08, 'sine', 0.06, 0.08); }
-      // turtles crawl to the sea, leaving flipper tracks
-      for (const t of g.turtles) {
-        t.t += dt;
-        if (t.state === 'walk') {
-          if (t.wait > 0) { t.wait -= dt; continue; }
-          t.y -= t.sp * dt; t.x += Math.sin(t.t * 1.6 + t.ph) * 10 * dt + t.drift * 0.15 * dt;
-          if (Math.hypot(t.x - t.lx, t.y - t.ly) > 7) { g.tracks.push({ x: t.x, y: t.y + 10, age: 0 }); t.lx = t.x; t.ly = t.y; }
-          if (t.y < TG_SEA) {
-            t.state = 'safe'; t.t = 0; g.saved++; g.points += t.scared ? 0.35 : 1; SFX.pop();
-            g.splashes.push({ x: t.x, y: TG_SEA, t: 0 });
-            burst(t.x, TG_SEA, 10, { colors: ['#ffffff', '#9ae8f0'] }); floatText(t.x, TG_SEA - 20, 'Safe!', '#fff');
+      if (g.step === 'flip') {
+        const f = g.flip; f.t += dt;
+        if (f.t > 0.55 && !f.thump) { f.thump = true; tone(110, 0.15, 'triangle', 0.12); }
+        if (f.t > 1.3 && !f.shown) {
+          f.shown = true;
+          if (f.res === 'ok') {
+            const score = Math.max(0.1, 1 - 0.25 * g.wrongMold - 0.3 * g.fails);
+            g.total += score; g.built.push(g.key); g.score = g.total / g.rounds;
+            SFX.sparkle(); const [, x, b, , h] = SC_PIECE[g.key]; burst(x, b - h / 2, 18, { colors: ['#fff6a8', '#ffd0a0', '#ffffff'] });
+            speak(`Ta da! A ${SHAPE_INFO[g.shape].name}! ${SHAPE_INFO[g.shape].fact}`);
+          } else {
+            g.fails++; SFX.miss();
+            g.fx = { t: 0, res: f.res, key: g.key };
+            if (g.fails >= 3) {
+              g.wet = (g.lo + g.hi) / 2;
+              speak("Arr, let me help ye, matey. I've mixed it just right. Flip it again!");
+            } else speak(f.res === 'dry' ? 'Oh no, it crumbled! The sand was too dry to stick. Add water, and try a squeeze test.' : 'Oh no, it slumped! The sand was too wet and runny. Add some dry sand.');
           }
         }
+        if (f.t > (f.res === 'ok' ? 3.4 : 1.8)) {
+          g.flip = null;
+          if (f.res !== 'ok') { g.step = 'mix'; return; }
+          g.i++;
+          if (g.i >= g.rounds) { g.step = 'end'; g.endT = 0; SFX.fanfare(); speak('Ahoy, what a castle! And here comes the tide to fill yer moat!'); return; }
+          this.piece(g);
+        }
+        return;
       }
-      // gulls pick a turtle that's still well up the beach, and they'd rather keep away from the Captain
-      if ((g.gullT -= dt) <= 0 && g.gulls.filter(q => q.state === 'hunt').length < p.gulls) {
-        const free = g.turtles.filter(t => t.state === 'walk' && t.wait <= 0 && t.y > TG_SEA + 40 && !g.gulls.some(q => q.target === t));
-        if (free.length) {
-          const far = free.filter(t => Math.hypot(t.x - g.x, t.y - g.y) > 160), tg = pick(far.length ? far : free), dir = tg.x < W / 2 ? 1 : -1;
-          g.gulls.push({ target: tg, state: 'hunt', t: 0, warn: p.warn, x: tg.x - dir * 300, y: 90, dir });
-          g.gullT = p.gap;
-          SFX.blip(); tone(1300, 0.12, 'sawtooth', 0.03, 0, 900);
-          if (g.firstGull) { g.firstGull = false; speak('A gull! Run to its shadow!'); }
-        } else g.gullT = 0.4;
+      if (g.step === 'mold') {
+        const k = id && id.startsWith('sc:') ? id.slice(3) : null;
+        if (!k) return;
+        if (k === g.shape) {
+          g.step = 'mix'; SFX.hit();
+          g.say = 'Now make the sand just right. Add water or dry sand, then squeeze it to test!';
+          speak(`Yes, the ${SHAPE_INFO[k].name} mold! ${g.i === 0 ? 'Now make the sand just right. Add water, then do a squeeze test!' : 'Now mix the sand just right!'}`);
+        } else {
+          g.wrongMold++; g.shake[k] = 0.4; SFX.miss();
+          speak(`That's a ${SHAPE_INFO[k].name}. ${SHAPE_INFO[k].fact} We need a ${SHAPE_INFO[g.shape].name}!`);
+        }
+        return;
       }
-      for (const q of g.gulls) {
-        q.t += dt;
-        const tg = q.target;
-        if (q.state === 'hunt') {
-          if (tg.state !== 'walk') { q.state = 'leave'; continue; }
-          const k = q.t / q.warn;
-          q.x = lerp(q.x, tg.x - q.dir * 40 * (1 - k), Math.min(1, dt * 3)); q.y = lerp(90, tg.y - 70, k * k);
-          if (Math.hypot(g.x - tg.x, g.y - tg.y) < TG_REACH) {
-            q.state = 'shoo'; q.t = 0; g.shoos++; g.snapT = 0.4; SFX.hit(); tone(300, 0.1, 'square', 0.04, 0.05);
-            floatText(tg.x, tg.y - 50, pick(['Shoo!', 'Avast!', 'Away with ye!']), '#ffd23a', false, 22); burst(tg.x, tg.y - 30, 8, { colors: ['#ffffff', '#c8d0e0'] });
-          } else if (k >= 1) {
-            q.state = 'grab'; q.t = 0; tg.state = 'carried'; tg.scared = true; g.snatched++; SFX.miss();
-            floatText(tg.x, tg.y - 50, 'Squawk!', '#ffb0b0', false, 20);
-          }
-        } else if (q.state === 'grab') {
-          // the gull lifts the turtle and plops it back at its nest (it'll have to try again)
-          const k = Math.min(1, q.t / 1.4);
-          q.x = lerp(tg.x, tg.nest, k); q.y = lerp(tg.y - 30, TG_NEST_Y - 60, k) - Math.sin(k * Math.PI) * 120;
-          if (k >= 1) { this.hatch(g, tg); q.state = 'leave'; q.t = 0; }
-        } else { q.x += q.dir * 260 * dt; q.y -= 160 * dt; }
-      }
-      g.snapT = Math.max(0, (g.snapT || 0) - dt);
-      g.gulls = g.gulls.filter(q => (q.state !== 'leave' && q.state !== 'shoo') || q.y > -60);
-      g.turtles = g.turtles.filter(t => t.state !== 'safe' || t.t < 1.2);
-      g.progress = `🐢 Safe: ${g.saved} of ${p.n}`;
-      g.score = g.points / p.n; // a turtle that got carried back only counts a little, but it still gets another go
-      if (g.saved >= p.n) { g.done = true; speak('Every baby turtle made it to the sea! Arr, well done!'); }
-      else if (g.timeLeft <= 0) { g.timeLeft = 0; g.done = true; }
+      if (id === 'sc_water' || id === 'sc_sand' || id === 'sc_squeeze' || id === 'sc_flip') this.act(g, id.slice(3));
     },
     draw(g) {
-      still('b2_tg_sand', tgSand);
-      // the sea washes in and out over the wet sand
-      const edge = x => TG_SEA + 2 + Math.sin(S.t * 1.2 + x * 0.004) * 7 + Math.sin(x * 0.05 + S.t * 2.2) * 2;
-      ctx.fillStyle = 'rgba(110,215,230,.55)'; ctx.beginPath(); ctx.moveTo(0, 388);
-      for (let x = 0; x <= W; x += 10) ctx.lineTo(x, edge(x));
-      ctx.lineTo(W, 388); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 4; ctx.beginPath();
-      for (let x = 0; x <= W; x += 10) ctx.lineTo(x, edge(x));
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.8)';
-      for (let i = 0; i < 30; i++) { const x = (i * 33 + Math.sin(i) * 9) % W; circle(x, edge(x) + 2 + (i % 3), 1.5 + (i % 2)); }
-      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; ctx.beginPath();
-      for (let x = 0; x <= W; x += 10) ctx.lineTo(x, edge(x) - 7 + Math.sin(x * 0.08 - S.t * 3) * 1.5);
-      ctx.stroke();
-      for (const s2 of g.splashes) { ctx.strokeStyle = `rgba(255,255,255,${1 - s2.t})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(s2.x, s2.y, 10 + s2.t * 40, 3 + s2.t * 10, 0, 0, TAU); ctx.stroke(); }
-      // flipper tracks in the sand
-      for (const tr of g.tracks) {
-        ctx.fillStyle = `rgba(150,100,50,${0.35 * (1 - tr.age / 7)})`;
-        ellipse(tr.x - 8, tr.y, 3.5, 1.6, -0.4); ellipse(tr.x + 8, tr.y, 3.5, 1.6, 0.4);
+      const [lo, hi] = [g.lo, g.hi];
+      drawCritter('Captain Pinch', 878, GY + 44, 0.56, -1);
+      // the sand mound and moat the castle sits on
+      const moat = g.step === 'end' ? clamp(g.endT / 1.6, 0, 1) : 0;
+      inkEllipse(SC_X, SC_GY + 6, 250, 34, 0, '#e8c888', 1.6);
+      ctx.fillStyle = '#c9a56c'; ctx.beginPath(); ctx.ellipse(SC_X, SC_GY + 8, 212, 24, 0, 0, TAU); ctx.ellipse(SC_X, SC_GY + 4, 182, 15, 0, 0, TAU); ctx.fill('evenodd');
+      if (moat > 0) {
+        ctx.fillStyle = `rgba(80,190,230,${0.85 * moat})`; ctx.beginPath(); ctx.ellipse(SC_X, SC_GY + 8, 210, 23, 0, 0, TAU); ctx.ellipse(SC_X, SC_GY + 4, 184, 16, 0, 0, TAU); ctx.fill('evenodd');
+        ctx.strokeStyle = `rgba(255,255,255,${0.8 * moat})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(SC_X, SC_GY + 14 + Math.sin(S.t * 3) * 1.5, 198, 18, 0, 0.3, Math.PI - 0.3); ctx.stroke();
       }
-      // gull shadows, shaped like a bird, grow under the hunted turtles
-      for (const q of g.gulls) if (q.state === 'hunt') {
-        const t = q.target, k = clamp(q.t / q.warn, 0, 1), sz = 0.5 + k * 0.8, flap = Math.sin(S.t * 9) * 0.3;
-        ctx.save(); ctx.translate(t.x, t.y + 6); ctx.scale(sz, sz * 0.45);
-        ctx.fillStyle = `rgba(40,20,60,${0.15 + k * 0.3})`;
-        ellipse(0, 0, 26, 12); ellipse(-30, -4, 32, 9 + flap * 6, 0.25); ellipse(30, -4, 32, 9 + flap * 6, -0.25);
-        ctx.restore();
-        ctx.strokeStyle = k > 0.7 ? '#ff4a4a' : '#ff9a3a'; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.ellipse(t.x, t.y + 6, 56, 22, 0, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - k)); ctx.stroke();
-        if (k > 0.6) outlined('!', t.x + 34, t.y - 34 + Math.sin(S.t * 12) * 2, 26, '#ff4a4a');
-      }
-      for (const f of g.puffs) { ctx.fillStyle = `rgba(240,215,160,${f.life * 1.2})`; circle(f.x, f.y, f.r); }
-      const things = [...g.turtles.filter(t => t.state !== 'carried').map(t => ({ y: t.y, t })), { y: g.y + 6, pinch: true }].sort((a, b) => a.y - b.y);
-      for (const o of things) {
-        if (o.pinch) {
-          const near = g.gulls.some(q => q.state === 'hunt' && Math.hypot(g.x - q.target.x, g.y - q.target.y) < TG_REACH * 1.8);
-          ctx.save(); ctx.lineDashOffset = -S.t * 20;
-          ctx.strokeStyle = near ? 'rgba(255,220,90,.9)' : 'rgba(255,255,255,.6)'; ctx.lineWidth = near ? 3 : 2; ctx.setLineDash([8, 7]);
-          ctx.beginPath(); ctx.ellipse(g.x, g.y + 6, TG_REACH, TG_REACH * 0.4, 0, 0, TAU); ctx.stroke(); ctx.restore();
-          const hop = g.snapT > 0 ? Math.sin(g.snapT / 0.4 * Math.PI) * 12 : 0;
-          drawCritter('Captain Pinch', g.x, g.y + 10 - hop, 0.5 + Math.sin(g.walk * 14) * 0.01, g.facing);
-          if (g.snapT > 0) for (const d of [-1, 1]) star(g.x + d * 34, g.y - 34 - hop, 10 * (g.snapT / 0.4) + 4, '#fff6a8', 4);
-        } else {
-          const t = o.t;
-          if (t.state === 'safe') { ctx.globalAlpha = clamp(1 - t.t, 0, 1); hatchling(t.x, t.y - t.t * 10, 1.3, S.t); ctx.globalAlpha = 1; continue; }
-          const pop = t.wait > 0 ? 1.3 * (1 - t.wait / 1.4) : 1.3;
-          hatchling(t.x, t.y, Math.max(0.4, pop), t.wait > 0 ? 0 : t.t);
+      ctx.fillStyle = '#ecd096'; ellipse(SC_X, SC_GY + 3, 180, 14);
+      // castle: built pieces, the one being made, and its ghost outline from the plan
+      const cur = g.step !== 'end' ? g.key : null;
+      for (const key of ['base', 'towerL', 'towerR', 'pyr', 'coneL', 'coneR']) {
+        if (g.built.includes(key)) {
+          const pop = g.flip && g.flip.shown && g.flip.res === 'ok' && key === g.key ? 1 + Math.sin(Math.min(1, (g.flip.t - 1.3) * 3) * Math.PI) * 0.06 : 1;
+          sandPiece(key, pop);
+        } else if (key === cur) {
+          ctx.save(); ctx.globalAlpha = 0.5 + Math.sin(S.t * 4) * 0.2; ctx.setLineDash([8, 6]);
+          const [shape, x, b, w, h] = SC_PIECE[key]; solid(shape, x, b, w, h, null, { line: '#ffffff', lw: 3 });
+          ctx.restore();
         }
       }
-      for (const q of g.gulls) {
-        if (q.state === 'grab') hatchling(q.x, q.y + 28, 1.0, S.t * 2);
-        gull(q.x, q.y, 0.9, S.t + q.t, q.dir, q.state === 'hunt' && q.t / q.warn > 0.7 ? 1 : 0, q.state === 'grab' || (q.state === 'hunt' && q.t / q.warn > 0.6));
+      // failed flips: a crumbly heap or a runny puddle
+      if (g.fx) {
+        const [, x, b, w] = SC_PIECE[g.fx.key], k = Math.min(1, g.fx.t * 2);
+        ctx.globalAlpha = clamp(2 - g.fx.t * 1.3, 0, 1);
+        if (g.fx.res === 'dry') {
+          inkEllipse(x, b - 10 * (1 - k * 0.4), w * 0.45, 16, 0, '#f2dca0', 1.4);
+          const R = rng(3); for (let i = 0; i < 18; i++) inkCircle(x + (R() - 0.5) * w * (0.6 + k * 0.6), b - 4 - R() * 26 * (1 - k * 0.6), 3 + R() * 3, '#f2dca0', 0.8);
+        } else {
+          inkEllipse(x, b - 2, w * (0.4 + k * 0.4), 9 + 6 * (1 - k), 0, '#a8844e', 1.4);
+          ctx.fillStyle = 'rgba(140,200,230,.6)'; ellipse(x + 8, b - 4, w * 0.3 * k, 4);
+        }
+        ctx.globalAlpha = 1;
+      }
+      // flipping: the mold flies over, thumps down, and lifts away
+      if (g.flip) {
+        const f = g.flip, [, x, b, w, h] = SC_PIECE[g.key];
+        const s = { cube: w / 74, cylinder: w / 54, cone: w / 64, pyramid: w / 70 }[g.shape];
+        if (f.t < 0.55) { const k = f.t / 0.55; mold(g.shape, lerp(120, x, k), lerp(300, b, k) - Math.sin(k * Math.PI) * 120, lerp(1, s, k)); }
+        else if (f.t < 0.9) { mold(g.shape, x, b + Math.sin((f.t - 0.55) * 30) * 2, s); }
+        else if (f.t < 1.3) { ctx.globalAlpha = 1 - (f.t - 0.9) / 0.4; mold(g.shape, x, b - (f.t - 0.9) * 260, s); ctx.globalAlpha = 1; }
+      }
+      // the mixing bucket, its sand showing how wet it is
+      const bx = 120, by = 404;
+      ink(P2(`M${bx - 58},${by - 110} L${bx + 58},${by - 110} L${bx + 46},${by} L${bx - 46},${by} Z`), '#ff8ac0', 2.4);
+      ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(bx - 46, by - 102, 10, 92);
+      ctx.fillStyle = '#e05a9a'; ctx.fillRect(bx - 56, by - 92, 112, 8);
+      ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(bx, by - 104, 62, Math.PI + 0.25, -0.25); ctx.stroke();
+      ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2.5; ctx.stroke();
+      inkEllipse(bx, by - 110, 58, 14, 0, sandCol(g.wet), 2);
+      if (g.wet < lo) { ctx.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 9; i++) circle(bx - 44 + i * 11, by - 112 + Math.sin(i * 2) * 5, 1.4); }
+      if (g.wet > hi) { ctx.fillStyle = `rgba(140,210,240,${0.4 + Math.sin(S.t * 3) * 0.1})`; ellipse(bx + 8, by - 110, 34, 7); ctx.fillStyle = 'rgba(255,255,255,.7)'; ellipse(bx, by - 113, 12, 2); }
+      if (g.tier === 1) text(g.wet < lo ? 'dry' : g.wet > hi ? 'soggy' : 'damp', bx, by - 56, 16, '#fff', 'center', 800); // later tiers: use the squeeze test
+      // a watering can and a scoop of dry sand beside it
+      ink(P2(`M${bx + 70},${by - 40} L${bx + 112},${by - 40} L${bx + 108},${by} L${bx + 74},${by} Z`), '#4fb0f0', 2);
+      ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(bx + 76, by - 30); ctx.lineTo(bx + 50, by - 58); ctx.stroke(); ctx.strokeStyle = '#4fb0f0'; ctx.lineWidth = 3; ctx.stroke();
+      inkCircle(bx + 48, by - 60, 5, '#4fb0f0', 1.2);
+      for (const p of g.drops) { ctx.fillStyle = 'rgba(90,180,240,.9)'; ellipse(p.x, p.y, 2.5, 4); }
+      for (const p of g.grains) { ctx.fillStyle = '#e8c070'; circle(p.x, p.y, 2.2); }
+      // squeeze test result, in Aubrey's hand
+      if (g.sq) {
+        const k = Math.min(1, g.sq.t * 3), y = 196;
+        panel(28, 112, 186, 128, 18);
+        hand(110, y + 12, 1, 1);
+        if (g.sq.res === 'ok') { inkCircle(110, y - 6, 22 * k, sandCol(g.wet), 1.6); ctx.fillStyle = 'rgba(255,255,255,.4)'; circle(102, y - 14, 5 * k); }
+        else if (g.sq.res === 'dry') { const R = rng(9); for (let i = 0; i < 14; i++) inkCircle(80 + R() * 60, y - 2 + R() * 10 + k * R() * 30, 3, sandCol(g.wet), 0.8); }
+        else { inkEllipse(110, y + 2, 30 * k, 9, 0, sandCol(g.wet), 1.4); ctx.fillStyle = 'rgba(90,180,240,.85)'; for (let i = 0; i < 3; i++) ellipse(90 + i * 20, y + 34 + ((g.sq.t * 60 + i * 13) % 30), 3, 5); }
+        text({ ok: 'Holds a ball!', dry: 'Crumbles!', wet: 'Drips!' }[g.sq.res], 120, 128, 17, { ok: '#3f9a5a', dry: '#c0703a', wet: '#3a7ac0' }[g.sq.res], 'center', 800);
+      }
+      // Pinch's plan
+      ctx.save(); ctx.translate(700, 66);
+      ink(P2('M0,0 L244,0 L244,258 L0,258 Z'), '#3f7fd0', 2.2);
+      ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1;
+      for (let x = 12; x < 244; x += 16) { ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x, 256); ctx.stroke(); }
+      for (let y = 12; y < 258; y += 16) { ctx.beginPath(); ctx.moveTo(2, y); ctx.lineTo(242, y); ctx.stroke(); }
+      ctx.restore();
+      text("Captain's Plan", 822, 84, 15, '#ffffff', 'center', 800);
+      ctx.save(); ctx.translate(822, 300); ctx.scale(0.5, 0.5); ctx.translate(-SC_X, -SC_GY);
+      for (const key of g.plan) {
+        const [shape, x, b, w, h] = SC_PIECE[key], now = key === cur;
+        const done = g.built.includes(key);
+        if (done) { ctx.globalAlpha = 0.35; solid(shape, x, b, w, h, '#ffffff', { lw: 1 }); ctx.globalAlpha = 1; }
+        solid(shape, x, b, w, h, null, { line: now ? '#ffe45a' : '#ffffff', lw: now ? 7 + Math.sin(S.t * 6) * 2 : 4 });
+      }
+      ctx.restore();
+      if (cur) text(SHAPE_INFO[g.shape].name.toUpperCase(), 822, 314, 17, '#ffe45a', 'center', 800);
+      // controls
+      if (g.step === 'mold') {
+        const n = g.molds.length, bw = 150, gap = 14, x0 = 400 - (n * bw + (n - 1) * gap) / 2 + 40;
+        g.molds.forEach((m, i) => {
+          const x = x0 + i * (bw + gap) + (g.shake[m] ? Math.sin(g.shake[m] * 50) * 6 : 0), hint = g.wrongMold >= 2 && m === g.shape;
+          if (hint) { ctx.fillStyle = `rgba(255,240,140,${0.5 + Math.sin(S.t * 6) * 0.3})`; rrect(x - 6, 434, bw + 12, 104, 20, ctx.fillStyle); }
+          button('sc:' + m, x, 440, bw, 92, '', { color: '#fff6e8', key: String(i + 1) });
+          mold(m, x + bw / 2 + 4, 506, 0.9);
+          text(SHAPE_INFO[m].name, x + bw / 2, 522, 15, '#5a2a6e', 'center', 800);
+        });
+      } else if (g.step === 'mix') {
+        const btns = [['sc_water', 'Water', '💧', '#4fa8f0'], ['sc_sand', 'Dry sand', '🏖️', '#d8a050'], ['sc_squeeze', 'Squeeze', '✊', '#9a6ae0'], ['sc_flip', 'Flip it!', '🪣', '#3fbf6a']];
+        btns.forEach(([idb, label, icon, col], i) => button(idb, 34 + i * 182, 450, 170, 74, label, { icon, color: col, size: 19, key: String(i + 1) }));
+      }
+      if (g.step === 'end') {
+        const k = clamp((g.endT - 1.2) * 2, 0, 1);
+        const top = g.built.includes('pyr') ? SC_GY - 184 : SC_GY - 106, px = g.built.includes('pyr') ? SC_X + 5 : SC_X - 6;
+        if (k > 0) { ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, top - 60 * k); ctx.stroke(); ink(P2(`M${px},${top - 60 * k} L${px + 40 * k},${top - 50 * k + Math.sin(S.t * 5) * 3} L${px},${top - 38 * k} Z`), '#3a2a4a', 1.4); ctx.fillStyle = '#fff'; circle(px + 14 * k, top - 49 * k, 4 * k); }
+        outlined('Ahoy, castle!', SC_X, 120, 34, '#ffd23a');
       }
     },
   };
 
   restage('beach', {
-    games: [['turtleguard', 'shell', {}], ['pinchtreasuremap', 'ribbon', {}]],
+    games: [['sandcastlelab', 'shell', {}], ['pinchtreasuremap', 'ribbon', {}]],
     intro: [
-      'N:Ahoy, matey! Quick, look! The baby sea turtles be hatchin\'!',
-      'N:They need to crawl down to the sea, but those greedy gulls want a snack.',
-      'N:Steer me onto the gull shadows, and I\'ll snap me claws and shoo them away! There be shells in it for ye!',
-      'A:determined:Aye aye, Captain! No gull gets past us!',
+      'N:Ahoy, matey! Today we build the finest sandcastle on the seven seas!',
+      "N:I drew the plan meself: cubes, cylinders, cones, and maybe a pyramid.",
+      "N:But mind the sand! Too dry and it crumbles, too wet and it slumps. Squeeze it to test, and there be shells in it for ye!",
+      'A:excited:A sandcastle lab? Aye aye, Captain!',
     ],
     mid: [
-      'N:Every little turtle is swimmin\' free! Ye be a fine first mate.',
+      "N:What a castle! Even the tide came to see it. Ye be a fine first mate.",
       'N:Now, long ago I buried me treasure... but I only remember the clues on me old map!',
       'N:Follow the arrows and count the steps, and we\'ll dig it up together!',
       'A:excited:A real treasure map? Let\'s dig!',
