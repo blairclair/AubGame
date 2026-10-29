@@ -507,20 +507,21 @@ MG.maze = {
       mzBlossom(x, y + bob, r, MZ_PETAL_COLS[p.ch] || MZ_PETAL_COLS['🌸'], S.t * 0.6 + p.x);
     }
     // Aubrey, with a sunny spot under her feet so she's easy to find
-    const [ax, ay] = at(g.px, g.py);
-    const sg = ctx.createRadialGradient(ax, ay + cell * 0.36, 1, ax, ay + cell * 0.36, cell * 0.5);
+    // feet sit on the gravel in the middle of the corridor: lower than this and they land on the hedge row below
+    const [ax, ay] = at(g.px, g.py), foot = cell * 0.2;
+    const sg = ctx.createRadialGradient(ax, ay + foot, 1, ax, ay + foot, cell * 0.42);
     sg.addColorStop(0, 'rgba(255,250,200,.9)'); sg.addColorStop(1, 'rgba(255,250,200,0)');
-    ctx.fillStyle = sg; ellipse(ax, ay + cell * 0.36, cell * 0.5, cell * 0.22);
-    ctx.fillStyle = 'rgba(60,40,80,.25)'; ellipse(ax, ay + cell * 0.38, cell * 0.2, cell * 0.06);
+    ctx.fillStyle = sg; ellipse(ax, ay + foot, cell * 0.42, cell * 0.18);
+    ctx.fillStyle = 'rgba(60,40,80,.25)'; ellipse(ax, ay + foot, cell * 0.18, cell * 0.06);
     const frame = g.moving ? `run${1 + (Math.floor(g.t * 11) % 5)}` : 'idle_front';
     const m = g.mon, [mx, my] = at(m.px, m.py), mStep = m.wait <= 0 && (m.px !== m.tx || m.py !== m.ty);
-    const drawMon = () => mzMonster(mx, my + cell * 0.38, cell / 52, m.facing, mStep ? g.t * 7 : 0, m.munch, g.t);
+    const drawMon = () => mzMonster(mx, my + foot, cell / 52, m.facing, mStep ? g.t * 7 : 0, m.munch, g.t);
     if (my <= ay) drawMon();
     // blink while bump-proof after thawing
-    if (!(g.immune > 0 && Math.sin(g.t * 30) > 0.3)) drawAubrey(ax, ay + cell * 0.38, g.frozen ? 'idle_front' : frame, g.facing, 0, cell * 1.12 / IMG.idle_front.height);
+    if (!(g.immune > 0 && Math.sin(g.t * 30) > 0.3)) drawAubrey(ax, ay + foot, g.frozen ? 'idle_front' : frame, g.facing, 0, cell * 0.95 / IMG.idle_front.height);
     if (g.frozen) {
       // an ice block with swirling snowflakes and a big countdown
-      const h = cell * 1.25, w = cell * 0.78, top = ay + cell * 0.42 - h;
+      const h = cell * 1.08, w = cell * 0.7, top = ay + foot + cell * 0.04 - h;
       ctx.globalAlpha = 0.55; rrect(ax - w / 2, top, w, h, 10, '#bfe9ff', OL, 2.5); ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(ax - w * 0.36, top + 6, w * 0.1, h * 0.55); ctx.fillRect(ax - w * 0.2, top + 6, w * 0.05, h * 0.3);
       for (let i = 0; i < 4; i++) {
