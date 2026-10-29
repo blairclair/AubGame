@@ -147,6 +147,7 @@ function drawMats(x, y, w, rows = 1) {
 const TIER_COLORS = { 0: '#b9aac4', 1: '#5fb87a', 2: '#4fa8e0', 3: '#9a6ae0' };
 
 // --- the Workshop: craft at night, or just peek at the plans during the day ---------------------
+const WS_UNI = [168, 0.9]; // the unicorn's x and scale beside the crafting panel
 SCENES.style = {
   enter({ mode = 'peek', onDone } = {}) {
     Object.assign(this, { mode, onDone, tab: this.tab || 'mane', shake: 0, joy: 0 });
@@ -168,8 +169,8 @@ SCENES.style = {
     } else if (canAfford(it.cost) && this.mode === 'craft') {
       pay(it.cost); S.owned[it.id] = true; S.equip[it.slot] = it.id;
       SFX.sparkle(); this.joy = 1.2;
-      burst(300, 300, 30);
-      floatText(300, 160, `Made: ${it.name}! +${it.pts} points`, '#fff6a8', false, 24);
+      burst(WS_UNI[0], 300, 30);
+      floatText(WS_UNI[0], 160, `Made: ${it.name}! +${it.pts} points`, '#fff6a8', false, 24);
       speak(`You made the ${it.name}!`);
     } else if (canAfford(it.cost)) {
       SFX.click();
@@ -183,7 +184,8 @@ SCENES.style = {
   draw() {
     buttons = [];
     drawShedInterior(0.15);
-    drawUnicorn(300, 492, 1.15, uniLook(), { facing: 1, mood: this.joy > 0 ? 'joy' : undefined, glow: 0.5 });
+    // she stands in the open space left of the crafting panel (it starts at x 340), so none of her is hidden
+    drawUnicorn(WS_UNI[0], 428, WS_UNI[1], uniLook(), { facing: 1, mood: this.joy > 0 ? 'joy' : undefined, glow: 0.5 });
     const craft = this.mode === 'craft';
     darkPanel(12, 12, 316, 46, 23);
     emoji(craft ? '🔨' : '📖', 36, 35, 22);
