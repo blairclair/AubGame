@@ -1417,7 +1417,7 @@
               }
               SFX.pop(); tone(660, 0.15, 'sine', 0.06, 0.05);
               if (g.fill.every(row => row.every(v => v >= 0))) {
-                g.st = 'yay'; g.stT = 0; SFX.fanfare(); burst(CB.x0 + 180, CB.y0 + 180, 40);
+                g.st = 'yay'; g.yayAt = g.stT; SFX.fanfare(); burst(CB.x0 + 180, CB.y0 + 180, 40); // keep stT running: the fill animation is timed by it
                 g.total += Math.max(0.3, 1 - 0.07 * g.mist);
                 speak(`Beautiful! You made a ${g.pic.name}!`);
               }
@@ -1427,7 +1427,7 @@
             }
           }
         }
-      } else if (g.st === 'yay' && g.stT > 2.4) { g.round++; if (g.round >= g.pics.length) g.done = true; else this.next(g); }
+      } else if (g.st === 'yay' && g.stT - g.yayAt > 2.4) { g.round++; if (g.round >= g.pics.length) g.done = true; else this.next(g); }
       g.progress = `Picture ${Math.min(g.round + 1, g.pics.length)} of ${g.pics.length}`;
       g.score = g.total / g.pics.length;
     },
@@ -1447,7 +1447,7 @@
       }
       if (g.st === 'yay') {
         ctx.lineWidth = 4; ctx.strokeStyle = '#ffd83a'; ctx.strokeRect(CB.x0 - 4, CB.y0 - 4, 9 * CB.cell + 8, 9 * CB.cell + 8);
-        outlined(`A ${g.pic.name}!`, CB.x0 + 180, CB.y0 + 180, 50, '#fff6a8');
+        outlined(`A ${g.pic.name}!`, CB.x0 + 180, CB.y0 + 9 * CB.cell - 26, 46, '#fff6a8'); // along the bottom so it doesn't hide the picture's face
       }
       // the colour key
       panel(520, 66, 380, 380, 22);
