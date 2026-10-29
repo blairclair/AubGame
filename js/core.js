@@ -37,7 +37,28 @@ function loadImages() {
     im.onload = () => { IMG[key] = im; resolve(); };
     im.onerror = () => reject(new Error(`Couldn't load ${src}`));
     im.src = src;
-  })));
+  }))).then(() => { for (const k in AUB_SMILES) smileSprite(k, AUB_SMILES[k]); });
+}
+// Aubrey looks a bit serious in her standing photo, so her smiling portrait is blended over its face once it
+// loads: scaled (sx, sy) and turned (rot) so the portrait's eye-line point
+// (fx, fy) lands on the sprite's (bx, by), inside a soft oval (cx, cy, rx, ry). Every game then draws her smiling.
+const AUB_SMILES = {
+  idle_front: { sx: 0.4, sy: 0.46, fx: 48, fy: 60, bx: 49.5, by: 25, cx: 49.5, cy: 34, rx: 11.5, ry: 14.5, edge: 0.55, rot: 0 },
+};
+function smileSprite(key, o) {
+  const im = IMG[key], f = IMG.face_happy;
+  if (!im || !f) return;
+  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+  const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+  const t = document.createElement('canvas'); t.width = im.width; t.height = im.height;
+  const tx = t.getContext('2d');
+  tx.translate(o.bx, o.by); tx.rotate(o.rot); tx.scale(o.sx, o.sy); tx.drawImage(f, -o.fx, -o.fy);
+  tx.setTransform(1, 0, 0, 1, 0, 0); tx.globalCompositeOperation = 'destination-in';
+  tx.translate(o.cx, o.cy); tx.rotate(o.rot); tx.scale(o.rx, o.ry);
+  const g = tx.createRadialGradient(0, 0, 0, 0, 0, 1); g.addColorStop(0, '#000'); g.addColorStop(o.edge, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  tx.fillStyle = g; tx.fillRect(-1, -1, 2, 2);
+  x.drawImage(t, 0, 0);
+  IMG[key + '_plain'] = im; IMG[key] = c;
 }
 
 // ---------------------------------------------------------------------------

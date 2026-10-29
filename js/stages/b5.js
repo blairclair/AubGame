@@ -790,7 +790,7 @@
       ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(side * 14, 0); ctx.lineTo(ex, ey); ctx.stroke();
       ctx.strokeStyle = '#d8a46a'; ctx.lineWidth = 3; ctx.stroke();
       inkEllipse(ex, ey, 5, 10, a * side, '#d8a46a', 1.5);
-      grips[side] = [side * 17, -9 + 10 * k]; // hands reach forward, then pull back with the stroke
+      grips[side] = [side * 18, 6 + 8 * k]; // hands reach toward the bow, then pull back toward her on the stroke
     }
     INK = OL; ink(RR_BOAT, col, 2.5);
     ctx.fillStyle = mix(col, '#2a1a3a', 0.25); ellipse(0, 0, 13, 28);
@@ -801,71 +801,23 @@
     rider(grips, oarL, oarR);
     ctx.restore();
   };
-  // Aubrey seen from above: pink dress, arms out to the oar handles, curly hair with a bow.
-  // She leans into each pull and turns her head toward the way she's steering.
+  // Aubrey rowing: her photo sits in the boat facing the stern (rowers face backwards, so she faces us as the boat
+  // heads up the river), her arms out to the oar handles, pulling each one back as that side strokes
   const aubTop = (grips, oarL, oarR, steer = 0) => {
-    const lean = -3 * Math.max(oarL, oarR);
+    const s = 0.3, im = IMG.idle_front, h = im.height * s, waist = 10, lean = 2.5 * Math.max(oarL, oarR);
     ctx.save(); ctx.translate(0, lean);
-    // arms first, so the dress and head sit on top of the shoulders
+    ctx.save(); ctx.beginPath(); ctx.rect(-30, waist - h * 0.5 - 4, 60, h * 0.5 + 4); ctx.clip();
+    ctx.translate(0, waist + h * 0.5); ctx.rotate(clamp(steer, -0.4, 0.4) * 0.3);
+    drawAubrey(0, 0, 'idle_front', 1, 0, s);
+    ctx.restore();
+    const sy = waist - h * 0.36;
     for (const side of [-1, 1]) {
-      const [hx, hy] = grips[side], sx = side * 9, sy = 3;
-      ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 7.5; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hx, hy - lean); ctx.stroke();
-      ctx.strokeStyle = '#ffd8b8'; ctx.lineWidth = 4.5; ctx.stroke();
-      inkCircle(hx, hy - lean, 3.6, '#ffd8b8', 1.2);
+      const [hx, hy] = grips[side];
+      ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(side * 8, sy); ctx.lineTo(hx, hy - lean); ctx.stroke();
+      ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 2.8; ctx.stroke();
+      inkCircle(hx, hy - lean, 2.8, '#f6cfb0', 1);
     }
-    inkEllipse(0, 4, 14, 10, 0, '#ff8fc8', 1.5);
-    ctx.strokeStyle = '#ffd0e8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 4, 11, 7, 0, 0.2, Math.PI - 0.2); ctx.stroke();
-    ctx.save(); ctx.translate(0, -5); ctx.rotate(clamp(steer, -0.6, 0.6));
-    ctx.fillStyle = '#ffd8b8'; ellipse(0, -8, 5.5, 3.5);
-    const curls = [[0, 0, 8.5], [-6, -3, 4.5], [6, -3, 4.5], [-7, 3, 4.5], [7, 3, 4.5], [-3, 7, 4.5], [3, 7, 4.5], [0, 9, 4]];
-    ctx.fillStyle = OL; for (const [cx, cy, r] of curls) circle(cx, cy, r + 1.5);
-    for (const [cx, cy, r] of curls) { ctx.fillStyle = '#8a5530'; circle(cx, cy, r); }
-    ctx.fillStyle = '#a8703f'; for (const [cx, cy, r] of curls) circle(cx - r * 0.3, cy - r * 0.3, r * 0.4);
-    inkCircle(5, 2, 3, '#ff6fb5', 1); inkCircle(8, 0, 2.2, '#ff6fb5', 1);
     ctx.restore();
-    ctx.restore();
-  };
-  // a side-on close-up of Aubrey rowing, in a window on the bank: each stroke sweeps that side's oar back with a splash
-  const rowCloseUp = (g, x0, y0, w, h) => {
-    rrect(x0 - 4, y0 - 4, w + 8, h + 8, 18, '#fff6e0', OL, 2.5);
-    ctx.save(); ctx.beginPath(); ctx.roundRect(x0, y0, w, h, 14); ctx.clip();
-    ctx.fillStyle = vgrad(y0, y0 + h, ['#1e2a6a', '#3a3a8a', '#24348a']); ctx.fillRect(x0, y0, w, h);
-    ctx.fillStyle = '#fff6c8'; circle(x0 + w - 26, y0 + 24, 11);
-    const wy = y0 + h * 0.66, cx = x0 + w / 2, bob = Math.sin(S.t * 3) * 1.5 + (g.v > 60 ? Math.sin(S.t * 9) : 0);
-    // the stroke: right after a tap her hands pull in and the blade sweeps through the water, then she reaches forward again
-    const pull = Math.max(g.oar[0], g.oar[1]), p = 1 - pull;
-    const sx = cx - 22, as = 0.5, im = IMG.idle_front, ah = im.height * as, base = wy - 14 + bob, lean = -pull * 0.12;
-    const chest = base - ah * 0.3, piv = [cx + 18, wy - 16 + bob];
-    const hand = [lerp(sx + 30, sx + 12, pull), chest + 4];
-    const oar = (dx, col, k) => {
-      const hx = hand[0] + dx, hy = hand[1] - dx * 0.4, px = piv[0] + dx, py = piv[1], d = Math.hypot(px - hx, py - hy);
-      const bx = px + (px - hx) / d * 52, by = py + (py - hy) / d * 52;
-      ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(bx, by); ctx.stroke();
-      ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke();
-      inkEllipse(bx, by, 5, 11, Math.atan2(by - py, bx - px) - Math.PI / 2, col, 1.4);
-      if (k > 0.35) { ctx.fillStyle = 'rgba(220,240,255,.9)'; for (let i = 0; i < 5; i++) circle(bx + rand(-14, 4), wy - rand(2, 16) * k, 2.4); }
-    };
-    oar(6, '#b8824a', g.oar[1]); // the far oar, behind the boat
-    ink(P2(`M${cx - 70},${wy - 16 + bob} L${cx + 66},${wy - 16 + bob} C${cx + 60},${wy + 10 + bob} ${cx + 34},${wy + 16 + bob} ${cx},${wy + 16 + bob} C${cx - 40},${wy + 16 + bob} ${cx - 64},${wy + 8 + bob} ${cx - 70},${wy - 16 + bob} Z`), '#ff8a6a', 2);
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(cx - 62, wy - 12 + bob, 124, 4);
-    glow(cx + 60, wy - 40 + bob, 22, '255,210,120', 0.7); ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx + 56, wy - 16 + bob); ctx.lineTo(cx + 60, wy - 36 + bob); ctx.stroke(); inkCircle(cx + 60, wy - 40 + bob, 5, '#ffe08a', 1.2);
-    // Aubrey sits in the boat, leaning back into each pull
-    ctx.save(); ctx.translate(sx, base); ctx.rotate(lean);
-    ctx.beginPath(); ctx.rect(-50, -ah * 0.52 - 4, 100, ah * 0.52 + 4); ctx.clip(); // her top half, above the gunwale
-    drawAubrey(0, ah * 0.48, 'idle_front', 1, 0, as);
-    ctx.restore();
-    // the near oar, with both her hands on the handle
-    oar(0, '#d8a46a', g.oar[0]);
-    for (const dy of [-3, 3]) {
-      ctx.strokeStyle = OL; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(sx + 8, chest + dy); ctx.lineTo(hand[0], hand[1] + dy * 0.4); ctx.stroke();
-      ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 3; ctx.stroke();
-    }
-    inkCircle(hand[0], hand[1], 3.4, '#f6cfb0', 1);
-    // water in front of the hull
-    ctx.fillStyle = 'rgba(40,70,170,.75)'; ctx.fillRect(x0, wy + 4, w, h);
-    ctx.strokeStyle = 'rgba(200,220,255,.6)'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = x0; x <= x0 + w; x += 8) ctx.lineTo(x, wy + 4 + Math.sin(x * 0.12 + S.t * 4) * 2); ctx.stroke();
-    ctx.restore();
-    text(pull > 0.3 ? (g.last < 0 ? 'Left pull!' : 'Right pull!') : 'Row, Aubrey!', x0 + w / 2, y0 + h + 18, 15, '#fff6a8', 'center', 800);
   };
   MG.rowrace = {
     kind: 'action', title: () => 'Row Race', icon: () => '🚣',
@@ -965,10 +917,9 @@
         const y = sy(r.d); if (y < -60 || y > H + 60) continue;
         drawTopBoat(r.x, y, r.col, () => emoji(r.icon, 0, -2, 28), (Math.sin(S.t * 6) + 1) / 2, (Math.sin(S.t * 6 + Math.PI) + 1) / 2);
       }
-      ctx.save(); ctx.translate(g.x, RR.y); ctx.scale(1.25, 1.25); // Aubrey's boat drawn a bit bigger so she reads clearly
+      ctx.save(); ctx.translate(g.x, RR.y); ctx.scale(1.5, 1.5); // Aubrey's boat drawn bigger so you can see her rowing
       drawTopBoat(0, 0, '#ff8a6a', (gr, l, r) => aubTop(gr, l, r, g.vx * 0.008), g.oar[0], g.oar[1], clamp(g.vx * 0.004, -0.35, 0.35) + (g.wob ? Math.sin(g.wob * 30) * 0.1 : 0));
       ctx.restore();
-      rowCloseUp(g, 8, 226, 168, 170);
       // race track at the side: who is where
       darkPanel(W - 58, 70, 40, 300, 18);
       const ty = w => 356 - clamp(w / g.L, 0, 1) * 272;
