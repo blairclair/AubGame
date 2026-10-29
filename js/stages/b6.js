@@ -1055,24 +1055,28 @@
     },
     // one hand holds the rope; the other reaches for the nearest wish-coin (and snatches it when she grabs one)
     drawArms(g, ax, atop, ah, bx) {
-      const sy = atop + ah * 0.21, bcy = g.by + 22;
+      const sy = atop + ah * 0.255, bcy = g.by + 22; // her shoulders in the photo
       let tx = null, ty = null;
       if (g.grab > 0) { tx = g.grabX; ty = g.grabY; }
       else if (g.held < 3) {
         let best = 150;
         for (const c of g.coins) { const d = Math.hypot(c.x - ax, c.y - bcy); if (c.gone <= 0 && Math.abs(c.y - bcy) < 70 && d < best) { best = d; tx = c.x; ty = c.y; } }
       }
-      const arm = (x0, y0, x1, y1) => {
-        ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      // a two-part arm the size of her real ones (upper arm + forearm), bending outward at the elbow
+      const SEG = 17;
+      const arm = (x0, y0, x1, y1, out) => {
+        let dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
+        if (d > SEG * 2 - 1) { const k = (SEG * 2 - 1) / d; x1 = x0 + dx * k; y1 = y0 + dy * k; dx *= k; dy *= k; d = SEG * 2 - 1; }
+        const m = Math.sqrt(Math.max(0, SEG * SEG - d * d / 4)), nx = -dy / d, ny = dx / d, sgn = nx * out >= 0 ? 1 : -1;
+        const ex = x0 + dx / 2 + nx * m * sgn, ey = y0 + dy / 2 + ny * m * sgn;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 5.5;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(ex, ey); ctx.lineTo(x1, y1); ctx.stroke();
         ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 3; ctx.stroke(); inkCircle(x1, y1, 3, '#f6cfb0', 1);
       };
-      const reachL = tx !== null && tx < ax;
-      // rope hand on the side away from the coin
-      arm(ax + (tx === null || reachL ? 9 : -9), sy, bx - 1, sy - 14); // the hand nearer the rope holds it, unless that one is reaching
-      if (tx !== null) {
-        const sx = ax + (reachL ? -9 : 9), dx = tx - sx, dy = ty - sy, d = Math.hypot(dx, dy), L = Math.min(d, g.grab > 0 ? 64 : 46);
-        arm(sx, sy, sx + dx / d * L, sy + dy / d * L);
-      }
+      const right = tx !== null && tx > ax;
+      // right hand on the rope unless it's reaching right; left hand reaches left or rests on the rim
+      if (right) arm(ax + 8, sy, tx, ty, 1); else arm(ax + 8, sy, bx - 1, sy - 12, 1);
+      if (tx !== null && !right) arm(ax - 8, sy, tx, ty, -1); else arm(ax - 8, sy, ax - 17, g.by + 7, -1);
     },
     draw(g) {
       const t = S.t, bx = WF.x + (g.jolt ? Math.sin(g.jolt * 60) * 6 : 0);
@@ -1111,7 +1115,7 @@
       ctx.strokeStyle = '#6a7080'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(bx, g.by + 8, 30, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
       // Aubrey sits in the bucket, just left of the rope: her legs hide behind the bucket's front
       const ax = bx - 13, as = 0.45, ah = IMG.idle_front.height * as, atop = g.by + 48 - ah;
-      drawAubrey(ax, g.by + 48, 'idle_front', 1, 0, as);
+      { const na = aubNoArmsImage(), w = na.width * as; ctx.drawImage(na, ax - w / 2, g.by + 48 - ah, w, ah); } // her photo arms are swapped for the reaching ones
       for (let i = 0; i < g.held; i++) wishCoin(bx + 8 + i * 12, g.by + 4, 0.6, i);
       ink(P2(`M${bx - 38},${g.by + 6} L${bx + 38},${g.by + 6} L${bx + 30},${g.by + 48} L${bx - 30},${g.by + 48} Z`), '#b07a4a', 2);
       ctx.fillStyle = '#6a7080'; ctx.fillRect(bx - 36, g.by + 14, 72, 4); ctx.fillRect(bx - 32, g.by + 38, 64, 4);

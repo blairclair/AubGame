@@ -844,6 +844,16 @@ function aubArmsImage() {
   x.putImageData(d, 0, 0);
   return (aubArms = c);
 }
+// her standing photo with those arms cut away, for scenes that draw her arms doing something else
+let aubNoArms = null;
+function aubNoArmsImage() {
+  if (aubNoArms) return aubNoArms;
+  const im = IMG.idle_front, c = document.createElement('canvas');
+  c.width = im.width; c.height = im.height;
+  const x = c.getContext('2d');
+  x.drawImage(im, 0, 0); x.globalCompositeOperation = 'destination-out'; x.drawImage(aubArmsImage(), 0, 0);
+  return (aubNoArms = c);
+}
 function dots(pts, r, col) { ctx.fillStyle = col; for (const [x, y] of pts) circle(x, y, r); }
 function fluff(x0, x1, y, r, lw) { for (let x = x0; x <= x1; x += r * 1.5) inkCircle(x, y + Math.sin(x) * 1.5, r, '#ffffff', lw * 0.6); }
 const CLOTHES = {
