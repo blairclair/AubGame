@@ -78,6 +78,71 @@ function drawShowStage() {
   ctx.fillStyle = '#ffb3d6'; ctx.fillRect(66, 506, 828, 6);
   ['🦉', '🐸', '🦔', '🐿️', '🦋', '🐉', '🧚', '🦄', '🐢', '🦊', '🐰', '🦌', '🧜‍♀️', '🐝'].forEach((c, i) => emoji(c, 40 + i * 68, 534 - Math.abs(Math.sin(S.t * 1.5 + i)) * 6, 36));
 }
+// --- the rival contestants strut the runway, dressed to dazzle ---------------------------
+// each one's outfit: drawn around their emoji (which is ~120px, centred on (0,0)), behind or in front of it
+const RIVAL_LOOKS = [
+  { outfit: 'Velvet Cape · Top Hat · Monocle', glit: ['#c9a0ff', '#fff6a8'], back(t) {
+      // a royal-purple velvet cape billowing out behind
+      const f = Math.sin(t * 5) * 6;
+      ink(P2(`M-30,-20 C-60,0 ${-78 + f},40 ${-70 + f},62 L50,62 C${56 - f},30 46,0 30,-20 Z`), '#7a3ab8', 2.5);
+      ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(-40, 52, 86, 6);
+    }, front(t) {
+      // his head is up and to the left in the emoji
+      ctx.save(); ctx.translate(-42, -36); ctx.rotate(-0.15);
+      inkRect(-20, -6, 40, 7, '#2a1a3a', 2, 3); inkRect(-13, -34, 26, 30, '#2a1a3a', 2, 4); ctx.fillStyle = '#ff5f9a'; ctx.fillRect(-13, -14, 26, 5);
+      ctx.restore();
+      inkCircle(-50, -22, 7, 'rgba(255,255,255,.25)', 2, '#d4a020'); ctx.strokeStyle = '#d4a020'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-44, -18); ctx.quadraticCurveTo(-38, -4, -42, 8); ctx.stroke();
+      ink(P2('M-44,2 L-32,8 L-20,2 L-20,16 L-32,8 L-44,16 Z'), '#ff5f9a', 1.6); inkCircle(-32, 9, 3.5, '#ffd23f', 1);
+    } },
+  { outfit: 'Pearl Tiara · Shell Necklace · Bubble Scarf', glit: ['#8ad4ff', '#ffffff'], back(t) {
+      // a shimmering sea-green scarf floating around her
+      ctx.strokeStyle = 'rgba(120,230,210,.75)'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let i = 0; i <= 20; i++) { const a = i / 20 * Math.PI * 1.6 + 0.6, r = 62 + Math.sin(t * 3 + i * 0.6) * 6; i ? ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.6 + 10) : ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r * 0.6 + 10); }
+      ctx.stroke();
+    }, front(t) {
+      // her head is up and to the right in the emoji
+      for (let i = 0; i < 5; i++) { const a = Math.PI + (i + 0.5) / 5 * Math.PI; inkCircle(21 + Math.cos(a) * 15, -66 + Math.sin(a) * 9, i === 2 ? 5 : 3.6, '#fffaf0', 1.2); }
+      for (let i = 0; i < 6; i++) { const a = 0.4 + i / 5 * (Math.PI - 0.8); inkEllipse(18 + Math.cos(a) * 16, -34 + Math.sin(a) * 9, 3.6, 3, a, i % 2 ? '#ffb8d8' : '#ffe0a8', 1); }
+      for (let i = 0; i < 4; i++) { const p = (t * 0.6 + i / 4) % 1; ctx.globalAlpha = 1 - p; inkCircle(40 + Math.sin(i + t) * 10, 20 - p * 120, 5 + i, 'rgba(200,240,255,.35)', 1.2, '#bfe8ff'); ctx.globalAlpha = 1; }
+    } },
+  { outfit: 'Jewelled Crown · Golden Cape · Ruby Necklace', glit: ['#ffd23f', '#ff8a3a'], back(t) {
+      // a gold cape trimmed with spotty ermine
+      const f = Math.sin(t * 4) * 5;
+      ink(P2(`M-34,-24 C-70,0 ${-86 + f},40 ${-80 + f},66 L60,66 C${66 - f},34 52,0 34,-24 Z`), '#f0b020', 2.5);
+      inkRect(-84, 58, 148, 12, '#ffffff', 2, 6); ctx.fillStyle = '#2a1a3a'; for (let i = 0; i < 9; i++) circle(-76 + i * 17, 64, 1.8);
+    }, front(t) {
+      // her head is on the left, about halfway down the emoji
+      ctx.save(); ctx.translate(-34, -20); ctx.rotate(-0.2); ctx.scale(0.55, 0.55);
+      ink(P2('M-30,0 L-24,-30 L-12,-12 L0,-38 L12,-12 L24,-30 L30,0 Z'), '#ffd23f', 3);
+      for (const [x, y, c] of [[0, -22, '#ff3f6a'], [-20, -14, '#40b0ff'], [20, -14, '#3fdc7a']]) inkCircle(x, y, 5, c, 1.4);
+      ctx.restore();
+      for (const dx of [-5, 6]) { star(-22 + dx, -7, 6, '#ff6fb5', 5); star(-22 + dx, -7, 3.4, '#3a1a4a', 5); }
+      ctx.strokeStyle = '#d4a020'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(-6, 0, 14, 0.4, Math.PI - 0.4); ctx.stroke(); inkCircle(-6, 14, 5, '#e0204a', 1.2);
+      for (let i = 0; i < 3; i++) { const p = (t * 0.9 + i / 3) % 1; ctx.globalAlpha = 1 - p; emoji('🔥', -50 + i * 50, 70 - p * 30, 14 + (1 - p) * 8); ctx.globalAlpha = 1; }
+    } },
+];
+function drawRivalStrut(i, x, rt, k) {
+  const r = RIVALS[i], look = RIVAL_LOOKS[i] || RIVAL_LOOKS[0], y = 400 - Math.abs(Math.sin(rt * 6)) * 10;
+  // a spotlight follows them down the runway, and the crowd's cameras flash
+  const lg = ctx.createLinearGradient(0, 70, 0, 500); lg.addColorStop(0, 'rgba(255,250,215,.1)'); lg.addColorStop(1, 'rgba(255,250,215,.42)');
+  ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(x - 20, 70); ctx.lineTo(x + 20, 70); ctx.lineTo(x + 130, 500); ctx.lineTo(x - 130, 500); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,245,200,.45)'; ellipse(x, 488, 120, 16);
+  for (let j = 0; j < 6; j++) { const p = (rt * 1.3 + j * 0.29) % 1; if (p < 0.1) { const fx = 80 + j * 160; const gr = ctx.createRadialGradient(fx, 500, 0, fx, 500, 50); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.fillRect(fx - 50, 450, 100, 100); } }
+  // glitter trail
+  for (let j = 0; j < 10; j++) { const tx = x + 30 + j * 26, a = Math.max(0, 1 - j / 10); ctx.globalAlpha = a * 0.9; star(tx, 470 - (j % 3) * 18 + Math.sin(rt * 8 + j) * 6, 6 - j * 0.3, look.glit[j % 2], 4); }
+  ctx.globalAlpha = 1;
+  // strike a pose: a quick spin when they reach centre stage
+  const spin = rt > 1.4 && rt < 2.0 ? Math.cos((rt - 1.4) / 0.6 * Math.PI * 2) : 1;
+  ctx.save(); ctx.translate(x, y); ctx.scale(spin || 0.01, 1);
+  look.back(rt);
+  emoji(r.icon, 0, 0, 120);
+  look.front(rt);
+  ctx.restore();
+  outlined(r.name, x, 196, 22, '#fff');
+  text(look.outfit, x, 222, 14, '#ffe3f1', 'center', 600);
+  if (rt > 1.6) outlined(`${r.score} points`, x, 252, 24, '#fff6a8');
+}
+
 SCENES.show = {
   enter() {
     Object.assign(this, { state: 'intro', rival: -1, rt: 0, shown: [], total: 0, mom: false, talentPts: 0 });
@@ -153,9 +218,7 @@ SCENES.show = {
       const r = RIVALS[this.rival];
       const k = this.rt < 1.4 ? easeOut(this.rt / 1.4) : this.rt < 3.6 ? 1 : 1 + (this.rt - 3.6) / 1.0;
       const x = lerp(W + 100, 560, Math.min(1, k)) - Math.max(0, k - 1) * 700;
-      emoji(r.icon, x, 410 - Math.abs(Math.sin(this.rt * 6)) * 10, 120);
-      outlined(r.name, x, 300, 22, '#fff');
-      if (this.rt > 1.6) outlined(`${r.score} points`, x, 330, 22, '#fff6a8');
+      drawRivalStrut(this.rival, x, this.rt, k);
     } else {
       drawUnicorn(620, 504, 0.95, uniLook(), { facing: -1, mood: this.state === 'results' ? 'joy' : undefined, glow: 0.8 });
       if (this.mom) drawPerson('mom', 860, 520, -1, 0, true, 0.85);
