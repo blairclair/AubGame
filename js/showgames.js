@@ -1,14 +1,14 @@
 'use strict';
-// The show's TALENT ROUNDS: three quick games played on stage after the outfit is scored.
+// The show's TALENT ROUNDS: four quick games played on stage after the outfit is scored.
 // Each is an MG type (same init/start/update/draw shape as js/minigames.js), but the show
 // runs them itself so there are no material rewards: each round's g.score turns into bonus
 // show points (1..TALENT_MAX), announced by a judge and added to the scorecard.
 
-const TALENT_GAMES = ['showriddles', 'runwaypose', 'spotlightstrut'];
-// up to 6 points a round (18 in all), at least 1 for trying. The outfit still matters most:
-// the top rival has 80, so an outfit needs 63+ AND perfect talent to win, while a strong
+const TALENT_GAMES = ['showriddles', 'runwaypose', 'spotlightstrut', 'freezedance'];
+// up to 5 points a round (20 in all), at least 1 for trying. The outfit still matters most:
+// the top rival has 80, so an outfit needs 61+ AND perfect talent to win, while a strong
 // outfit (75+) wins with a so-so performance.
-const TALENT_MAX = 6;
+const TALENT_MAX = 5;
 const talentPoints = score => clamp(Math.round(score * TALENT_MAX), 1, TALENT_MAX);
 const SHOW_JUDGES = ['Grandpa Smolder', 'Granny Owl', 'Wizard Wendell'];
 const SHOW_JUDGE_ICONS = ['🐉', '🦉', '🧙'];
@@ -274,6 +274,111 @@ const SHOW_JUDGE_ICONS = ['🐉', '🦉', '🧙'];
       if (!g.inLight && g.timeLeft > 0) outlined(g.ux < g.sx ? 'Go right! →' : '← Go left!', g.ux, 250, 24, '#fff6a8');
     },
   };
+
+  // ===========================================================================================
+  // 4. FREEZE DANCE: dance while the music plays (each arrow is a different move), freeze when it stops!
+  // ===========================================================================================
+  const FD_MOVES = [
+    { key: 'arrowup', icon: '⬆️', name: 'Jump', frame: 'jump', uni: 'jump' },
+    { key: 'arrowleft', icon: '⬅️', name: 'Point', frame: 'cast', face: -1, uni: 'bow' },
+    { key: ' ', icon: '🌀', name: 'Twirl', frame: 'twirl', uni: 'twirl' },
+    { key: 'arrowright', icon: '➡️', name: 'Point', frame: 'cast', face: 1, uni: 'bow' },
+    { key: 'arrowdown', icon: '⬇️', name: 'Squat', frame: 'crouch', uni: 'sparkle' },
+  ];
+  const FD_TUNE = [523, 659, 784, 659, 587, 698, 880, 698, 659, 784, 1047, 784, 698, 587, 523, 587];
+  MG.freezedance = {
+    kind: 'action', title: () => 'Freeze Dance', icon: () => '💃',
+    how: () => 'Dance while the music plays! Each arrow key (or button) is a different move, and Space twirls. Mix up your moves! When the music STOPS, freeze like a statue!',
+    init(g) {
+      // music stretches and freezes alternate; the freezes come at surprising moments
+      const segs = []; for (let i = 0; i < 5; i++) segs.push({ music: true, len: rand(2.8, 4.6) }, { music: false, len: rand(1.6, 2.4) });
+      Object.assign(g, { segs, si: 0, segT: segs[0].len, beatT: 0, note: 0, move: null, moveT: 0, last: -1, energy: 0, segMoves: 0, segVar: new Set(), danceScore: 0, freezeScore: 0, moved: false, wob: 0, msg: '', msgT: 0, lights: 0 });
+      g.say = 'Dance while the music plays, and freeze when it stops!';
+    },
+    start(g) { speak(g.say); },
+    endSeg(g) {
+      const sg = g.segs[g.si];
+      if (sg.music) g.danceScore += clamp((Math.min(g.segMoves, 6) / 6) * 0.7 + (Math.min(g.segVar.size, 3) / 3) * 0.3, 0, 1);
+      else {
+        g.freezeScore += g.moved ? 0.25 : 1;
+        if (!g.moved) { g.msg = 'Frozen like a statue!'; g.msgT = 1.2; SFX.sparkle(); }
+      }
+      g.si++;
+      if (g.si >= g.segs.length) { g.done = true; return; }
+      const nx = g.segs[g.si];
+      g.segT = nx.len; g.segMoves = 0; g.segVar = new Set(); g.moved = false;
+      if (nx.music) { g.msg = 'Dance!'; g.msgT = 0.9; }
+      else { g.msg = 'FREEZE!'; g.msgT = nx.len; tone(330, 0.25, 'square', 0.05, 0, 110); speak('Freeze!'); }
+    },
+    update(g, dt, id) {
+      const sg = g.segs[g.si];
+      if (!sg) return;
+      g.moveT = Math.max(0, g.moveT - dt); g.wob = Math.max(0, g.wob - dt); g.msgT = Math.max(0, g.msgT - dt);
+      let mi = FD_MOVES.findIndex(m => pressed[m.key]);
+      if (id && id.startsWith('fd:')) mi = +id.slice(3);
+      if (mi >= 0) {
+        if (sg.music) {
+          g.move = FD_MOVES[mi]; g.moveT = 0.55; g.segMoves++; g.segVar.add(mi);
+          g.energy = Math.min(1, g.energy + (mi !== g.last ? 0.16 : 0.07)); g.last = mi;
+          burst(330 + rand(-30, 30), 340, 5, { colors: uniCols(), spread: 70, up: 90 });
+        } else if (!g.moved) {
+          g.moved = true; g.wob = 0.6; g.msg = 'Oops, you moved!'; g.msgT = 1; SFX.miss();
+        }
+      }
+      if (sg.music) {
+        g.lights += dt;
+        g.energy = Math.max(0, g.energy - dt * 0.12);
+        if ((g.beatT -= dt) <= 0) {
+          g.beatT = 0.25;
+          const f = FD_TUNE[g.note % FD_TUNE.length];
+          tone(f, 0.16, 'triangle', 0.05); if (g.note % 2 === 0) tone(f / 4, 0.18, 'sine', 0.06);
+          g.note++;
+        }
+      }
+      if ((g.segT -= dt) <= 0) this.endSeg(g);
+      const musics = g.segs.filter(s => s.music).length, freezes = g.segs.length - musics;
+      g.score = clamp(0.6 * g.danceScore / musics + 0.4 * g.freezeScore / freezes, 0, 1);
+      g.progress = sg.music ? '🎵 Dance!' : '🧊 Freeze!';
+    },
+    draw(g) {
+      const sg = g.segs[g.si] || g.segs[g.segs.length - 1], music = sg.music;
+      ctx.fillStyle = music ? 'rgba(30,10,50,.35)' : 'rgba(10,20,50,.55)'; ctx.fillRect(0, 0, W, H);
+      // disco lights sweep while the music plays and stop dead on a freeze
+      const cols = ['255,110,180', '110,200,255', '255,220,110', '170,130,255'];
+      for (let i = 0; i < 4; i++) {
+        const a = music ? Math.sin(g.lights * 1.6 + i * 1.7) * 0.5 : (i - 1.5) * 0.25, x0 = 140 + i * 230;
+        ctx.save(); ctx.translate(x0, 64); ctx.rotate(a);
+        const lg = ctx.createLinearGradient(0, 0, 0, 460); lg.addColorStop(0, `rgba(${cols[i]},${music ? 0.5 : 0.18})`); lg.addColorStop(1, `rgba(${cols[i]},0)`);
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.lineTo(90, 460); ctx.lineTo(-90, 460); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      // a mirror ball
+      inkCircle(480, 86, 24, '#d8dcf0', 2); ctx.save(); ctx.beginPath(); ctx.arc(480, 86, 23, 0, Math.PI * 2); ctx.clip();
+      for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) { ctx.fillStyle = (i + j + Math.floor(music ? g.lights * 6 : 0)) % 3 ? 'rgba(255,255,255,.75)' : 'rgba(150,160,220,.6)'; ctx.fillRect(456 + i * 8, 62 + j * 8, 7, 7); }
+      ctx.restore();
+      // music notes float up while it plays
+      if (music) for (let i = 0; i < 6; i++) { const p = (g.lights * 0.4 + i / 6) % 1; ctx.globalAlpha = 1 - p; emoji(i % 2 ? '🎵' : '🎶', 120 + i * 140 + Math.sin(p * 6 + i) * 18, 400 - p * 260, 26); ctx.globalAlpha = 1; }
+      // Aubrey dances (or holds her pose, trying not to wobble)
+      const mv = g.move, fr = mv && (g.moveT > 0 || !music) ? mv.frame : 'idle_front', wob = g.wob ? Math.sin(g.wob * 40) * 6 : 0;
+      const lift = fr === 'jump' && g.moveT > 0 ? Math.sin((1 - g.moveT / 0.55) * Math.PI) * 40 : 0, bop = music && fr === 'idle_front' ? Math.abs(Math.sin(g.lights * 8)) * 6 : 0;
+      drawAubrey(330 + wob, 458, fr, mv?.face || 1, lift + bop, fr === 'twirl' ? 0.6 : 0.66);
+      // the unicorn dances alongside
+      const uk = mv && g.moveT > 0 ? 1 - g.moveT / 0.55 : (music ? (g.lights * 1.5) % 1 : 0.5);
+      poseUnicorn(640 + wob * 0.5, 452, 0.6, mv ? mv.uni : (music ? 'sparkle' : null), mv && g.moveT > 0 ? uk : (music ? uk : 0), { facing: -1, mood: 'joy' });
+      // the dance meter
+      darkPanel(40, 80, 210, 46, 20);
+      text('Dance power', 60, 103, 15, '#fff', 'left', 700);
+      rrect(150, 95, 86, 16, 8, 'rgba(255,255,255,.2)'); rrect(150, 95, Math.max(10, 86 * g.energy), 16, 8, '#ff6fb5');
+      // big FREEZE / Dance! call
+      if (g.msgT > 0 && g.msg) { const k = g.msg === 'FREEZE!' ? 1 : clamp(g.msgT * 2, 0, 1); ctx.globalAlpha = k; outlined(g.msg, W / 2, 190, g.msg === 'FREEZE!' ? 60 : 36, g.msg === 'FREEZE!' ? '#9fe0ff' : g.msg.startsWith('Oops') ? '#ffb0b0' : '#fff6a8'); ctx.globalAlpha = 1; }
+      // move buttons along the bottom
+      FD_MOVES.forEach((m, i) => {
+        const bx = 170 + i * 128;
+        button(`fd:${i}`, bx, 470, 110, 58, '', { color: music ? CARD_COLS[i % 4] : '#8a9ac0', on: true });
+        emoji(m.icon, bx + 30, 499, 24); text(m.name, bx + 74, 499, 15, '#fff', 'center', 700);
+      });
+    },
+  };
 }
 
 // ---- running the rounds inside SCENES.show --------------------------------------------------
@@ -282,7 +387,7 @@ function startTalent(show) {
   show.state = 'talentjudge';
   say([
     ['fairy', '🧚', `${show.total} points for that outfit! But wait... it's time for the TALENT ROUNDS!`, () => SFX.fanfare()],
-    ['fairy', '🧚', `Our judges, Grandpa Smolder, Granny Owl and Wizard Wendell, will give up to ${TALENT_MAX} bonus points in each of three rounds!`],
+    ['fairy', '🧚', `Our judges, Grandpa Smolder, Granny Owl and Wizard Wendell, will give up to ${TALENT_MAX} bonus points in each of ${TALENT_GAMES.length} rounds!`],
   ], () => nextTalent(show));
 }
 function nextTalent(show) {
@@ -292,7 +397,7 @@ function nextTalent(show) {
   const g = { type, skin: {}, mat: null, tier: 2, loc: null, t: 0, done: false, score: 0 };
   impl.init(g);
   Object.assign(show, { tg: g, timpl: impl, state: 'talent' });
-  const judge = SHOW_JUDGES[show.talentI];
+  const judge = SHOW_JUDGES[show.talentI % SHOW_JUDGES.length]; // the judges take turns hosting
   say([[judge, null, `Talent round ${show.talentI + 1}: ${impl.title(g)}! ${impl.how(g)}`]], () => { impl.start?.(g); });
 }
 function talentUpdate(show, dt) {
@@ -307,10 +412,10 @@ function talentUpdate(show, dt) {
 function finishTalent(show) {
   const g = show.tg, impl = show.timpl;
   g.score = clamp(g.score, 0, 1);
-  const pts = talentPoints(g.score), judge = SHOW_JUDGES[show.talentI];
+  const pts = talentPoints(g.score), judge = SHOW_JUDGES[show.talentI % SHOW_JUDGES.length];
   show.talentPts = (show.talentPts || 0) + pts;
   show.state = 'talentjudge';
-  const say1 = pts >= 6 ? 'MAGNIFICENT! A perfect performance!' : pts >= 4 ? 'Wonderful! The crowd loved it!' : pts >= 2 ? 'Very nice! Good effort!' : 'A brave try! Every star counts.';
+  const say1 = pts >= TALENT_MAX ? 'MAGNIFICENT! A perfect performance!' : pts >= TALENT_MAX - 1 ? 'Wonderful! The crowd loved it!' : pts >= 2 ? 'Very nice! Good effort!' : 'A brave try! Every star counts.';
   say([[judge, null, `${say1} I give you ${pts} bonus ${pts === 1 ? 'point' : 'points'}!`, () => {
     show.shown.push({ name: `★ ${impl.title(g)}`, pts, col: '#ff9a3a' });
     show.total += pts; SFX.hit();
@@ -322,7 +427,7 @@ function talentDraw(show) {
   const g = show.tg, impl = show.timpl;
   impl.draw(g);
   darkPanel(12, 12, 420, 44, 22);
-  emoji(SHOW_JUDGE_ICONS[show.talentI], 34, 34, 20);
+  emoji(SHOW_JUDGE_ICONS[show.talentI % SHOW_JUDGE_ICONS.length], 34, 34, 20);
   text(`Round ${show.talentI + 1}: ${impl.title(g)}`, 54, 34, 18, '#fff', 'left', 700);
   if (g.timeLeft != null) {
     darkPanel(W - 132, 12, 120, 44, 22);
