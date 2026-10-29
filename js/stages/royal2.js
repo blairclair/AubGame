@@ -5,10 +5,12 @@
   // flags, a tall clock tower (it matters at midnight!), a fountain in the town square, bunting,
   // colourful houses with coloured doors, and neat royal gardens of topiary and roses.
   // The host is Fairy Godmother Gwen, with silver hair, fluttering wings and a starry wand.
-  //   game 1 (action) Royal Messenger: market day! Aubrey rides a pony through a big, crowded town square
-  //            (the camera pans) to find the one person in the corner picture (hat, hat colour, what
-  //            they hold; plus clothes colour at tier 3) and hand them their ball invitation. 4 rounds;
-  //            more people and more look-alikes at higher tiers; a sparkle and arrow hint after a while.
+  //   game 1 (action) Royal Messenger: market day! Aubrey rides a pony through a packed, panning town
+  //            square of wonderfully odd townsfolk (fish hats, hat towers, knights, jesters, wizards,
+  //            dragon costumes, stilts, giants, beards, monocles, geese, pigs on leashes...) to find the
+  //            one person in the corner picture (their hat and what they hold; plus one more look at
+  //            tier 3) and hand over a ball invitation. 4 rounds; 50/75/100 people and more look-alikes
+  //            by tier; a sparkle and edge-arrow hint after a while.
   //   game 2 (learn) Cinderella: a storybook Aubrey acts out as Cinderella, page by page: sweep the
   //            hearth, pick the lentils out of the ashes with the birds, answer the door to the royal
   //            invitation and fetch the stepsisters' things, wave the wand over the pumpkin, mice, rat
@@ -489,19 +491,25 @@
   // GAME 1 (action): Royal Messenger. Market day in a busy town! Ride the pony through the crowd and
   // find the one person in the corner picture to hand them their invitation to the ball.
   // =============================================================================================
-  const PW = [1500, 1900, 2300], PH = [900, 1000, 1100], CROWD = [20, 32, 46], PAR = [25, 35, 45], HINT = [30, 40, 40];
-  const SPEED = 290, SPR_W = 64, SPR_H = 112;
-  const CARD = { x: 12, y: H - 168, w: 262, h: 156 };
-  const HATS = ['tophat', 'cap', 'beret', 'pointy', 'bonnet', 'sunhat'];
-  const HAT_NAME = { tophat: 'top hat', cap: 'cap', beret: 'beret', pointy: 'pointy hat', bonnet: 'bonnet', sunhat: 'big sun hat' };
-  const COLS = ['red', 'blue', 'yellow', 'green', 'purple', 'orange'];
-  const COL_HEX = { red: '#ff4a5a', blue: '#3a7aff', yellow: '#ffd23a', green: '#3ac86a', purple: '#a45ae8', orange: '#ff8a2a' };
-  const HELD = ['loaf', 'flowers', 'balloon', 'fish', 'basket', 'lantern'];
-  const HELD_NAME = { loaf: 'a loaf of bread', flowers: 'some flowers', balloon: 'a balloon', fish: 'a fish', basket: 'a basket of apples', lantern: 'a lantern' };
-  const SKINS = ['#f8d8c4', '#f0c8a8', '#d8a078', '#b07a52', '#8a5a3a'];
-  const HAIRS = ['#6a3e22', '#e8c070', '#2a1a1a', '#d8682a', '#a8a8b8'];
-  const describe = (tg, T) => `the person in the ${tg.hatCol} ${HAT_NAME[tg.hat]}, with ${HELD_NAME[tg.item]}${T === 2 ? `, in ${tg.cloth} clothes` : ''}`;
-  const cardText = (tg, T) => `${tg.hatCol} ${HAT_NAME[tg.hat]}, holding ${HELD_NAME[tg.item]}${T === 2 ? `, ${tg.cloth} clothes` : ''}`;
+  const PW = [1300, 1650, 1950], PH = [880, 960, 1040], CROWD = [50, 75, 100], PAR = [28, 38, 48], HINT = [22, 30, 35];
+  const SPEED = 300, SPR_W = 104, SPR_H = 196, SPR_FEET = 188, SPR_S = 1.5;
+  const CARD = { x: 12, y: H - 176, w: 286, h: 164 };
+  // the described features: what's on their head, what they're holding, and (tier 3) one more look
+  const HATS = ['tophat', 'cap', 'beret', 'party', 'bonnet', 'sunhat', 'fishhat', 'tower', 'cake', 'pot', 'viking', 'propeller', 'chef', 'knight', 'jester', 'wizard', 'dragon'];
+  const COSTUME = { knight: 'the knight in armour', jester: 'the jester', wizard: 'the wizard', dragon: 'the person in the dragon costume' };
+  const HAT_NAME = { tophat: 'a top hat', cap: 'a cap', beret: 'a beret', party: 'a party hat', bonnet: 'a bonnet', sunhat: 'a big sun hat', fishhat: 'a fish hat', tower: 'a tower of three hats', cake: 'a cake hat', pot: 'a cooking pot on their head', viking: 'a horned helmet', propeller: 'a propeller hat', chef: "a chef's hat" };
+  const HAT_SHORT = { tophat: 'top hat', cap: 'cap', beret: 'beret', party: 'party hat', bonnet: 'bonnet', sunhat: 'big sun hat', fishhat: 'fish hat', tower: 'tower of 3 hats', cake: 'cake hat', pot: 'pot on head', viking: 'horned helmet', propeller: 'propeller hat', chef: "chef's hat", knight: 'knight', jester: 'jester', wizard: 'wizard', dragon: 'dragon costume' };
+  const HELD = ['loaf', 'flowers', 'balloon', 'fish', 'basket', 'lantern', 'goose', 'umbrella', 'lollipop', 'rod', 'pig', 'trumpet', 'juggle', 'teddy'];
+  const HELD_NAME = { loaf: 'holding a loaf of bread', flowers: 'holding flowers', balloon: 'holding a balloon', fish: 'holding a fish', basket: 'holding a basket of apples', lantern: 'holding a lantern', goose: 'holding a goose', umbrella: 'holding an umbrella', lollipop: 'holding a giant lollipop', rod: 'holding a fishing rod', pig: 'walking a pig on a leash', trumpet: 'holding a trumpet', juggle: 'juggling balls', teddy: 'holding a teddy bear' };
+  const LOOKS2 = ['beard', 'moustache', 'glasses', 'monocle', 'eyepatch', 'stripes', 'dots', 'cape', 'apron', 'rainbow', 'pigtails', 'beehive', 'bignose'];
+  const LOOK_NAME = { beard: 'with a big beard', moustache: 'with a curly moustache', glasses: 'wearing glasses', monocle: 'wearing a monocle', eyepatch: 'with an eyepatch', stripes: 'in stripy clothes', dots: 'in spotty clothes', cape: 'wearing a cape', apron: 'wearing an apron', rainbow: 'with rainbow hair', pigtails: 'with pigtails', beehive: 'with a tall beehive hairdo', bignose: 'with a big nose' };
+  const LOOK_SHORT = { beard: 'big beard', moustache: 'moustache', glasses: 'glasses', monocle: 'monocle', eyepatch: 'eyepatch', stripes: 'stripy clothes', dots: 'spotty clothes', cape: 'a cape', apron: 'an apron', rainbow: 'rainbow hair', pigtails: 'pigtails', beehive: 'beehive hair', bignose: 'big nose' };
+  const BRIGHT = ['#ff4a5a', '#3a7aff', '#ffd23a', '#3ac86a', '#a45ae8', '#ff8a2a', '#ff6fc0', '#2ad0d0', '#8ad83a', '#ffffff', '#6a4ad8', '#e83a8a', '#ffb0d0', '#2a9a7a'];
+  const SKINS = ['#ffe4d4', '#f8d0b8', '#f0c0a0', '#e0a880', '#c88a60', '#a86c48', '#8a5236', '#6a3e28', '#b8e0a0', '#c8c0f0'];
+  const HAIRS = ['#6a3e22', '#e8c070', '#2a1a1a', '#d8682a', '#e8e8f0', '#ff6fc0', '#3a8aff', '#8a4ad8', '#3ac86a'];
+  const who = tg => COSTUME[tg.hat] || `the person with ${HAT_NAME[tg.hat]}`;
+  const describe = (tg, T) => `${who(tg)}, ${HELD_NAME[tg.item]}${T === 2 ? `, ${LOOK_NAME[tg.look]}` : ''}`;
+  const cardLines = (tg, T) => [HAT_SHORT[tg.hat], HELD_NAME[tg.item].replace('holding ', '').replace('walking ', ''), ...(T === 2 ? [LOOK_SHORT[tg.look]] : [])];
   const bubbleW = (x, y, str, col) => {
     ctx.font = `700 16px ${FONT}`; const w = ctx.measureText(str).width + 24, h = 32;
     ctx.fillStyle = OL; ctx.beginPath(); ctx.roundRect(x - w / 2 - 2.5, y - h - 2.5, w + 5, h + 5, 16); ctx.fill();
@@ -509,51 +517,117 @@
     text(str, x, y - h / 2, 16, col, 'center', 700);
   };
   // ---- one townsperson, drawn once into a little canvas (feet at the bottom middle) ----
-  function heldItem(kind, x, y) {
+  function heldItem(kind, x, y, gy) {
     if (kind === 'loaf') { inkEllipse(x, y, 16, 9, -0.3, '#d89a4a', 1.1); ctx.strokeStyle = '#a86a2a'; ctx.lineWidth = 1.6; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x + i * 7 - 3, y - 5 - i * 2); ctx.lineTo(x + i * 7 + 3, y + 2 - i * 2); ctx.stroke(); } }
     else if (kind === 'flowers') { ctx.strokeStyle = '#3f8a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y + 8); ctx.lineTo(x - 5, y - 10); ctx.moveTo(x, y + 8); ctx.lineTo(x + 5, y - 10); ctx.moveTo(x, y + 8); ctx.lineTo(x, y - 14); ctx.stroke(); flower(x - 6, y - 12, 5, '#ff4a8a', '#ffd84a', 0.6); flower(x + 6, y - 12, 5, '#ffd84a', '#ff8a2a', 0.6); flower(x, y - 17, 5, '#ffffff', '#ffd84a', 0.6); }
-    else if (kind === 'balloon') { ctx.strokeStyle = OL; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6, y - 20, x + 2, y - 40); ctx.stroke(); inkEllipse(x + 2, y - 52, 11, 13, 0, '#ff5a8a', 1); ctx.fillStyle = 'rgba(255,255,255,.6)'; ellipse(x - 2, y - 57, 3, 4); }
+    else if (kind === 'balloon') { ctx.strokeStyle = OL; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6, y - 24, x + 2, y - 50); ctx.stroke(); inkEllipse(x + 2, y - 62, 12, 14, 0, '#ff5a8a', 1); ctx.fillStyle = 'rgba(255,255,255,.6)'; ellipse(x - 2, y - 67, 3, 4); }
     else if (kind === 'fish') { ink(P2(`M${x - 14},${y} C${x - 8},${y - 8} ${x + 6},${y - 8} ${x + 10},${y} C${x + 6},${y + 8} ${x - 8},${y + 8} ${x - 14},${y} Z M${x + 8},${y} L${x + 18},${y - 7} L${x + 18},${y + 7} Z`), '#7ab0d8', 1); ctx.fillStyle = '#1a1a2a'; circle(x - 8, y - 1, 1.5); }
     else if (kind === 'basket') { ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 4, 10, Math.PI, 0); ctx.stroke(); for (const [dx, c] of [[-5, '#ff4a4a'], [4, '#7ad84a'], [0, '#ff4a4a']]) inkCircle(x + dx, y - 3 - (dx === 0 ? 4 : 0), 4.5, c, 0.6); ink(P2(`M${x - 12},${y - 2} L${x + 12},${y - 2} L${x + 9},${y + 10} L${x - 9},${y + 10} Z`), '#c8904a', 1); }
     else if (kind === 'lantern') { ctx.strokeStyle = OL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - 2); ctx.lineTo(x, y + 4); ctx.stroke(); inkRect(x - 7, y + 4, 14, 18, '#ffe88a', 1, 4); ctx.fillStyle = '#ff9a2a'; ellipse(x, y + 13, 3, 5); inkRect(x - 8, y + 2, 16, 4, '#5a3a5a', 0.8, 2); }
+    else if (kind === 'goose') { inkEllipse(x + 4, y + 4, 15, 10, 0.2, '#ffffff', 1); ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x + 14, y); ctx.quadraticCurveTo(x + 22, y - 12, x + 16, y - 22); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4.5; ctx.stroke(); inkCircle(x + 16, y - 24, 5, '#ffffff', 0.8); ctx.fillStyle = '#ff9a2a'; tri(x + 20, y - 26, x + 28, y - 23, x + 20, y - 21); ctx.fillStyle = '#1a1a2a'; circle(x + 17, y - 25, 1.2); }
+    else if (kind === 'umbrella') { ctx.strokeStyle = OL; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x, y - 52); ctx.stroke(); ink(P2(`M${x - 30},${y - 50} C${x - 26},${y - 80} ${x + 26},${y - 80} ${x + 30},${y - 50} C${x + 20},${y - 56} ${x + 10},${y - 56} ${x},${y - 50} C${x - 10},${y - 56} ${x - 20},${y - 56} ${x - 30},${y - 50} Z`), '#3a7aff', 1); ctx.fillStyle = '#ffd23a'; tri(x, y - 78, x - 9, y - 54, x + 9, y - 54); }
+    else if (kind === 'lollipop') { ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x, y - 30); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke(); inkCircle(x, y - 46, 18, '#ff6fc0', 1); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); for (let i = 0; i < 30; i++) { const a = i * 0.5, r = i * 0.55; ctx.lineTo(x + Math.cos(a) * r, y - 46 + Math.sin(a) * r); } ctx.stroke(); }
+    else if (kind === 'rod') { ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 4, y + 6); ctx.lineTo(x + 30, y - 60); ctx.stroke(); ctx.strokeStyle = 'rgba(60,60,80,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 30, y - 60); ctx.lineTo(x + 36, y - 10); ctx.stroke(); ink(P2(`M${x + 30},${y - 6} C${x + 33},${y - 12} ${x + 40},${y - 12} ${x + 42},${y - 6} C${x + 40},${y} ${x + 33},${y} ${x + 30},${y - 6} Z`), '#ff9a2a', 0.7); }
+    else if (kind === 'pig') { ctx.strokeStyle = '#d83a5a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 14, gy - 30, x + 22, gy - 18); ctx.stroke(); inkEllipse(x + 32, gy - 12, 14, 9, 0, '#ffb0c8', 1); inkCircle(x + 44, gy - 15, 7, '#ffb0c8', 0.9); inkEllipse(x + 50, gy - 14, 3, 3, 0, '#ff8aa8', 0.6); ctx.fillStyle = '#1a1a2a'; circle(x + 45, gy - 18, 1.2); ctx.strokeStyle = OL; ctx.lineWidth = 2; for (const lx of [26, 38]) { ctx.beginPath(); ctx.moveTo(x + lx, gy - 6); ctx.lineTo(x + lx, gy); ctx.stroke(); } }
+    else if (kind === 'trumpet') { ink(P2(`M${x - 4},${y - 2} L${x + 16},${y - 6} L${x + 26},${y - 14} L${x + 26},${y + 6} L${x + 16},${y} L${x - 4},${y + 2} Z`), '#ffd23a', 1); }
+    else if (kind === 'juggle') { for (let i = 0; i < 3; i++) inkCircle(x - 18 + i * 14, y - 30 - Math.sin(i * 1.5) * 12, 5, ['#ff4a5a', '#3a7aff', '#ffd23a'][i], 0.8); }
+    else if (kind === 'teddy') { inkCircle(x - 5, y - 10, 3.5, '#c8874a', 0.6); inkCircle(x + 5, y - 10, 3.5, '#c8874a', 0.6); inkEllipse(x, y + 4, 8, 9, 0, '#c8874a', 0.9); inkCircle(x, y - 6, 6.5, '#c8874a', 0.9); ctx.fillStyle = '#1a1a1a'; circle(x - 2, y - 7, 1); circle(x + 2, y - 7, 1); }
   }
-  function hatOn(kind, col, x, top, r) {
-    const c = COL_HEX[col], dk = mix(c, '#1a0830', 0.25);
-    if (kind === 'tophat') { inkRect(x - r * 1.1, top + r * 0.12, r * 2.2, r * 0.28, c, 1, 3); inkRect(x - r * 0.7, top - r * 1.1, r * 1.4, r * 1.25, c, 1, 2); ctx.fillStyle = dk; ctx.fillRect(x - r * 0.7, top - r * 0.12, r * 1.4, r * 0.22); }
-    else if (kind === 'cap') { ink(P2(`M${x - r},${top + r * 0.35} C${x - r},${top - r * 0.75} ${x + r},${top - r * 0.75} ${x + r},${top + r * 0.35} Z`), c, 1); ink(P2(`M${x + r * 0.6},${top + r * 0.3} L${x + r * 1.6},${top + r * 0.42} L${x + r * 0.6},${top + r * 0.55} Z`), dk, 1); inkCircle(x, top - r * 0.38, r * 0.14, dk, 0.6); }
-    else if (kind === 'beret') { inkEllipse(x - r * 0.15, top + r * 0.05, r * 1.2, r * 0.48, -0.15, c, 1); ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - r * 0.1, top - r * 0.42); ctx.lineTo(x, top - r * 0.62); ctx.stroke(); }
-    else if (kind === 'pointy') { ink(P2(`M${x - r * 1.1},${top + r * 0.35} L${x + r * 0.2},${top - r * 2.1} L${x + r * 1.1},${top + r * 0.35} Z`), c, 1); vecStar(x, top - r * 0.4, r * 0.28, '#fff6a8', 0.6); }
-    else if (kind === 'bonnet') { ink(P2(`M${x - r * 1.15},${top + r * 0.9} C${x - r * 1.3},${top - r * 0.9} ${x + r * 1.3},${top - r * 0.9} ${x + r * 1.15},${top + r * 0.9} C${x + r * 0.8},${top + r * 0.1} ${x - r * 0.8},${top + r * 0.1} ${x - r * 1.15},${top + r * 0.9} Z`), c, 1); bow(x + r * 1.0, top + r * 0.95, r * 0.4, dk, 0.8); }
-    else if (kind === 'sunhat') { inkEllipse(x, top + r * 0.2, r * 1.9, r * 0.42, 0, c, 1); ink(P2(`M${x - r * 0.8},${top + r * 0.2} C${x - r * 0.8},${top - r * 0.8} ${x + r * 0.8},${top - r * 0.8} ${x + r * 0.8},${top + r * 0.2} Z`), c, 1); ctx.fillStyle = dk; ctx.fillRect(x - r * 0.8, top - r * 0.05, r * 1.6, r * 0.2); flower(x - r * 0.5, top, r * 0.22, '#ffffff', '#ffd84a', 0.5); }
+  function hatOn(sp, x, top, r) {
+    const c = sp.hatHex, dk = mix(c, '#1a0830', 0.25), k = sp.hat;
+    if (k === 'tophat') { inkRect(x - r * 1.1, top + r * 0.12, r * 2.2, r * 0.28, c, 1, 3); inkRect(x - r * 0.7, top - r * 1.1, r * 1.4, r * 1.25, c, 1, 2); ctx.fillStyle = dk; ctx.fillRect(x - r * 0.7, top - r * 0.12, r * 1.4, r * 0.22); }
+    else if (k === 'cap') { ink(P2(`M${x - r},${top + r * 0.35} C${x - r},${top - r * 0.75} ${x + r},${top - r * 0.75} ${x + r},${top + r * 0.35} Z`), c, 1); ink(P2(`M${x + r * 0.6},${top + r * 0.3} L${x + r * 1.6},${top + r * 0.42} L${x + r * 0.6},${top + r * 0.55} Z`), dk, 1); }
+    else if (k === 'beret') { inkEllipse(x - r * 0.15, top + r * 0.05, r * 1.2, r * 0.48, -0.15, c, 1); ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - r * 0.1, top - r * 0.42); ctx.lineTo(x, top - r * 0.62); ctx.stroke(); }
+    else if (k === 'party') { ink(P2(`M${x - r * 0.8},${top + r * 0.35} L${x + r * 0.1},${top - r * 1.9} L${x + r * 0.8},${top + r * 0.35} Z`), c, 1); ctx.fillStyle = '#ffffff'; for (let i = 0; i < 3; i++) circle(x - r * 0.25 + i * r * 0.2, top - r * 0.1 - i * r * 0.55, r * 0.14); inkCircle(x + r * 0.1, top - r * 1.95, r * 0.25, '#ffd23a', 0.6); }
+    else if (k === 'bonnet') { ink(P2(`M${x - r * 1.15},${top + r * 0.9} C${x - r * 1.3},${top - r * 0.9} ${x + r * 1.3},${top - r * 0.9} ${x + r * 1.15},${top + r * 0.9} C${x + r * 0.8},${top + r * 0.1} ${x - r * 0.8},${top + r * 0.1} ${x - r * 1.15},${top + r * 0.9} Z`), c, 1); bow(x + r * 1.0, top + r * 0.95, r * 0.4, dk, 0.8); }
+    else if (k === 'sunhat') { inkEllipse(x, top + r * 0.2, r * 2.0, r * 0.42, 0, c, 1); ink(P2(`M${x - r * 0.8},${top + r * 0.2} C${x - r * 0.8},${top - r * 0.8} ${x + r * 0.8},${top - r * 0.8} ${x + r * 0.8},${top + r * 0.2} Z`), c, 1); flower(x - r * 0.5, top, r * 0.25, '#ffffff', '#ffd84a', 0.5); }
+    else if (k === 'fishhat') { ink(P2(`M${x - r * 1.3},${top - r * 0.2} C${x - r * 0.6},${top - r * 1.1} ${x + r * 0.6},${top - r * 1.1} ${x + r * 1.0},${top - r * 0.3} L${x + r * 1.7},${top - r * 0.9} L${x + r * 1.6},${top + r * 0.3} L${x + r * 1.0},${top - r * 0.1} C${x + r * 0.6},${top + r * 0.4} ${x - r * 0.6},${top + r * 0.4} ${x - r * 1.3},${top - r * 0.2} Z`), '#ff9a3a', 1); ctx.fillStyle = '#ffffff'; circle(x - r * 0.8, top - r * 0.35, r * 0.2); ctx.fillStyle = '#1a1a2a'; circle(x - r * 0.8, top - r * 0.35, r * 0.1); }
+    else if (k === 'tower') { for (let i = 0; i < 3; i++) { const yy = top - i * r * 0.9, cc = [c, '#ffd23a', '#3ac86a'][i], w = r * (1.1 - i * 0.15); inkRect(x - w, yy + r * 0.12, w * 2, r * 0.25, cc, 1, 2); inkRect(x - w * 0.65, yy - r * 0.55, w * 1.3, r * 0.7, cc, 1, 2); } }
+    else if (k === 'cake') { inkRect(x - r * 0.95, top - r * 0.7, r * 1.9, r, '#ffe0b0', 1, 3); ink(P2(`M${x - r * 0.95},${top - r * 0.55} C${x - r * 0.5},${top - r * 0.2} ${x},${top - r * 0.6} ${x + r * 0.3},${top - r * 0.3} C${x + r * 0.6},${top - r * 0.1} ${x + r * 0.9},${top - r * 0.5} ${x + r * 0.95},${top - r * 0.55} L${x + r * 0.95},${top - r * 0.75} L${x - r * 0.95},${top - r * 0.75} Z`), '#ff8ac0', 0.8); inkRect(x - r * 0.08, top - r * 1.35, r * 0.16, r * 0.6, '#5ab0ff', 0.6, 1); ctx.fillStyle = '#ffb83a'; ellipse(x, top - r * 1.48, r * 0.12, r * 0.2); ctx.fillStyle = '#ff3a3a'; circle(x - r * 0.5, top - r * 0.8, r * 0.14); circle(x + r * 0.5, top - r * 0.8, r * 0.14); }
+    else if (k === 'pot') { ink(P2(`M${x - r * 0.95},${top + r * 0.35} L${x - r * 0.85},${top - r * 0.7} L${x + r * 0.85},${top - r * 0.7} L${x + r * 0.95},${top + r * 0.35} Z`), '#a8b0c8', 1); inkRect(x + r * 0.85, top - r * 0.4, r * 0.9, r * 0.22, '#3a3a4a', 0.8, 2); inkEllipse(x, top - r * 0.7, r * 0.85, r * 0.15, 0, '#c8d0e0', 0.7); }
+    else if (k === 'viking') { ink(P2(`M${x - r},${top + r * 0.4} C${x - r},${top - r * 0.8} ${x + r},${top - r * 0.8} ${x + r},${top + r * 0.4} Z`), '#b8c0d0', 1); for (const s of [-1, 1]) ink(P2(`M${x + s * r * 0.8},${top - r * 0.1} C${x + s * r * 1.5},${top - r * 0.3} ${x + s * r * 1.7},${top - r * 1.0} ${x + s * r * 1.5},${top - r * 1.5} C${x + s * r * 1.3},${top - r * 0.9} ${x + s * r * 1.1},${top - r * 0.5} ${x + s * r * 0.75},${top + r * 0.2} Z`), '#fff4d8', 0.9); }
+    else if (k === 'propeller') { ink(P2(`M${x - r},${top + r * 0.35} C${x - r},${top - r * 0.75} ${x + r},${top - r * 0.75} ${x + r},${top + r * 0.35} Z`), c, 1); ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, top - r * 0.4); ctx.lineTo(x, top - r * 0.85); ctx.stroke(); inkEllipse(x - r * 0.55, top - r * 0.9, r * 0.55, r * 0.14, 0, '#ff4a5a', 0.6); inkEllipse(x + r * 0.55, top - r * 0.9, r * 0.55, r * 0.14, 0, '#3a7aff', 0.6); }
+    else if (k === 'chef') { inkRect(x - r * 0.8, top - r * 0.3, r * 1.6, r * 0.6, '#ffffff', 1, 2); puffCluster([[x - r * 0.5, top - r * 0.7, r * 0.5], [x, top - r * 1.0, r * 0.6], [x + r * 0.5, top - r * 0.7, r * 0.5]], '#ffffff', 1, OL); }
+    else if (k === 'knight') { ink(P2(`M${x - r * 1.05},${top + r * 1.4} L${x - r * 1.05},${top + r * 0.1} C${x - r * 1.05},${top - r * 0.9} ${x + r * 1.05},${top - r * 0.9} ${x + r * 1.05},${top + r * 0.1} L${x + r * 1.05},${top + r * 1.4} Z`), '#c8d0e0', 1.1); ctx.fillStyle = '#2a2a3a'; ctx.fillRect(x - r * 0.75, top + r * 0.75, r * 1.5, r * 0.18); ink(P2(`M${x},${top - r * 0.6} C${x + r * 0.3},${top - r * 1.6} ${x + r * 1.2},${top - r * 1.6} ${x + r * 1.5},${top - r * 1.1} C${x + r},${top - r * 1.0} ${x + r * 0.4},${top - r * 0.8} ${x + r * 0.2},${top - r * 0.5} Z`), c, 0.9); }
+    else if (k === 'jester') { for (const [s, cc] of [[-1, c], [1, '#ffd23a'], [0, '#3ac86a']]) { const ex = x + s * r * 1.4, ey = top - r * (s === 0 ? 1.4 : 0.6); ink(P2(`M${x - r * 0.8},${top + r * 0.3} Q${x + s * r * 0.6},${top - r * 1.0} ${ex},${ey} Q${x + s * r * 0.3},${top - r * 0.3} ${x + r * 0.8},${top + r * 0.3} Z`), cc, 0.9); inkCircle(ex, ey, r * 0.2, '#ffd23a', 0.6); } }
+    else if (k === 'wizard') { ink(P2(`M${x - r * 1.5},${top + r * 0.35} C${x - r * 0.4},${top + r * 0.1} ${x + r * 0.4},${top + r * 0.1} ${x + r * 1.5},${top + r * 0.35} L${x + r * 0.6},${top + r * 0.1} L${x + r * 0.4},${top - r * 2.1} L${x - r * 0.6},${top + r * 0.1} Z`), '#4a3ab0', 1); vecStar(x - r * 0.05, top - r * 0.6, r * 0.25, '#ffe36b', 0.5); ctx.fillStyle = '#ffe36b'; circle(x + r * 0.2, top - r * 1.2, r * 0.1); }
+    else if (k === 'dragon') { ink(P2(`M${x - r * 1.2},${top + r * 1.6} C${x - r * 1.4},${top - r * 0.6} ${x + r * 1.4},${top - r * 0.6} ${x + r * 1.2},${top + r * 1.6} L${x + r * 0.9},${top + r * 1.6} C${x + r * 0.9},${top + r * 0.2} ${x - r * 0.9},${top + r * 0.2} ${x - r * 0.9},${top + r * 1.6} Z`), '#5ac86a', 1); for (let i = 0; i < 4; i++) ink(P2(`M${x - r * 0.7 + i * r * 0.45},${top - r * 0.15 - Math.sin(i / 3 * Math.PI) * r * 0.25} l${r * 0.22},${-r * 0.5} l${r * 0.22},${r * 0.5} Z`), '#ff8a2a', 0.6); for (const s of [-1, 1]) { inkCircle(x + s * r * 0.45, top - r * 0.05, r * 0.24, '#ffffff', 0.6); ctx.fillStyle = '#1a1a2a'; circle(x + s * r * 0.45, top - r * 0.02, r * 0.1); } }
   }
   function personSprite(sp) {
-    const S2 = 2, c = document.createElement('canvas'); c.width = SPR_W * S2; c.height = SPR_H * S2;
+    const c = document.createElement('canvas'); c.width = SPR_W * SPR_S; c.height = SPR_H * SPR_S;
     const old = ctx; ctx = c.getContext('2d');
     try {
-      ctx.scale(S2, S2); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-      const x = SPR_W / 2, gy = SPR_H - 6, cl = COL_HEX[sp.cloth];
-      // legs, body (a dress or a tunic), arms
-      if (!sp.dress) for (const k of [-1, 1]) { inkRect(x + k * 6 - 4, gy - 26, 8, 22, '#5a4a6a', 1, 3); inkEllipse(x + k * 7, gy - 3, 7, 4, 0, '#3a2a2a', 1); }
-      else for (const k of [-1, 1]) inkEllipse(x + k * 7, gy - 3, 7, 4, 0, '#3a2a2a', 1);
-      const body = sp.dress ? P2(`M${x - 12},${gy - 62} C${x - 16},${gy - 40} ${x - 24},${gy - 18} ${x - 24},${gy - 6} L${x + 24},${gy - 6} C${x + 24},${gy - 18} ${x + 16},${gy - 40} ${x + 12},${gy - 62} Z`)
-        : P2(`M${x - 14},${gy - 62} C${x - 16},${gy - 50} ${x - 17},${gy - 36} ${x - 16},${gy - 24} L${x + 16},${gy - 24} C${x + 17},${gy - 36} ${x + 16},${gy - 50} ${x + 14},${gy - 62} Z`);
-      ink(body, cl, 1.2);
-      ctx.fillStyle = 'rgba(255,255,255,.35)'; if (sp.dress) ctx.fillRect(x - 16, gy - 20, 32, 4); else { ctx.fillStyle = mix(cl, '#1a0830', 0.3); ctx.fillRect(x - 16, gy - 34, 32, 4); }
-      inkRect(x - 21, gy - 60, 8, 26, cl, 1, 4); inkCircle(x - 17, gy - 32, 4.5, sp.skin, 0.8);
-      // the held item in the front hand
-      inkRect(x + 13, gy - 60, 8, 22, cl, 1, 4); inkCircle(x + 17, gy - 36, 4.5, sp.skin, 0.8);
-      heldItem(sp.item, x + 20, gy - 34);
-      // head and hair
-      const hy = gy - 76, r = 13;
-      if (sp.style === 'long') ink(P2(`M${x - r - 2},${hy - 4} C${x - r - 4},${hy + 14} ${x - r},${hy + 22} ${x - r + 4},${hy + 24} L${x + r - 4},${hy + 24} C${x + r},${hy + 22} ${x + r + 4},${hy + 14} ${x + r + 2},${hy - 4} Z`), sp.hair, 1);
+      ctx.scale(SPR_S, SPR_S); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      const x = SPR_W / 2, gy = SPR_FEET, hs = sp.hs, ws = sp.ws, cl = sp.cloth, cl2 = sp.cloth2;
+      const costume = sp.hat === 'knight' ? 'knight' : sp.hat === 'wizard' ? 'wizard' : sp.hat === 'jester' ? 'jester' : sp.hat === 'dragon' ? 'dragon' : null;
+      const legH = (sp.stilts ? 54 : 24) * hs, torH = 38 * hs, tw = 14 * ws * Math.sqrt(hs), r = 12.5 * Math.pow(hs, 0.4);
+      const waist = gy - legH, shoulder = waist - torH, hy = shoulder - r * 0.9;
+      const body = costume === 'knight' ? '#c8d0e0' : costume === 'dragon' ? '#5ac86a' : costume === 'wizard' ? '#4a3ab0' : cl;
+      // cape and dragon tail go behind
+      if (sp.look === 'cape') ink(P2(`M${x - tw},${shoulder + 4} C${x - tw * 2},${waist} ${x - tw * 2.1},${gy - 10} ${x - tw * 1.6},${gy - 6} L${x + tw * 1.4},${gy - 6} C${x + tw * 1.8},${gy - 10} ${x + tw * 1.6},${waist} ${x + tw},${shoulder + 4} Z`), sp.capeHex, 1);
+      if (costume === 'dragon') { ink(P2(`M${x - tw * 0.6},${waist} C${x - tw * 2.4},${waist + 4} ${x - tw * 2.6},${gy - 4} ${x - tw * 3.2},${gy - 18} L${x - tw * 2.2},${gy - 4} C${x - tw * 1.6},${gy} ${x - tw * 0.6},${gy - 8} ${x},${waist + 8} Z`), '#5ac86a', 1); }
+      if (sp.look === 'pigtails' || sp.look === 'rainbow') {
+        if (sp.look === 'pigtails') for (const s of [-1, 1]) { inkEllipse(x + s * r * 1.35, hy + r * 0.3, r * 0.42, r * 0.7, s * 0.4, sp.hairHex, 0.9); bow(x + s * r * 1.05, hy - r * 0.1, r * 0.3, '#ff4a8a', 0.6); }
+        else { const rb = ['#ff4a5a', '#ff9a2a', '#ffd23a', '#3ac86a', '#3a7aff', '#a45ae8']; rb.forEach((cc, i) => inkRect(x - r * 1.15 + i * r * 0.38, hy - r * 0.2, r * 0.4, r * 2.1, cc, i ? 0 : 0.8, 3)); }
+      }
+      // legs (or stilts) and shoes
+      if (sp.stilts) for (const s of [-1, 1]) { inkRect(x + s * 6 - 3, waist, 6, legH, '#b8763a', 1, 2); inkRect(x + s * 6 - 6, waist + 4, 12, 18, cl2, 1, 3); }
+      else if (!sp.dress || costume === 'knight') for (const s of [-1, 1]) { inkRect(x + s * tw * 0.42 - 4.5, waist - 2, 9, legH, costume === 'knight' ? '#a8b0c0' : cl2, 1, 3); inkEllipse(x + s * tw * 0.45, gy - 3, 7.5, 4.5, 0, sp.shoe, 1); }
+      else for (const s of [-1, 1]) { inkRect(x + s * 6 - 3, gy - 12, 6, 10, sp.skin, 0.8, 2); inkEllipse(x + s * 7, gy - 3, 7, 4, 0, sp.shoe, 1); }
+      // the body: a dress/robe down to the knees, or a tunic
+      const long = (sp.dress || costume === 'wizard') && costume !== 'knight';
+      const bot = long ? (sp.stilts ? waist + 18 : gy - 8) : waist + 4;
+      const bodyP = P2(`M${x - tw * 0.85},${shoulder} C${x - tw * 1.1},${shoulder + torH * 0.4} ${x - tw * (long ? 1.6 : 1.15)},${bot - 10} ${x - tw * (long ? 1.7 : 1.1)},${bot} L${x + tw * (long ? 1.7 : 1.1)},${bot} C${x + tw * (long ? 1.6 : 1.15)},${bot - 10} ${x + tw * 1.1},${shoulder + torH * 0.4} ${x + tw * 0.85},${shoulder} Z`);
+      ink(bodyP, body, 1.2);
+      ctx.save(); ctx.clip(bodyP);
+      if (sp.look === 'stripes') { ctx.fillStyle = sp.patHex; for (let yy = shoulder; yy < bot; yy += 9) ctx.fillRect(x - 40, yy, 80, 4.5); }
+      if (sp.look === 'dots') { ctx.fillStyle = sp.patHex; for (let yy = shoulder + 4; yy < bot; yy += 10) for (let xx = x - 36 + ((yy / 10) % 2) * 5; xx < x + 40; xx += 10) circle(xx, yy, 2.6); }
+      if (costume === 'jester') { ctx.fillStyle = '#ffd23a'; ctx.fillRect(x, shoulder - 2, 40, bot - shoulder + 4); }
+      if (costume === 'knight') { ctx.strokeStyle = 'rgba(90,90,120,.5)'; ctx.lineWidth = 1.5; for (let yy = shoulder + 8; yy < bot; yy += 8) { ctx.beginPath(); ctx.moveTo(x - 30, yy); ctx.lineTo(x + 30, yy); ctx.stroke(); } inkCircle(x, shoulder + torH * 0.45, 6, sp.hatHex, 0.8); }
+      if (costume === 'dragon') { ctx.fillStyle = '#ffe08a'; ellipse(x, (shoulder + bot) / 2 + 4, tw * 0.7, torH * 0.45); }
+      if (costume === 'wizard') { for (let i = 0; i < 6; i++) vecStar(x - tw + (i * 13) % (tw * 2), shoulder + 10 + i * 9, 3, '#ffe36b', 0.3); }
+      ctx.restore();
+      if (sp.look === 'apron') ink(P2(`M${x - tw * 0.6},${shoulder + torH * 0.35} L${x + tw * 0.6},${shoulder + torH * 0.35} L${x + tw * 0.8},${bot - 2} L${x - tw * 0.8},${bot - 2} Z`), '#ffffff', 0.9);
+      if (!long && !costume) { ctx.fillStyle = mix(body, '#1a0830', 0.3); ctx.fillRect(x - tw * 1.1, waist - 4, tw * 2.2, 4); }
+      // arms: back arm hangs, front arm holds the item
+      const sleeve = costume === 'knight' ? '#c8d0e0' : costume === 'jester' ? '#ffd23a' : body;
+      inkRect(x - tw - 7, shoulder + 2, 8, torH * 0.7, sleeve, 1, 4); inkCircle(x - tw - 3, shoulder + torH * 0.72 + 4, 4.5, costume === 'knight' ? '#a8b0c0' : sp.skin, 0.8);
+      const hx = x + tw + 3, handY = shoulder + torH * 0.66;
+      inkRect(x + tw - 1, shoulder + 2, 8, torH * 0.66, costume === 'jester' ? cl : sleeve, 1, 4); inkCircle(hx, handY + 2, 4.5, costume === 'knight' ? '#a8b0c0' : sp.skin, 0.8);
+      heldItem(sp.item, hx + 3, handY + 2, gy);
+      // the head
+      if (sp.look === 'beehive') inkEllipse(x, hy - r * 1.6, r * 0.85, r * 1.3, 0, sp.hairHex, 1);
       inkCircle(x, hy, r, sp.skin, 1.1);
-      ink(P2(`M${x - r - 1},${hy + 1} C${x - r - 2},${hy - r - 4} ${x + r + 2},${hy - r - 4} ${x + r + 1},${hy + 1} C${x + 6},${hy - 7} ${x - 6},${hy - 7} ${x - r - 1},${hy + 1} Z`), sp.hair, 0.9);
-      ctx.fillStyle = '#2a1a2a'; circle(x - 4.5, hy + 1, 1.8); circle(x + 4.5, hy + 1, 1.8);
-      ctx.strokeStyle = '#8a3a4a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, hy + 5, 4, 0.3, Math.PI - 0.3); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,120,140,.35)'; circle(x - 8, hy + 5, 2.6); circle(x + 8, hy + 5, 2.6);
-      hatOn(sp.hat, sp.hatCol, x, hy - r + 4, r);
+      if (costume !== 'knight' && costume !== 'dragon') {
+        if (sp.look === 'rainbow') ink(P2(`M${x - r - 1},${hy + 1} C${x - r - 2},${hy - r - 4} ${x + r + 2},${hy - r - 4} ${x + r + 1},${hy + 1} C${x + 6},${hy - 7} ${x - 6},${hy - 7} ${x - r - 1},${hy + 1} Z`), '#ff6fc0', 0.9);
+        else if (!sp.bald) ink(P2(`M${x - r - 1},${hy + 1} C${x - r - 2},${hy - r - 4} ${x + r + 2},${hy - r - 4} ${x + r + 1},${hy + 1} C${x + 6},${hy - 7} ${x - 6},${hy - 7} ${x - r - 1},${hy + 1} Z`), sp.hairHex, 0.9);
+      }
+      // face
+      const ey = hy + r * 0.05, ex = r * 0.38;
+      ctx.fillStyle = '#2a1a2a'; circle(x - ex, ey, 1.9); circle(x + ex, ey, 1.9);
+      if (sp.freckles) { ctx.fillStyle = 'rgba(160,90,50,.6)'; for (const [a, b] of [[-0.55, 0.35], [-0.4, 0.45], [0.45, 0.4], [0.6, 0.3]]) circle(x + a * r, hy + b * r, 0.9); }
+      if (sp.look === 'glasses') { ctx.strokeStyle = '#1a1a2a'; ctx.lineWidth = 1.6; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * ex, ey, 4, 0, TAU); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(x - ex + 4, ey); ctx.lineTo(x + ex - 4, ey); ctx.stroke(); }
+      if (sp.look === 'monocle') { ctx.strokeStyle = '#d8a020'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(x + ex, ey, 4.5, 0, TAU); ctx.stroke(); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + ex + 3, ey + 4); ctx.lineTo(x + ex + 6, ey + 16); ctx.stroke(); }
+      if (sp.look === 'eyepatch') { ctx.fillStyle = '#1a1a2a'; ellipse(x - ex, ey, 4.2, 3.6); ctx.strokeStyle = '#1a1a2a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - r, ey - 5); ctx.lineTo(x + r, ey - 4); ctx.stroke(); }
+      const nose = sp.look === 'bignose' ? r * 0.42 : r * 0.14;
+      inkEllipse(x + 1, hy + r * 0.32, nose * 0.9, nose, 0, mix(sp.skin, '#ff6a6a', 0.25), 0.7);
+      ctx.strokeStyle = '#8a3a4a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, hy + r * 0.62, 3.5, 0.3, Math.PI - 0.3); ctx.stroke();
+      if (sp.look === 'moustache') ink(P2(`M${x},${hy + r * 0.52} C${x - 6},${hy + r * 0.38} ${x - 12},${hy + r * 0.62} ${x - 14},${hy + r * 0.3} C${x - 12},${hy + r * 0.85} ${x - 4},${hy + r * 0.7} ${x},${hy + r * 0.62} C${x + 4},${hy + r * 0.7} ${x + 12},${hy + r * 0.85} ${x + 14},${hy + r * 0.3} C${x + 12},${hy + r * 0.62} ${x + 6},${hy + r * 0.38} ${x},${hy + r * 0.52} Z`), sp.beardHex, 0.7);
+      if (sp.look === 'beard') ink(P2(`M${x - r * 0.95},${hy + r * 0.2} C${x - r * 1.1},${hy + r * 2.6} ${x + r * 1.1},${hy + r * 2.6} ${x + r * 0.95},${hy + r * 0.2} C${x + r * 0.5},${hy + r * 0.6} ${x - r * 0.5},${hy + r * 0.6} ${x - r * 0.95},${hy + r * 0.2} Z`), sp.beardHex, 1);
+      if (sp.look !== 'beard') { ctx.fillStyle = 'rgba(255,110,140,.3)'; circle(x - r * 0.62, hy + r * 0.42, 2.6); circle(x + r * 0.62, hy + r * 0.42, 2.6); }
+      hatOn(sp, x, (sp.look === 'beehive' ? hy - r * 2.5 : hy - r) + 4, r);
     } finally { ctx = old; }
-    return c;
+    const top = 38 * sp.hs + (sp.stilts ? 54 : 24) * sp.hs + 30 + 10;
+    return { c, top, tw: 14 * sp.ws * Math.sqrt(sp.hs) };
+  }
+  // a random townsperson with the given described features
+  function townsfolk(f) {
+    const kind = pick(['kid', 'kid', 'normal', 'normal', 'normal', 'normal', 'round', 'skinny', 'tall', 'giant', 'stilts']);
+    const hs = { kid: 0.68, normal: rand(0.9, 1.05), round: rand(0.85, 1), skinny: 1.05, tall: 1.18, giant: 1.32, stilts: 0.95 }[kind];
+    const ws = { kid: 0.95, normal: rand(0.9, 1.1), round: 1.5, skinny: 0.72, tall: 0.95, giant: 1.25, stilts: 0.9 }[kind];
+    const cloth = pick(BRIGHT);
+    let pat; do pat = pick(BRIGHT); while (pat === cloth);
+    return { ...f, hs, ws, stilts: kind === 'stilts', dress: Math.random() < 0.45, skin: pick(SKINS), hairHex: pick(HAIRS), beardHex: pick(['#6a3e22', '#e8e8f0', '#d8682a', '#2a1a1a', '#ff6fc0']), cloth, cloth2: pick(['#3a3a5a', '#5a4a3a', '#2a5a8a', '#8a2a4a', '#ffffff']), patHex: pat, capeHex: pick(BRIGHT), hatHex: pick(BRIGHT), shoe: pick(['#3a2a2a', '#d83a3a', '#3a3a8a', '#ffd23a']), freckles: Math.random() < 0.3, bald: Math.random() < 0.12 };
   }
   // ---- the town square: buildings along the top, cobbled squares and gardens ----
   function makeProps(ww, wh, round) {
@@ -600,7 +674,7 @@
     for (let i = 0; i * 140 < ww; i++) {
       const x = 70 + i * 140;
       if (Math.abs(x - ww / 2) < 200 || x < cx - 120 || x > cx + W + 120) continue;
-      townHouse(x, 272, 104, 110 + (i * 37) % 30, { wall: WALLS[i % 6], roof: ROOFS[(i * 5) % 6], door: COLS[i % 6] }, t);
+      townHouse(x, 272, 104, 110 + (i * 37) % 30, { wall: WALLS[i % 6], roof: ROOFS[(i * 5) % 6], door: ['red', 'blue', 'yellow', 'green', 'purple', 'orange'][i % 6] }, t);
     }
     bunting(Math.max(cx - 20, 0), 190, Math.min(cx + W + 20, ww), 200, 20, t, 26);
   }
@@ -672,35 +746,36 @@
       g.ww = ww; g.wh = wh;
       // pick a target that hasn't been used yet (a different look every round)
       let tg;
-      do tg = { hat: pick(HATS), hatCol: pick(COLS), item: pick(HELD), cloth: pick(COLS) };
-      while (g.used.some(u => u.hat === tg.hat && u.hatCol === tg.hatCol) || g.used.some(u => u.item === tg.item && g.used.length < 3));
+      do tg = { hat: pick(HATS), item: pick(HELD), look: pick(LOOKS2) };
+      while (g.used.some(u => u.hat === tg.hat || u.item === tg.item));
       g.used.push(tg);
-      const keys = T === 2 ? ['hat', 'hatCol', 'item', 'cloth'] : ['hat', 'hatCol', 'item'];
+      const keys = T === 2 ? ['hat', 'item', 'look'] : ['hat', 'item'];
       const shared = p => keys.filter(k => p[k] === tg[k]).length;
-      const rp = () => ({ hat: pick(HATS), hatCol: pick(COLS), item: pick(HELD), cloth: pick(COLS) });
+      const rp = () => ({ hat: pick(HATS), item: pick(HELD), look: pick(LOOKS2) });
       const crowd = [];
-      // look-alikes: share some (never all) of the described features
-      const nLook = [2, 5, 9][T], share = [[1, 1], [2, 2], [2, 3]][T];
+      // look-alikes share some (never all) of the described features
+      const nLook = [5, 12, 22][T], share = [[1, 1], [1, 1], [1, 2]][T];
       for (let i = 0; i < nLook; i++) {
         let p; do { p = rp(); const s = randInt(share[0], share[1]); shuffle(keys.slice()).slice(0, s).forEach(k => { p[k] = tg[k]; }); } while (shared(p) >= keys.length || shared(p) < share[0]);
         crowd.push(p);
       }
-      // everyone else shares at most one feature with the target
-      while (crowd.length < CROWD[T] - 1) { const p = rp(); if (shared(p) <= 1) crowd.push(p); }
+      // everyone else: tier 1 shares nothing with the target (easy to rule out); higher tiers share at most one feature
+      while (crowd.length < CROWD[T] - 1) { const p = rp(); if (shared(p) <= (T === 0 ? 0 : 1) && shared(p) < keys.length) crowd.push(p); }
       crowd.push({ ...tg, target: true });
-      // spread them over the square, not too close together, away from the props
+      // pack them into the square (they may overlap a little in depth), away from the props
       const props = makeProps(ww, wh, g.round);
       const spots = [];
       for (const p of shuffle(crowd)) {
         let x, y, k = 0;
-        do { x = rand(70, ww - 70); y = rand(300, wh - 50); k++; }
-        while (k < 200 && (spots.some(s => Math.hypot(s.x - x, (s.y - y) * 1.4) < 74) || props.some(q => Math.abs(q.x - x) < q.r && Math.abs(q.y - y) < 40) || (p.target && Math.hypot(x - ww / 2, y - (wh - 70)) < 360)));
-        const skin = pick(SKINS), hair = pick(HAIRS), dress = Math.random() < 0.5;
-        const spec = { ...p, skin, hair, dress, style: pick(['short', 'long', 'bun']) };
-        spots.push({ x, y, spec, img: personSprite(spec), ph: rand(0, 6), wx: rand(-1, 1), say: 0, hop: 0 });
+        const gap = p.target ? 70 : 46;
+        do { x = rand(60, ww - 60); y = rand(300, wh - 30); k++; }
+        while (k < 300 && (spots.some(s => Math.hypot(s.x - x, (s.y - y) * 1.7) < (s.spec.target ? 70 : gap)) || props.some(q => Math.abs(q.x - x) < q.r && Math.abs(q.y - y) < 40) || (p.target && Math.hypot(x - ww / 2, y - (wh - 70)) < 360)));
+        const spec = townsfolk(p);
+        const spr = personSprite(spec);
+        spots.push({ x, y, spec, img: spr.c, top: spr.top, tw: spr.tw, ph: rand(0, 6), anim: randInt(0, 4), sp: rand(0.8, 1.6), wx: rand(-1, 1), say: 0, hop: 0 });
       }
       g.people = spots; g.props = props;
-      g.animals = Array.from({ length: [4, 6, 8][T] }, () => ({ x: rand(60, ww - 60), y: rand(300, wh - 40), e: pick(['🐕', '🐈', '🐓', '🦆', '🐑']), ph: rand(0, 6) }));
+      g.animals = Array.from({ length: [8, 12, 16][T] }, () => ({ x: rand(60, ww - 60), y: rand(300, wh - 40), e: pick(['🐕', '🐈', '🐓', '🦆', '🐑', '🐐', '🐖', '🦃']), ph: rand(0, 6) }));
       g.tg = tg; g.keys = keys; g.rt = 0; g.wrong = 0; g.hinted = false; g.cheer = -1; g.fly = null; g.dest = null;
       g.hx = ww / 2; g.hy = wh - 60; g.camX = clamp(g.hx - W / 2, 0, ww - W); g.camY = clamp(g.hy - H / 2 - 40, 0, wh - H);
       g.desc = describe(tg, T);
@@ -746,7 +821,7 @@
       const wpx = pointer.x + g.camX, wpy = pointer.y + g.camY;
       const onUI = inRect(CARD) || pointer.y < 62;
       if (pointer.clicked && !onUI) {
-        const p = g.people.filter(p => Math.abs(wpx - p.x) < 28 && wpy < p.y + 6 && wpy > p.y - 108).sort((a, c) => Math.hypot(wpx - a.x, wpy - a.y + 50) - Math.hypot(wpx - c.x, wpy - c.y + 50))[0];
+        const p = g.people.filter(p => Math.abs(wpx - p.x) < Math.max(24, p.tw + 8) && wpy < p.y + 6 && wpy > p.y - p.top).sort((a, c) => Math.hypot(wpx - a.x, wpy - a.y + a.top / 2) - Math.hypot(wpx - c.x, wpy - c.y + c.top / 2))[0];
         g.dest = p ? { p } : { x: wpx, y: wpy };
         g.usePointer = true;
       } else if (pointer.down && g.dest && !g.dest.p && !onUI) g.dest = { x: wpx, y: wpy };
@@ -782,9 +857,14 @@
       for (const p of g.people) {
         if (p.x < cx - 60 || p.x > cx + W + 60 || p.y < cy - 20 || p.y > cy + H + 140) continue;
         list.push([p.y, () => {
-          const sway = Math.sin(t * 1.2 + p.ph) * 6 * p.wx, hop = p.hop > 0 ? Math.abs(Math.sin(p.hop * 9)) * 16 : 0;
+          // little idle animations: sway, bob, wiggle, bounce or shuffle
+          const q = t * p.sp + p.ph, a = p.anim;
+          const sway = a === 0 ? Math.sin(q * 1.2) * 5 : a === 4 ? Math.sin(q * 0.6) * 12 : 0;
+          const hop = (p.hop > 0 ? Math.abs(Math.sin(p.hop * 9)) * 16 : 0) + (a === 1 ? Math.abs(Math.sin(q * 2.2)) * 3 : a === 3 ? Math.max(0, Math.sin(q * 1.5) - 0.8) * 30 : 0);
+          const rot = a === 2 ? Math.sin(q * 3) * 0.07 : a === 0 ? Math.sin(q * 1.2) * 0.03 : 0;
           ctx.fillStyle = 'rgba(40,20,60,.18)'; ellipse(p.x + sway, p.y, 20, 5);
-          ctx.drawImage(p.img, p.x + sway - SPR_W / 2, p.y - SPR_H + 6 - hop, SPR_W, SPR_H);
+          if (rot) { ctx.save(); ctx.translate(p.x + sway, p.y); ctx.rotate(rot); ctx.drawImage(p.img, -SPR_W / 2, -SPR_FEET - hop, SPR_W, SPR_H); ctx.restore(); }
+          else ctx.drawImage(p.img, p.x + sway - SPR_W / 2, p.y - SPR_FEET - hop, SPR_W, SPR_H);
         }]);
       }
       list.push([g.hy + 1, () => {
@@ -795,7 +875,7 @@
       list.sort((a, b) => a[0] - b[0]).forEach(([, f]) => f());
       // who SPACE would hand the invitation to
       const nr = g.cheer < 0 && !g.fly ? this.near(g, 110) : null;
-      if (nr) { ctx.strokeStyle = `rgba(255,255,255,${0.7 + 0.3 * Math.sin(t * 6)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(nr.x, nr.y, 26, 8, 0, 0, TAU); ctx.stroke(); text('📜?', nr.x, nr.y - SPR_H - 4, 18, '#fff', 'center', 800); }
+      if (nr) { ctx.strokeStyle = `rgba(255,255,255,${0.7 + 0.3 * Math.sin(t * 6)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(nr.x, nr.y, 26, 8, 0, 0, TAU); ctx.stroke(); text('📜?', nr.x, nr.y - nr.top - 14, 18, '#fff', 'center', 800); }
       // the hint sparkle over the right person
       const tgP = g.people.find(p => p.spec.target);
       if (g.hinted && g.cheer < 0) { softGlow(tgP.x, tgP.y - 50, 70, '255,240,150', 0.5 + 0.2 * Math.sin(t * 6)); for (let i = 0; i < 4; i++) { const a = t * 3 + i * TAU / 4; star(tgP.x + Math.cos(a) * 40, tgP.y - 60 + Math.sin(a) * 40, 6, '#fff6a8'); } }
@@ -803,7 +883,7 @@
         const p = g.fly.p, k = g.fly.t, x = lerp(g.hx, p.x, k), y = lerp(g.hy - 120, p.y - 70, k) - Math.sin(k * Math.PI) * 60;
         scrollRoll(x, y, 1, k * 9);
       }
-      for (const p of g.people) if (p.say > 0) bubbleW(p.x, p.y - SPR_H - 6, p.line, p.spec.target ? '#c03a7a' : '#5a2a6e');
+      for (const p of g.people) if (p.say > 0) bubbleW(p.x, p.y - p.top - 10, p.line, p.spec.target ? '#c03a7a' : '#5a2a6e');
       ctx.restore();
       // edge arrow to the target when the hint is on and they're off-screen
       if (g.hinted && g.cheer < 0) {
@@ -816,9 +896,11 @@
       // the corner card: who to find
       rrect(CARD.x, CARD.y, CARD.w, CARD.h, 18, '#fff8e6', '#c9a070', 3);
       rrect(CARD.x + 10, CARD.y + 10, 96, CARD.h - 20, 12, '#e8f4ff', '#c9a8e0', 2);
-      const tgI = tgP.img; ctx.drawImage(tgI, CARD.x + 58 - SPR_W * 0.68, CARD.y + CARD.h - 14 - SPR_H * 1.36 + 8, SPR_W * 1.36, SPR_H * 1.36);
+      { const k = Math.min(1.1, (CARD.h - 24) / (tgP.top + 30)), bx = CARD.x + 58, by = CARD.y + CARD.h - 16;
+        ctx.save(); ctx.beginPath(); ctx.roundRect(CARD.x + 10, CARD.y + 10, 96, CARD.h - 20, 12); ctx.clip();
+        ctx.drawImage(tgP.img, bx - SPR_W * k / 2, by - SPR_FEET * k, SPR_W * k, SPR_H * k); ctx.restore(); }
       text('Find:', CARD.x + 116, CARD.y + 24, 16, '#9a6a3a', 'left', 800);
-      wrap(g.cardText || (g.cardText = cardText(g.tg, g.T)), 136, 15, 700).slice(0, 5).forEach((l, i) => text(l, CARD.x + 116, CARD.y + 48 + i * 19, 15, '#5a2a6e', 'left', 700));
+      { let yy = CARD.y + 48; for (const line of cardLines(g.tg, g.T)) for (const l of wrap('• ' + line, 160, 15, 700)) { text(l, CARD.x + 116, yy, 15, '#5a2a6e', 'left', 700); yy += 19; } }
       if (g.cheer >= 0) { outlined(g.round + 1 >= g.rounds ? 'All delivered!' : 'Delivered!', W / 2, 140, 40, '#ffd84a', 'center', '#7a3a6a'); }
       if (g.rt < 5 && g.cheer < 0) { rrect(W / 2 - 250, 70, 500, 38, 19, 'rgba(48,24,72,.78)'); text('Arrow keys to ride. Tap someone or press SPACE to deliver!', W / 2, 89, 16, '#fff6a8', 'center', 700); }
     },

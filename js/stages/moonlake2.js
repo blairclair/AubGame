@@ -62,60 +62,26 @@
     }
     ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, -16, 22, Math.PI, 0); ctx.stroke();
   };
-  const clam = open => {
+  const umbrella = open => {
     INK = OL;
+    ctx.lineCap = 'round';
     if (open) {
-      inkEllipse(0, 4, 30, 30, 0, '#ffb8d8', 2);
-      ink(P2('M-30,10 C-30,-30 30,-30 30,10 C10,14 -10,14 -30,10 Z'), '#ffd0e4', 2);
-      ink(P2('M-30,12 C-28,30 28,30 30,12 C10,16 -10,16 -30,12 Z'), '#ffb8d8', 2);
-      glow(0, 10, 18, '255,255,255', 0.8); inkCircle(0, 10, 7, '#fffaf0', 1.2);
-      ctx.strokeStyle = 'rgba(200,80,140,.45)'; ctx.lineWidth = 2;
-      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 4, 6); ctx.lineTo(i * 12, -16); ctx.stroke(); }
+      // a wide striped canopy on a curved handle
+      ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(0, 22); ctx.arc(-6, 22, 6, 0, Math.PI); ctx.stroke();
+      ctx.strokeStyle = '#8a5a3a'; ctx.lineWidth = 2.5; ctx.stroke();
+      ink(P2('M-36,-12 C-34,-40 34,-40 36,-12 C30,-17 24,-17 18,-12 C12,-17 6,-17 0,-12 C-6,-17 -12,-17 -18,-12 C-24,-17 -30,-17 -36,-12 Z'), '#ff6fae', 2);
+      ctx.save(); ctx.clip(P2('M-36,-12 C-34,-40 34,-40 36,-12 L-36,-12 Z'));
+      ctx.fillStyle = '#ffd23f'; for (const x of [-27, 9]) { ctx.beginPath(); ctx.moveTo(0, -38); ctx.lineTo(x, -10); ctx.lineTo(x + 18, -10); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+      inkCircle(0, -38, 3, '#ffd23f', 1);
     } else {
-      ink(P2('M-32,8 C-30,-22 30,-22 32,8 C12,14 -12,14 -32,8 Z'), '#ffb8d8', 2);
-      ink(P2('M-32,8 C-26,24 26,24 32,8 C12,14 -12,14 -32,8 Z'), '#f598c0', 2);
-      ctx.strokeStyle = 'rgba(200,80,140,.45)'; ctx.lineWidth = 2;
-      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 4, 8); ctx.lineTo(i * 11, -12); ctx.stroke(); }
+      // rolled up tight, with its strap done up
+      ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(0, 14); ctx.lineTo(0, 24); ctx.arc(-6, 24, 6, 0, Math.PI); ctx.stroke();
+      ctx.strokeStyle = '#8a5a3a'; ctx.lineWidth = 2.5; ctx.stroke();
+      ink(P2('M0,-40 C6,-24 8,0 6,14 L-6,14 C-8,0 -6,-24 0,-40 Z'), '#ff6fae', 2);
+      ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(0, -38); ctx.lineTo(3, 12); ctx.lineTo(-1, 12); ctx.closePath(); ctx.fill();
+      inkRect(-7, -6, 14, 5, '#ffd23f', 1.2, 2);
     }
-  };
-  const towel = wet => {
-    line([[-34, -22], [34, -22]], OL, 3);
-    INK = OL;
-    const col = wet ? '#6a7ad8' : '#ff9ad0';
-    ink(P2(wet ? 'M-22,-22 L22,-22 L20,22 C10,28 -10,28 -20,22 Z' : 'M-24,-22 L24,-22 L24,20 L-24,20 Z'), col, 2);
-    ctx.fillStyle = wet ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.55)'; ctx.fillRect(-20, -4, 40, 5); ctx.fillRect(-20, 8, 40, 3);
-    inkRect(-6, -27, 12, 9, '#ffe08a', 1, 2);
-    if (wet) { ctx.fillStyle = '#7ac8ff'; for (let i = 0; i < 3; i++) ellipse(-12 + i * 12, 30 + ((S.t * 40 + i * 9) % 18), 3, 4.5); }
-    else for (let i = 0; i < 2; i++) star(-14 + i * 30, 30 + Math.sin(S.t * 4 + i) * 2, 6, '#fff6a8');
-  };
-  const bowl = inside => {
-    INK = OL;
-    const bx = inside ? 0 : -8;
-    inkRect(bx - 18, 22, 36, 6, '#b89070', 1.5, 3);
-    ctx.globalAlpha = 0.8; inkCircle(bx, 0, 24, 'rgba(200,235,255,.55)', 2); ctx.globalAlpha = 1;
-    ctx.fillStyle = 'rgba(80,160,240,.5)'; ctx.beginPath(); ctx.arc(bx, 0, 22, 0.2, Math.PI - 0.2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.7)'; ellipse(bx - 10, -10, 4, 7, 0.5);
-    if (inside) emoji('🐠', Math.sin(S.t * 2) * 5, 6, 24);
-    else { const hop = Math.abs(Math.sin(S.t * 4)) * 8; ctx.save(); ctx.translate(26, 14 - hop); ctx.rotate(-0.4); emoji('🐠', 0, 0, 24); ctx.restore(); }
-  };
-  const cairn = tall => {
-    INK = OL;
-    const stones = tall ? [[0, 20, 22, 9], [2, 4, 18, 8], [-1, -10, 15, 7], [1, -22, 11, 6], [0, -32, 8, 5]] : [[0, 20, 22, 9]];
-    for (const [x, y, rx, ry] of stones) inkEllipse(x, y, rx, ry, 0, '#a0aac8', 1.5);
-  };
-  const arrow = up => {
-    ctx.save(); if (!up) ctx.scale(1, -1);
-    INK = OL; ink(P2('M0,-30 L24,-4 L10,-4 L10,28 L-10,28 L-10,-4 L-24,-4 Z'), '#ffd23a', 2);
-    ctx.restore();
-  };
-  const lantern = on => {
-    INK = OL;
-    if (on) glow(0, 4, 50, '255,210,120', 0.8);
-    inkRect(-3, -34, 6, 10, '#4a3a5a', 1, 2);
-    inkRect(-16, -26, 32, 6, '#4a3a5a', 1.5, 2);
-    inkRect(-13, -20, 26, 36, on ? '#ffe08a' : '#4a4a6a', 2, 6);
-    inkRect(-16, 16, 32, 6, '#4a3a5a', 1.5, 2);
-    if (on) { ctx.fillStyle = '#ff9a3a'; ellipse(0, 2 + Math.sin(S.t * 8), 4, 8); ctx.fillStyle = '#fff6c0'; ellipse(0, 4, 2, 4); }
   };
   const em = (ch, size = 50, extra) => () => { if (extra) extra(); emoji(ch, 0, 0, size); };
   const speedLines = () => { for (let i = 0; i < 3; i++) line([[36 + ((S.t * 60 + i * 9) % 14), -8 + i * 10], [50 + ((S.t * 60 + i * 9) % 14), -8 + i * 10]], 'rgba(255,255,255,.85)', 3); };
@@ -128,7 +94,7 @@
     mug: { a: 'hot', b: 'cold', ph: ['a HOT drink', 'a COLD drink'], d: [() => mug(true), () => mug(false)] },
     pet: { a: 'fast', b: 'slow', ph: ['a FAST bunny', 'a SLOW turtle'], d: [em('🐇', 50, speedLines), em('🐢', 50)] },
     bucket: { a: 'full', b: 'empty', ph: ['a FULL bucket', 'an EMPTY bucket'], d: [() => bucket(true), () => bucket(false)] },
-    clam: { a: 'open', b: 'closed', ph: ['an OPEN shell', 'a CLOSED shell'], d: [() => clam(true), () => clam(false)] },
+    umbrella: { a: 'open', b: 'closed', ph: ['an OPEN umbrella', 'a CLOSED umbrella'], d: [() => umbrella(true), () => umbrella(false)] },
     sky: { a: 'day', b: 'night', ph: ['the DAY sun', 'the NIGHT moon'], d: [em('☀️', 54), em('🌙', 50)] },
     arrow: { a: 'up', b: 'down', ph: ['an arrow pointing UP', 'an arrow pointing DOWN'], d: [() => arrow(true), () => arrow(false)] },
     towel: { a: 'wet', b: 'dry', ph: ['a WET towel', 'a DRY towel'], d: [() => towel(true), () => towel(false)] },
@@ -140,9 +106,9 @@
     lantern: { a: 'on', b: 'off', ph: ['a lantern that is ON', 'a lantern that is OFF'], d: [() => lantern(true), () => lantern(false)] },
   };
   const OL_POOL = {
-    1: ['frog', 'fish', 'mug', 'pet', 'bucket', 'clam', 'sky', 'arrow'],
-    2: ['frog', 'fish', 'mug', 'pet', 'bucket', 'clam', 'sky', 'arrow', 'towel', 'horn', 'bowl', 'cairn'],
-    3: ['mug', 'pet', 'bucket', 'clam', 'towel', 'horn', 'bowl', 'cairn', 'feather', 'sleepy', 'lantern', 'sky'],
+    1: ['frog', 'fish', 'mug', 'pet', 'bucket', 'umbrella', 'sky', 'arrow'],
+    2: ['frog', 'fish', 'mug', 'pet', 'bucket', 'umbrella', 'sky', 'arrow', 'towel', 'horn', 'bowl', 'cairn'],
+    3: ['mug', 'pet', 'bucket', 'umbrella', 'towel', 'horn', 'bowl', 'cairn', 'feather', 'sleepy', 'lantern', 'sky'],
   };
   // i = put a thing on the magic rock, b = tow the toy boat
   const OL_ROUNDS = { 1: 'iibii', 2: 'iibiib', 3: 'ibiibii' };
