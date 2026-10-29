@@ -726,7 +726,74 @@
     ctx.fillStyle = '#ff9a3a'; tri(-4, -4, 4, -4, 0, 4);
     ctx.globalAlpha = 1; ctx.restore();
   };
-  const branchCol = (x, y0, y1, fromTop) => {
+  // Aubrey's owl wings. One feather is drawn from its quill end at (bx,by), pointing at angle `a`,
+  // with soft barring across it and a pale tip; the wing is rows of them hung off a curved arm.
+  const ogFeather = (bx, by, a, len, wid, col, bar, tip) => {
+    ctx.save(); ctx.translate(bx, by); ctx.rotate(a);
+    const f = new Path2D(); f.moveTo(0, -wid * 0.4);
+    f.bezierCurveTo(len * 0.45, -wid * 0.62, len * 0.92, -wid * 0.5, len, 0);
+    f.bezierCurveTo(len * 0.92, wid * 0.5, len * 0.45, wid * 0.62, 0, wid * 0.4); f.closePath();
+    ctx.fillStyle = col; ctx.fill(f);
+    ctx.save(); ctx.clip(f);
+    ctx.fillStyle = bar; for (let k = 0.34; k < 0.95; k += 0.2) ctx.fillRect(len * k, -wid, len * 0.075, wid * 2);
+    ctx.fillStyle = tip; ctx.fillRect(len * 0.9, -wid, len * 0.2, wid * 2);
+    ctx.strokeStyle = 'rgba(255,240,210,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(len * 0.85, 0); ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = OL; ctx.lineWidth = 1.3; ctx.stroke(f);
+    ctx.restore();
+  };
+  // a wing from its root on Aubrey's back: +x is behind her, -y is up. `swing` turns the whole wing
+  // down (0 = raised and spread for gliding, ~1.6 = swept down at the bottom of a flap); `fold` 0..1
+  // tucks the feathers in a little as it comes back up.
+  const OG_ARM = t => [2 * (1 - t) * t * 16 + t * t * 74, 2 * (1 - t) * t * -50 + t * t * -46];   // a curved arm: up from her back, then sweeping back
+  const ogWing = (swing, fold, far) => {
+    ctx.save(); ctx.rotate(swing);
+    const pr = far ? ['#6a4430', '#4a2e20', '#c8a070'] : ['#8a5a3a', '#5a3622', '#f0d4a0'];   // flight feathers: colour, bars, tip
+    const cv = far ? ['#a07850', '#7a5236', '#d8b888'] : ['#c8945e', '#94643e', '#f6e2bc'];   // coverts
+    const fan = 1 - fold * 0.45, dir = (a0, a1, t) => lerp(a0, a1, t) * fan + (1 - fan) * 0.6;
+    // broad flight feathers along the trailing edge, longest at the wing tip (drawn tip first so they layer)
+    for (let i = 7; i >= 0; i--) {
+      const t = i / 7, [x, y] = OG_ARM(0.1 + t * 0.9);
+      ogFeather(x, y, dir(1.25, 0.15, t), lerp(36, 56, t ** 0.8), 18, pr[0], pr[1], pr[2]);
+    }
+    // a row of shorter covert feathers over their roots
+    for (let i = 5; i >= 0; i--) {
+      const t = i / 5, [x, y] = OG_ARM(0.06 + t * 0.84);
+      ogFeather(x - 1, y + 2, dir(1.2, 0.3, t), lerp(24, 30, t), 17, cv[0], cv[1], cv[2]);
+    }
+    // the soft, spotted shoulder of the wing along its leading edge, covering the feather roots
+    const sh = new Path2D(), N = 16, nrm = t => { const [x0, y0] = OG_ARM(Math.max(0, t - 0.02)), [x1, y1] = OG_ARM(t + 0.02), l = Math.hypot(x1 - x0, y1 - y0); return [-(y1 - y0) / l, (x1 - x0) / l]; };
+    for (let i = 0; i <= N; i++) { const [x, y] = OG_ARM(i / N * 0.86); i ? sh.lineTo(x, y) : sh.moveTo(x, y); }
+    for (let i = N; i >= 0; i--) {
+      const t = i / N * 0.86, [x, y] = OG_ARM(t), [nx, ny] = nrm(t), d = lerp(15, 7, t) + (i % 2 ? 3.5 : 0);
+      sh.lineTo(x + nx * d, y + ny * d);
+    }
+    sh.closePath();
+    ink(sh, far ? '#9a7450' : '#b8844e', 1.4);
+    ctx.save(); ctx.clip(sh);
+    ctx.strokeStyle = far ? '#c8a47a' : '#ecd0a0'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); for (let i = 0; i <= N; i++) { const [x, y] = OG_ARM(i / N * 0.86); i ? ctx.lineTo(x + 1, y + 1) : ctx.moveTo(x + 1, y + 1); } ctx.stroke();
+    ctx.fillStyle = far ? 'rgba(240,220,180,.6)' : '#f6e2bc';
+    for (let i = 1; i < 6; i++) { const t = i / 6 * 0.8, [x, y] = OG_ARM(t), [nx, ny] = nrm(t), d = 0.55 * lerp(15, 7, t); ellipse(x + nx * d, y + ny * d, 2, 1.4, Math.atan2(ny, nx)); }
+    ctx.restore();
+    ctx.restore();
+  };
+  // Aubrey with her owl wings, centred on (x,y), facing right. Wing root is her back in the 'jump' sprite.
+  const OG_AS = 0.42, OG_ROOT = [80, 66];
+  const ogAubrey = (x, y, tilt, beat, hurt) => {
+    const im = IMG.jump, w = im.width * OG_AS, h = im.height * OG_AS;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
+    if (hurt) ctx.globalAlpha = 0.5 + 0.5 * Math.sin(S.t * 30);
+    ctx.scale(-1, 1);                                     // the 'jump' sprite faces left: mirror it so she flies right
+    ctx.save(); ctx.translate(-w / 2 + OG_ROOT[0] * OG_AS, -h / 2 + OG_ROOT[1] * OG_AS);
+    // the far wing lags a touch behind the near one, darker and narrower
+    ctx.save(); ctx.scale(0.86, 0.9); ogWing(-0.55 + beat.swing * 0.92, beat.fold, true); ctx.restore();
+    ogWing(-0.25 + beat.swing, beat.fold, false);
+    ctx.restore();
+    ctx.drawImage(im, -w / 2, -h / 2, w, h);
+    ctx.globalAlpha = 1; ctx.restore();
+  };
+  const branchCol =(x, y0, y1, fromTop) => {
     // a knobbly branch hanging down (fromTop) or a stump growing up, with leaves at its tip
     const w = 56, tip = fromTop ? y1 : y0;
     glow(x, tip, 70, 'rgba(255,220,150,.5)');
@@ -740,17 +807,26 @@
   };
   MG.owlglide = {
     kind: 'action', title: () => 'Owl Glide', icon: () => '🦉',
-    how: () => 'Press SPACE or tap to flap! Glide through the gaps between the branches and catch the feathers.',
+    how: () => 'Aubrey has owl wings! Press SPACE or tap to flap them. Glide through the gaps between the branches and catch the feathers.',
     init(g) {
       const gates = [8, 10, 12][g.tier - 1];
-      Object.assign(g, { gates, made: 0, passed: 0, clean: 0, feathers: 0, y: 280, vy: 0, flap: 0, inv: 0, bumped: false, list: [], spawnT: 0.6, scroll: [160, 180, 200][g.tier - 1], gap: [210, 185, 165][g.tier - 1], endT: 0, x: 210 });
-      g.say = 'Tap to flap! Fly through the gaps.';
+      Object.assign(g, { gates, made: 0, passed: 0, clean: 0, feathers: 0, y: 280, vy: 0, flap: 0, stroke: 0, puffs: [], gy: 300, cheer: 0, inv: 0, bumped: false, list: [], spawnT: 0.6, scroll: [160, 180, 200][g.tier - 1], gap: [210, 185, 165][g.tier - 1], endT: 0, x: 210 });
+      g.say = 'Tap to flap your owl wings! Fly through the gaps.';
     },
     start(g) { speak(g.say); },
     update(g, dt) {
-      if (jumpPressed() || pointer.clicked) { g.vy = -330; g.flap = 0; SFX.jump(); }
+      if (jumpPressed() || pointer.clicked) {
+        g.vy = -330; g.flap = 0; g.stroke = 1; g.started = true; SFX.jump();
+        for (let i = 0; i < 2; i++) g.puffs.push({ x: g.x - 30 + rand(-8, 8), y: g.y + rand(-4, 14), vx: rand(-70, -40), vy: rand(10, 40), a: rand(0, 6), life: 1 });
+      }
       g.flap += dt * (g.vy < 0 ? 18 : 6);
-      g.vy = Math.min(g.vy + 880 * dt, 420); g.y += g.vy * dt;
+      g.stroke = Math.max(0, g.stroke - dt / 0.42);
+      for (const f of g.puffs) { f.x += f.vx * dt; f.y += f.vy * dt; f.a += dt * 3; f.life -= dt * 0.9; }
+      g.puffs = g.puffs.filter(f => f.life > 0);
+      // Granny Owl glides along behind, following Aubrey up and down
+      g.gy += (g.y - 72 - g.gy) * Math.min(1, dt * 1.6); g.cheer = Math.max(0, g.cheer - dt);
+      // she hovers, bobbing gently, until the first flap, so a slow start never costs the first gate
+      if (g.started) { g.vy = Math.min(g.vy + 880 * dt, 420); g.y += g.vy * dt; } else g.y = 280 + Math.sin(g.flap * 0.5) * 6;
       g.inv = Math.max(0, g.inv - dt);
       const bump = () => { if (g.inv > 0) return; g.inv = 1.1; g.bumped = true; SFX.miss(); floatText(g.x, g.y - 40, 'Bonk!', '#ffb0c4', false, 22); };
       if (g.y < 84) { g.y = 84; g.vy = Math.max(0, g.vy); }
@@ -768,7 +844,7 @@
         if (!b.got && sq(b.x - g.x, b.fy - g.y) < 40) { b.got = true; g.feathers++; SFX.sparkle(); burst(b.x, b.fy, 12); }
         if (!b.done && b.x < g.x - 50) {
           b.done = true; g.passed++;
-          if (!g.bumped) { g.clean++; floatText(g.x, g.y - 46, pick(['Whoosh!', 'Hoo-ray!', 'Great!']), '#fff6a8', false, 22); }
+          if (!g.bumped) { g.clean++; g.cheer = 0.9; floatText(g.x, g.y - 52, pick(['Whoosh!', 'Hoo-ray!', 'Great!']), '#fff6a8', false, 22); }
           g.bumped = false;
         }
       }
@@ -780,13 +856,21 @@
     draw(g) {
       // dim the hollow a little so the branches stand out
       ctx.fillStyle = 'rgba(30,18,60,.38)'; ctx.fillRect(0, 0, W, H);
+      // Granny Owl glides along a little behind, and does a happy loop-the-loop bob when Aubrey gets through cleanly
+      const hop = g.cheer > 0 ? Math.sin(g.cheer / 0.9 * PI) * 26 : 0;
+      drawFlyOwl(60, clamp(g.gy - hop, 112, 430) + Math.sin(S.t * 2) * 6, 0.68, S.t * (g.cheer > 0 ? 16 : 5), g.cheer > 0 ? Math.sin(g.cheer * 14) * 0.25 : 0.12, false);
       for (const b of g.list) {
         const top = b.c - g.gap / 2, bot = b.c + g.gap / 2;
         branchCol(b.x, 52, top, true);
         branchCol(b.x, bot, 560, false);
         if (!b.got) { glowEmoji('🪶', b.x, b.fy + Math.sin(S.t * 3 + b.x * 0.01) * 5, 32, 'rgba(255,250,200,.8)'); }
       }
-      drawFlyOwl(g.x, g.y, 1, g.flap, clamp(g.vy / 1400, -0.3, 0.35), g.inv > 0);
+      // Aubrey and her owl wings: a quick strong downstroke on each flap, then they sweep back up and spread to glide
+      const p = 1 - g.stroke, ease = k => k * k * (3 - 2 * k);
+      const beat = g.stroke > 0 ? (p < 0.3 ? { swing: 1.45 * ease(p / 0.3), fold: 0.15 } : { swing: 1.45 * (1 - ease((p - 0.3) / 0.7)), fold: 0.6 * Math.sin((p - 0.3) / 0.7 * PI) })
+        : { swing: Math.sin(S.t * 2.2) * 0.05 - clamp(g.vy / 2000, 0, 0.12), fold: 0 };
+      for (const f of g.puffs) { ctx.save(); ctx.globalAlpha = f.life; ctx.translate(f.x, f.y); ctx.rotate(Math.sin(f.a) * 0.6); ogFeather(-7, 0, 0, 14, 7, '#c49060', '#94643e', '#f6e2bc'); ctx.restore(); }
+      ogAubrey(g.x, g.y, clamp(g.vy / 1400, -0.3, 0.3), beat, g.inv > 0);
     },
   };
 
@@ -868,7 +952,7 @@
   restage('owlhollow', {
     bg: 'owlhollow_bg',
     games: [['owlglide', 'feather', {}], ['owlnightday', 'feather', {}]],
-    intro: ['*:The sky turns purple and orange. Fireflies blink on, one by one.', 'N:Hoo, hoo! A young visitor! My old wings are stiff tonight. Will you glide through the branches and gather my feathers?', 'A:excited:I get to fly like an owl!'],
+    intro: ['*:The sky turns purple and orange. Fireflies blink on, one by one.', 'N:Hoo, hoo! A young visitor! My old wings are stiff tonight. Here, borrow a pair of owl wings, and glide through the branches to gather my feathers!', 'A:excited:Owl wings? For me? I can fly!'],
     mid: ['N:Hoo! Splendid flying. Now tell me, little one: who is awake at night like me, and who is awake in the day?', 'A:thinking:Hmm, bats come out at night...'],
     outro: ['N:Take these feathers. Wisdom and softness, all in one.', 'A:happy:Goodnight, Granny Owl!'],
   });
