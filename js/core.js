@@ -133,20 +133,40 @@ function noise(dur, vol = 0.05, when = 0) {
 }
 // read text aloud (for young players); emoji and *stage directions* markers are dropped
 let readAloud = true;
-let speakTok = 0;
+let speakTok = 0, speakVoice = null, speakNow = null;
+// pick a clear English voice ourselves (left to itself, Chrome sometimes picks one that never makes a sound)
+function pickVoice() {
+  const v = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  const en = v.filter(x => /^en[-_]/i.test(x.lang));
+  speakVoice = en.find(x => x.localService && /^en[-_]US/i.test(x.lang) && /Samantha|Ava|Allison|Susan|Karen|Moira|Tessa/.test(x.name))
+    || en.find(x => x.localService && /^en[-_]US/i.test(x.lang)) || en.find(x => x.localService) || en[0] || null;
+}
+if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
 function speak(str) {
   if (!readAloud || muted || !window.speechSynthesis) return;
   const clean = str.replace(/\p{Extended_Pictographic}|️|‍/gu, '').replace(/[*_]/g, '').trim();
   if (!clean) return;
-  const u = new SpeechSynthesisUtterance(clean);
-  u.rate = 0.92; u.pitch = 1.1;
+  const make = () => {
+    const u = new SpeechSynthesisUtterance(clean);
+    u.rate = 0.92; u.pitch = 1.1; u.lang = speakVoice?.lang || 'en-US';
+    if (speakVoice) u.voice = speakVoice;
+    u.onstart = () => { u.started = true; };
+    u.onerror = e => { if (e.error !== 'interrupted' && e.error !== 'canceled') console.warn('read-aloud:', e.error, speakVoice?.name); };
+    return (speakNow = u); // keep a reference: Chrome can drop an utterance that gets garbage-collected
+  };
   // Chrome can silently drop an utterance queued straight after cancel(), and its synth sometimes sticks
   // paused; so only cancel when something is actually talking, give it a beat, and nudge it awake first
   const busy = speechSynthesis.speaking || speechSynthesis.pending;
   if (busy) speechSynthesis.cancel();
   speechSynthesis.resume();
   const tok = ++speakTok; // a newer line wins over one still waiting out its beat
-  if (busy) setTimeout(() => { if (tok === speakTok) speechSynthesis.speak(u); }, 80); else speechSynthesis.speak(u);
+  const go = () => {
+    if (tok !== speakTok) return;
+    const u = make(); speechSynthesis.speak(u);
+    // if it still hasn't started a moment later, the synth is stuck: reset it and try once more
+    setTimeout(() => { if (tok === speakTok && !u.started && !speechSynthesis.speaking) { speechSynthesis.cancel(); setTimeout(() => { if (tok === speakTok) speechSynthesis.speak(make()); }, 60); } }, 1200);
+  };
+  if (busy) setTimeout(go, 80); else go();
 }
 const SFX = {
   pick() { tone(784, 0.1, 'triangle', 0.1); tone(1175, 0.14, 'triangle', 0.08, 0.07); },
