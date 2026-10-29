@@ -14,19 +14,17 @@
     muffin: { one: 'blueberry muffin', many: 'blueberry muffins' },
     cakeslice: { one: 'slice of cake', many: 'slices of cake' },
   };
-  const BC_KINDS = { 1: ['pinkdonut', 'cookie', 'croissant'], 2: ['pinkdonut', 'chocdonut', 'cookie', 'croissant'], 3: ['pinkdonut', 'chocdonut', 'cookie', 'croissant', 'muffin', 'cakeslice'] };
   // custom cupcakes: which frostings and toppings each tier offers, and how many toppings an order asks for
   const BC_FROST = { pink: '#ffb3d6', blue: '#9ad8ff', yellow: '#ffe27a', chocolate: '#a8683e' };
   const BC_FROSTS = { 1: ['pink', 'blue', 'yellow'], 2: ['pink', 'blue', 'yellow', 'chocolate'], 3: ['pink', 'blue', 'yellow', 'chocolate'] };
   // every base gets a colour coat (frosting, glaze, icing or drizzle) and its own toppings
   const BC_BASES = {
-    cupcake: { coat: 'Frosting', tops: ['sprinkles', 'cherry', 'star'] },
-    donut: { coat: 'Glaze', tops: ['sprinkles', 'candy', 'drizzle'] },
-    cookie: { coat: 'Icing', tops: ['sprinkles', 'chips', 'heart'] },
+    cupcake: { coat: 'Frosting', tops: ['cherry', 'star', 'sprinkles'] },
+    donut: { coat: 'Glaze', tops: ['candy', 'drizzle', 'sprinkles'] },
+    cookie: { coat: 'Icing', tops: ['chips', 'heart', 'sprinkles'] },
     croissant: { coat: 'Drizzle', tops: ['sugar', 'almonds', 'jam'] },
   };
   // every level can decorate all four treats; harder levels just use more colours and toppings
-  const BC_BASE_TIER = { 1: ['cupcake', 'donut', 'cookie', 'croissant'], 2: ['cupcake', 'donut', 'cookie', 'croissant'], 3: ['cupcake', 'donut', 'cookie', 'croissant'] };
   const BC_TOP_WORD = { sprinkles: 'sprinkles', cherry: 'a cherry', star: 'a star', candy: 'candies', drizzle: 'a white drizzle', chips: 'chocolate chips', heart: 'a heart', sugar: 'powdered sugar', almonds: 'almonds', jam: 'jam' };
   const BC_TOP_SHORT = { sugar: 'sugar', chips: 'choc chips', drizzle: 'drizzle' };
   const BC_CUSTOMERS = ['Penny the Pig', 'Millie Mouse', 'Hazel Hedgehog', 'Scamper Squirrel', 'Otto the Otter', 'Bramble the Bear', 'Pengu the Penguin', 'Fergus the Frog', 'Ruby Robin', 'Granny Owl', 'Tilly the Turtle', 'Mama Duck'];
@@ -37,13 +35,7 @@
   const BC_COUNTER = 298;
   const BC_WRAP = 0.9;
 
-  // a decorated treat that looks exactly like a ready-made one counts as that one
-  const ccKey = (base, frost, tops) => {
-    const t = tops.slice().sort().join('+');
-    if (base === 'donut' && frost === 'pink' && t === 'sprinkles') return 'pinkdonut';
-    if (base === 'donut' && frost === 'chocolate' && t === 'drizzle') return 'chocdonut';
-    return `cc:${base}:${frost}:${t}`;
-  };
+  const ccKey = (base, frost, tops) => `cc:${base}:${frost}:${tops.slice().sort().join('+')}`;
   const ccParse = k => { const [, base, frost, t] = k.split(':'); return { base, frost, tops: t ? t.split('+') : [] }; };
   const andList = a => (a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0] || '');
 
@@ -257,47 +249,37 @@
 
   MG.pipcounter = {
     kind: 'action', title: () => 'Bakery Counter', icon: () => '🧁',
-    how: () => "Customers are coming in! Tap treats to put them in the box. If they want a special treat, tap Decorate and make it just like the picture. Then hand the box over before they get tired of waiting!",
+    how: () => "Every customer wants their own special treat! Tap the cupcakes, donuts, cookies or croissants to decorate one just like the order: pick a colour, add the toppings, and box it. Then hand the box over before they get tired of waiting!",
     init(g) {
-      const kinds = BC_KINDS[g.tier].concat('deco'), n = kinds.length;
+      // one tray per kind of treat; tapping a tray opens its own decorating station
+      const kinds = Object.keys(BC_BASES), n = kinds.length;
       const gap = 10, tw = Math.min(190, (W - 36 - gap * (n - 1)) / n), x0 = (W - (tw * n + gap * (n - 1))) / 2;
       g.trays = kinds.map((k, i) => ({ k, x: x0 + i * (tw + gap), y: 334, w: tw, h: 166, bump: 0 }));
       // the station's piping bags and topping jars
       g.bags = BC_FROSTS[g.tier].map((c, i) => ({ c, x: 254 + i * 80, y: 352, w: 72, h: 148, sq: 0 }));
-      g.baseTabs = BC_BASE_TIER[g.tier].map((b, i) => ({ b, x: 22 + i * 53, y: 332, w: 49, h: 46 }));
       this.setJars(g, 'cupcake');
       const total = [5, 6, 7][g.tier - 1];
       Object.assign(g, {
         total, served: 0, wrong: 0, missed: 0, ci: 0, box: [], msg: '', msgT: 0, endT: 0, bcState: 'walkin', coins: 0, flyCoins: [], hearts: [], wrapT: 0,
-        deco: null, decoOpen: false, who: shuffle(BC_CUSTOMERS.slice()).slice(0, total),
+        deco: null, decoOpen: false, who: shuffle(BC_CUSTOMERS.slice()).slice(0, total), usedKeys: new Set(), baseBag: [],
       });
       g.say = 'Here comes a customer!';
       this.next(g);
     },
     makeOrder(g) {
-      const kinds = BC_KINDS[g.tier];
-      // the second customer always wants a special treat, so every game shows the station
-      const custom = g.ci === 1 || (g.ci > 1 && Math.random() < [1, 0.65, 0.7][g.tier - 1]);
-      let [maxTypes, maxEach, minTotal, maxTotal] = [[2, 2, 1, 3], [2, 3, 2, 4], [3, 3, 3, 5]][g.tier - 1];
-      if (custom) { maxTypes--; maxTotal--; minTotal = Math.max(0, minTotal - 1); }
-      let order = null;
-      for (let tries = 0; tries < 60 && !order; tries++) {
-        const types = g.ci === 0 ? 1 : randInt(custom ? (g.tier === 1 ? 0 : 1) : Math.min(2, maxTypes), maxTypes);
-        const o = shuffle(kinds.slice()).slice(0, types).map(k => ({ k, n: randInt(1, maxEach) }));
-        const sum = o.reduce((a, x) => a + x.n, 0);
-        if (sum <= maxTotal && (sum >= minTotal || g.ci === 0)) order = o;
-      }
-      order = order || [{ k: kinds[0], n: 1 }];
-      if (custom) {
+      // every order is decorated treats, and no two customers ever want exactly the same one;
+      // the kinds of treat take turns from a shuffled bag so each game uses all four
+      const items = g.tier === 1 || g.ci === 0 ? 1 : g.tier === 2 ? randInt(1, 2) : 2;
+      const order = [];
+      for (let i = 0; i < items; i++) {
+        if (!g.baseBag.length) g.baseBag = shuffle(Object.keys(BC_BASES));
+        let base = g.baseBag.pop();
+        if (order.some(o => ccParse(o.k).base === base)) { g.baseBag.unshift(base); base = g.baseBag.pop(); }
+        const nTops = g.tier === 1 ? 1 : g.tier === 2 ? randInt(1, 2) : 2;
         let k = null;
-        // special orders take turns through a shuffled bag of bases, so a game shows all four treats
-        // (cupcake, donut, cookie, croissant) instead of repeating one; tier 3 asks for two toppings
-        if (!g.baseBag?.length) g.baseBag = shuffle(BC_BASE_TIER[g.tier].slice());
-        const base = g.baseBag.pop();
-        while (!k || !k.startsWith('cc:')) {
-          k = ccKey(base, pick(BC_FROSTS[g.tier]), shuffle(this.topsFor(g, base)).slice(0, g.tier === 3 ? 2 : 1));
-        }
-        order.unshift({ k, n: 1, custom: true });
+        for (let tries = 0; tries < 40 && (!k || g.usedKeys.has(k)); tries++) k = ccKey(base, pick(BC_FROSTS[g.tier]), shuffle(this.topsFor(g, base)).slice(0, nTops));
+        g.usedKeys.add(k);
+        order.push({ k, n: 1, custom: true });
       }
       return order;
     },
@@ -321,11 +303,9 @@
     },
     add(g, tr) {
       tr.bump = 0.25;
-      if (tr.k === 'deco') {
-        const want = g.cust.order.find(o => o.custom && bcCount(g, o.k) < o.n);
-        g.decoOpen = true; g.deco = g.deco || this.newDeco(g, want ? ccParse(want.k).base : 'cupcake'); SFX.click(); return;
-      }
-      if (this.put(g, tr.k, tr.x + tr.w / 2, tr.y + 70)) SFX.pop();
+      g.decoOpen = true;
+      if (!g.deco || g.deco.base !== tr.k) g.deco = this.newDeco(g, tr.k);
+      SFX.click();
     },
     slot(i) {
       // front row first (lower), then the back row
@@ -357,9 +337,8 @@
     decoInput(g, id) {
       const d = g.deco;
       if (pointer.clicked) {
-        const bag = g.bags.find(b => inRect(b)), jar = g.jars.find(j => inRect(j)), tab = g.baseTabs.find(t => inRect(t));
-        if (tab) { if (tab.b !== d.base) { g.deco = this.newDeco(g, tab.b); SFX.click(); } }
-        else if (bag) {
+        const bag = g.bags.find(b => inRect(b)), jar = g.jars.find(j => inRect(j));
+        if (bag) {
           bag.sq = 0.3; d.frost = bag.c; d.grow = 0; d.tops = []; d.popT = {};
           tone(300, 0.35, 'sine', 0.08, 0, 700);
         } else if (jar) {
@@ -510,30 +489,23 @@
       ctx.restore();
     },
     drawTrays(g) {
+      const NAMES = { cupcake: 'Cupcakes', donut: 'Donuts', cookie: 'Cookies', croissant: 'Croissants' };
       g.trays.forEach((tr, i) => {
-        const deco = tr.k === 'deco';
         const hover = g.bcState === 'order' && inRect(tr), lift = tr.bump > 0 ? -Math.sin(tr.bump / 0.25 * Math.PI) * 8 : hover ? -3 : 0;
-        // the decorate tray glows when the order wants a special treat
-        const want = deco && g.bcState === 'order' && g.cust?.order.some(o => o.custom && bcCount(g, o.k) < o.n);
+        // a tray glows while the order still needs that kind of treat
+        const want = g.bcState === 'order' && g.cust?.order.some(o => ccParse(o.k).base === tr.k && bcCount(g, o.k) < o.n);
         if (want) { ctx.save(); ctx.shadowColor = '#ff6fb5'; ctx.shadowBlur = 14 + Math.sin(S.t * 6) * 8; rrect(tr.x, tr.y + lift, tr.w, tr.h, 18, '#ffffff'); ctx.restore(); }
-        rrect(tr.x, tr.y + lift, tr.w, tr.h, 18, deco ? (hover ? '#f6eaff' : '#efe0ff') : hover ? '#fffdf4' : '#fff6ea', OL, 2.5);
-        const cx = tr.x + tr.w / 2, cy = tr.y + 76 + lift;
-        if (deco) {
-          drawCustom('donut', null, [], cx - 22, cy + 8, 0.5); drawCustom('cupcake', null, [], cx - 2, cy - 6, 0.66);
-          // a little piping bag leaning in
-          ctx.save(); ctx.translate(cx + 30, cy - 30); ctx.rotate(0.6 + Math.sin(S.t * 3) * 0.08);
-          ink(P2('M-12,-26 L12,-26 L3,18 L-3,18 Z'), '#ff9ac8', 1.6); inkRect(-13, -32, 26, 8, '#ffffff', 1.4, 3); ctx.restore();
-          text('Decorate', cx, tr.y + 128 + lift, 16, '#7a3aa0', 'center', 800);
-          text('a treat', cx, tr.y + 146 + lift, 13, '#7a3aa0', 'center', 700);
-        } else {
-          ctx.fillStyle = '#ffffff'; for (let a = 0; a < 16; a++) circle(cx + Math.cos(a / 16 * TAU) * 46, cy + Math.sin(a / 16 * TAU) * 22, 9);
-          ellipse(cx, cy, 46, 22);
-          drawTreat(tr.k, cx - 14, cy - 12, 0.6);
-          drawTreat(tr.k, cx + 14, cy - 6, 0.7);
-          const lines = wrap(bcCap(BC_TREATS[tr.k].one), tr.w - 14, 16, 800);
-          lines.forEach((l, j) => text(l, cx, tr.y + 132 + lift + (j - (lines.length - 1) / 2) * 18, 16, '#5a2a6e', 'center', 800));
-        }
-        inkCircle(tr.x + 18, tr.y + 18 + lift, 12, deco ? '#9a6ae0' : '#ff6fb5', 1.4); text(String(i + 1), tr.x + 18, tr.y + 18 + lift, 13, '#fff', 'center', 800);
+        rrect(tr.x, tr.y + lift, tr.w, tr.h, 18, hover ? '#fffdf4' : '#fff6ea', want ? '#ff6fb5' : OL, want ? 3.5 : 2.5);
+        const cx = tr.x + tr.w / 2, cy = tr.y + 72 + lift;
+        // a plain treat on a doily, waiting to be decorated, with a piping bag leaning in
+        ctx.fillStyle = '#ffffff'; for (let a = 0; a < 16; a++) circle(cx + Math.cos(a / 16 * TAU) * 50, cy + 14 + Math.sin(a / 16 * TAU) * 16, 8);
+        ellipse(cx, cy + 14, 50, 16);
+        drawCustom(tr.k, null, [], cx - 6, cy + (tr.k === 'cupcake' ? 0 : 6), tr.k === 'cupcake' ? 0.82 : 0.72);
+        ctx.save(); ctx.translate(cx + 44, cy - 22); ctx.rotate(0.6 + Math.sin(S.t * 3 + i) * 0.08);
+        ink(P2('M-10,-22 L10,-22 L3,15 L-3,15 Z'), ['#ff9ac8', '#9ad8ff', '#ffe27a', '#c8a0ff'][i % 4], 1.5); inkRect(-11, -27, 22, 7, '#ffffff', 1.3, 3); ctx.restore();
+        text(NAMES[tr.k], cx, tr.y + 128 + lift, 18, '#5a2a6e', 'center', 800);
+        text('tap to decorate', cx, tr.y + 148 + lift, 12, '#9a6ab0', 'center', 700);
+        inkCircle(tr.x + 18, tr.y + 18 + lift, 12, '#ff6fb5', 1.4); text(String(i + 1), tr.x + 18, tr.y + 18 + lift, 13, '#fff', 'center', 800);
       });
     },
     drawStation(g) {
@@ -545,12 +517,8 @@
       inkEllipse(kx, ky + 26, 82, 14, 0, '#ffffff', 2);
       ctx.strokeStyle = 'rgba(255,140,190,.6)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.lineDashOffset = -S.t * 20; ctx.beginPath(); ctx.ellipse(kx, ky + 26, 70, 9, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       drawCustom(d.base, d.frost, d.tops, kx, ky - 26, 1.12, d.grow, d.popT);
-      // the base tabs: which treat are we decorating?
-      for (const t of g.baseTabs) {
-        const on = d.base === t.b;
-        rrect(t.x, t.y, t.w, t.h, 10, on ? '#fff6c8' : 'rgba(255,255,255,.8)', on ? '#ff6fb5' : OL, on ? 3.5 : 1.8);
-        drawCustom(t.b, null, [], t.x + t.w / 2, t.y + t.h / 2 + (t.b === 'cupcake' ? 0 : 3), 0.38);
-      }
+      // which treat this station is decorating
+      text(`Decorating a ${d.base}`, kx, DS.y + 16, 15, '#2f7a5a', 'center', 800);
       // piping bags
       text(BC_BASES[d.base].coat, 254 + g.bags.length * 40 - 4, DS.y + 14, 14, '#2f7a5a', 'center', 800);
       for (const b of g.bags) {
@@ -699,7 +667,7 @@
     games: [['pipcounter', 'ribbon', {}], ['bakewithpip', 'berry', {}]],
     intro: [
       "N:Oh, Aubrey, thank goodness! It's party day, and the whole village is lining up at my counter!",
-      'N:Fill each box with the treats they ask for. And if someone wants a special treat, decorate it just like their picture!',
+      'N:Everyone wants their own special treat: cupcakes, donuts, cookies or croissants. Decorate each one just like their picture!',
       'A:determined:I got this!',
     ],
   });
