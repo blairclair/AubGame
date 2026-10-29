@@ -2554,25 +2554,27 @@
   };
   const BW_FRAC = { 0.25: ['¼', 'a quarter of a'], 0.5: ['½', 'half a'], 0.75: ['¾', 'three quarters of a'], 1: ['1', 'one'] };
   // steps: k = kind, n = amount per tier, t = first tier that has the step
+  // each recipe has its own run of steps, so no two bakes feel the same (new hands-on steps: whisk, sift, knead,
+  // grate, drizzle, pipe and slice; mash with ing 'butter' is "cream the butter and sugar")
   const BW_RECIPES = [
     { key: 'cupcakes', name: 'Cupcakes', batter: '#ffe2a0', raw: '#fff0b8', gold: '#e8a860', piece: 'tin', frost: '#ff9ac8',
-      steps: [{ k: 'crack', n: [1, 2, 2] }, { k: 'pour', ing: 'milk', t: 2 }, { k: 'add', ing: 'flour', n: [2, 2, 3] }, { k: 'add', ing: 'sugar', n: [1, 2, 2], t: 3 },
-        { k: 'stir', n: [3, 3, 4] }, { k: 'fill', n: [4, 6, 6] }, { k: 'bake' }, { k: 'spread', ing: 'frosting' }, { k: 'top', tops: ['cherry', 'star', 'sprk'] }] },
+      steps: [{ k: 'crack', n: [1, 2, 2] }, { k: 'add', ing: 'sugar', n: [1, 2, 2], t: 2 }, { k: 'add', ing: 'flour', n: [2, 2, 3] }, { k: 'whisk', n: [8, 10, 12] },
+        { k: 'fill', n: [4, 6, 6] }, { k: 'bake' }, { k: 'spread', ing: 'frosting' }, { k: 'top', tops: ['cherry', 'star', 'sprk'] }] },
     { key: 'pancakes', name: 'Pancakes', batter: '#f8dc9c', raw: '#f8e6b0', gold: '#dc9a48', piece: 'griddle',
-      steps: [{ k: 'crack', n: [1, 2, 2] }, { k: 'pour', ing: 'milk' }, { k: 'add', ing: 'flour', n: [2, 2, 3] }, { k: 'add', ing: 'sugar', n: [1, 1, 2], t: 3 },
-        { k: 'stir', n: [3, 3, 4] }, { k: 'fill', n: [2, 3, 3] }, { k: 'flip' }, { k: 'top', tops: ['berry', 'straw', 'banana'], n: [3, 5, 7] }] },
+      steps: [{ k: 'pour', ing: 'milk' }, { k: 'crack', n: [1, 1, 2] }, { k: 'add', ing: 'flour', n: [2, 2, 3], t: 2 }, { k: 'whisk', n: [8, 10, 12] },
+        { k: 'fill', n: [2, 3, 3] }, { k: 'flip' }, { k: 'drizzle', n: [3, 4, 5] }, { k: 'top', tops: ['berry', 'straw', 'banana'], n: [3, 5, 7] }] },
     { key: 'cookies', name: 'Chocolate Chip Cookies', short: 'Cookies', batter: '#f0cc90', raw: '#f2d49a', gold: '#d89a50', piece: 'tray', dough: true,
-      steps: [{ k: 'add', ing: 'butter' }, { k: 'add', ing: 'sugar', n: [1, 2, 3] }, { k: 'crack', n: [1, 1, 2], t: 2 }, { k: 'add', ing: 'flour', n: [2, 2, 3] },
-        { k: 'stir', n: [3, 3, 4] }, { k: 'shake', ing: 'chips' }, { k: 'scoop', n: [4, 6, 6] }, { k: 'bake' }] },
+      steps: [{ k: 'add', ing: 'butter' }, { k: 'add', ing: 'sugar', n: [1, 2, 2] }, { k: 'mash', ing: 'butter', n: [5, 6, 8] }, { k: 'crack', n: [1, 1, 1], t: 3 },
+        { k: 'sift', ing: 'flour', n: [6, 8, 10] }, { k: 'shake', ing: 'chips' }, { k: 'scoop', n: [4, 6, 6] }, { k: 'bake' }] },
     { key: 'pizza', name: 'Pizza', batter: '#f6e6c0', raw: '#f6e2b8', gold: '#e4aa58', piece: 'pizza', dough: true,
-      steps: [{ k: 'add', ing: 'flour', n: [2, 2, 3] }, { k: 'pour', ing: 'water', t: 2 }, { k: 'stir', n: [3, 3, 4] }, { k: 'roll' },
-        { k: 'spread', ing: 'sauce' }, { k: 'shake', ing: 'cheese' }, { k: 'top', tops: ['pep', 'mush', 'olive'], n: [4, 6, 8] }, { k: 'bake' }] },
+      steps: [{ k: 'add', ing: 'flour', n: [2, 2, 3] }, { k: 'pour', ing: 'water', t: 2 }, { k: 'knead', n: [4, 5, 6] }, { k: 'roll' },
+        { k: 'spread', ing: 'sauce' }, { k: 'grate' }, { k: 'top', tops: ['pep', 'mush', 'olive'], n: [4, 6, 8] }, { k: 'bake' }] },
     { key: 'ginger', name: 'Gingerbread Friends', short: 'Gingerbread', batter: '#c88a50', raw: '#cf9258', gold: '#a8642c', piece: 'sheet', dough: true,
-      steps: [{ k: 'add', ing: 'butter', t: 2 }, { k: 'add', ing: 'sugar', n: [1, 2, 2] }, { k: 'add', ing: 'flour', n: [2, 2, 3] }, { k: 'crack', n: [1, 1, 1], t: 3 },
-        { k: 'stir', n: [3, 3, 4] }, { k: 'roll' }, { k: 'cut', n: [3, 4, 5] }, { k: 'bake' }, { k: 'top', tops: ['gum', 'mint', 'choc'], n: [3, 4, 5] }] },
+      steps: [{ k: 'sift', ing: 'spice', n: [6, 8, 10] }, { k: 'add', ing: 'butter' }, { k: 'add', ing: 'sugar', n: [1, 2, 2], t: 2 },
+        { k: 'stir', n: [2, 3, 3] }, { k: 'roll' }, { k: 'cut', n: [3, 4, 5] }, { k: 'bake' }, { k: 'pipe' }] },
     { key: 'banana', name: 'Banana Bread', batter: '#e8c48a', raw: '#ecd09a', gold: '#b8783a', piece: 'loaf',
-      steps: [{ k: 'mash', n: [5, 7, 9] }, { k: 'crack', n: [1, 2, 2] }, { k: 'add', ing: 'sugar', n: [1, 2, 2] }, { k: 'add', ing: 'flour', n: [2, 2, 3], t: 2 },
-        { k: 'stir', n: [3, 3, 4] }, { k: 'fill', n: [1, 1, 1] }, { k: 'top', tops: ['banana'], n: [3, 4, 5], t: 2 }, { k: 'bake' }] },
+      steps: [{ k: 'mash', n: [5, 7, 9] }, { k: 'crack', n: [1, 2, 2] }, { k: 'add', ing: 'flour', n: [2, 2, 3], t: 2 }, { k: 'stir', n: [2, 3, 3] },
+        { k: 'fill', n: [1, 1, 1] }, { k: 'top', tops: ['banana'], n: [3, 4, 5], t: 3 }, { k: 'bake' }, { k: 'slice', n: [2, 3, 4] }] },
   ];
   const bwName = r => r.short || r.name;
   const bwStackTop = p => 50 - (Math.max(3, p.spots0 || 3) - 1) * 22 - 4;
@@ -2590,8 +2592,15 @@
       case 'crack': return `Crack ${bwPl(n, 'egg')}`;
       case 'pour': return `Pour ${BW_FRAC[s.frac][0]} cup of ${s.ing}`;
       case 'add': return s.ing === 'butter' ? 'Add the butter' : s.ing === 'flour' ? `Add ${bwPl(n, 'scoop')} of flour` : `Add ${bwPl(n, 'spoon')} of sugar`;
-      case 'mash': return 'Mash the bananas';
+      case 'mash': return s.ing === 'butter' ? 'Cream butter and sugar' : 'Mash the bananas';
       case 'stir': return r.dough ? `Mix the dough ${bwPl(n, 'time')}` : `Stir ${bwPl(n, 'time')}`;
+      case 'whisk': return 'Whisk until bubbly';
+      case 'sift': return s.ing === 'spice' ? 'Sift flour and spice' : 'Sift in the flour';
+      case 'knead': return `Knead the dough ${bwPl(n, 'time')}`;
+      case 'grate': return 'Grate the cheese';
+      case 'drizzle': return 'Drizzle the syrup';
+      case 'pipe': return 'Pipe icing faces';
+      case 'slice': return 'Slice the bread';
       case 'fill': return r.piece === 'tin' ? `Fill ${n} cupcake cups` : r.piece === 'griddle' ? `Pour ${bwPl(n, 'pancake')}` : 'Pour into the loaf pan';
       case 'scoop': return `Scoop ${bwPl(n, 'cookie')}`;
       case 'shake': return s.ing === 'chips' ? 'Shake in the chips' : 'Sprinkle on the cheese';
@@ -2609,7 +2618,14 @@
       case 'crack': return `Crack ${bwPlW(s.n, 'egg')}! Pick up an egg and knock it down hard on the edge of the bowl. Two knocks crack it!`;
       case 'pour': return `Pour ${BW_FRAC[s.frac][1]} cup of ${s.ing}! Hold down to pour. Let go when the line turns green!`;
       case 'add': return s.ing === 'butter' ? 'Add the butter! Drag it into the bowl.' : `Add ${bwPlW(s.n, s.ing === 'flour' ? 'scoop' : 'spoon')} of ${s.ing}! Drag each one into the bowl.`;
-      case 'mash': return 'Mash the bananas! Tap them again and again to squish them.';
+      case 'mash': return s.ing === 'butter' ? 'Cream the butter and sugar! Tap them again and again to squish them soft and smooth.' : 'Mash the bananas! Tap them again and again to squish them.';
+      case 'whisk': return 'Whisk it! Hold down in the bowl and swish fast, side to side, until it is all bubbly.';
+      case 'sift': return s.ing === 'spice' ? 'Sift the flour and spice! Grab the sieve, hold it over the bowl and shake it side to side.' : 'Sift the flour! Grab the sieve, hold it over the bowl and shake it side to side.';
+      case 'knead': return 'Knead the dough! Press on it and push it away. Do it again and again until it is smooth.';
+      case 'grate': return 'Grate the cheese! Grab the grater, hold it over the pizza and rub up and down.';
+      case 'drizzle': return 'Drizzle the syrup! Hold down and follow the zigzag line.';
+      case 'pipe': return 'Pipe the icing! Hold down and trace the dots to give each friend a happy face and buttons.';
+      case 'slice': return 'Slice the bread! Drag the knife down each dashed line.';
       case 'stir': return 'Stir! Hold down in the bowl and go round and round.';
       case 'fill': return r.piece === 'griddle' ? 'Pour the pancakes! Hold down on each circle. Let go when it turns green!' : 'Pour in the batter! Hold down on each circle. Let go when it turns green!';
       case 'scoop': return 'Scoop the cookies! Drag dough from the bowl onto each circle on the tray.';
@@ -2622,6 +2638,13 @@
       case 'flip': return 'Watch the bubbles! Press Flip when the arrow is on the green.';
     }
     return '';
+  }
+  // back-and-forth strokes (whisk, sieve): true each time the motion turns round after a run of at least minLen px
+  function bwStroke(st, v, minLen) {
+    if (Math.abs(v) < 0.5) return false;
+    const d = Math.sign(v);
+    if (d !== st.sdir) { const ok = st.sdir !== 0 && st.slen >= minLen; st.sdir = d; st.slen = Math.abs(v); return ok; }
+    st.slen += Math.abs(v); return false;
   }
   const bwBakeCol = (r, b) => (b <= 0.66 ? mix(r.raw, r.gold, b / 0.66) : b <= 0.84 ? r.gold : mix(r.gold, '#5a3418', (b - 0.84) / 0.3));
 
@@ -2825,10 +2848,11 @@
     ctx.fillStyle = 'rgba(160,100,50,.25)'; ctx.fillRect(x - w / 2 + 8, y + 6, w - 16, 4);
   }
   const BW_MAN = P2('M0,-34 C9,-34 13,-28 13,-21 C13,-16 11,-13 8,-11 L22,-10 C28,-9 28,-1 22,0 L11,1 L12,10 L18,26 C20,32 13,35 10,30 L0,15 L-10,30 C-13,35 -20,32 -18,26 L-12,10 L-11,1 L-22,0 C-28,-1 -28,-9 -22,-10 L-8,-11 C-11,-13 -13,-16 -13,-21 C-13,-28 -9,-34 0,-34 Z');
-  function bwMan(x, y, s, col, iced) {
+  function bwMan(x, y, s, col, iced, buttons) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
     ink(BW_MAN, col, 1.8);
     ctx.fillStyle = 'rgba(255,255,255,.22)'; ellipse(-4, -26, 5, 3, -0.4);
+    if (buttons) { ctx.fillStyle = '#ffffff'; circle(0, -5, 2); circle(0, 4, 2); }
     if (iced) {
       ctx.fillStyle = '#ffffff'; circle(-4, -23, 1.8); circle(4, -23, 1.8);
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(0, -19, 4, 0.3, Math.PI - 0.3); ctx.stroke();
@@ -2882,6 +2906,115 @@
     }
     ctx.globalAlpha = 1;
   }
+  // a round mesh sieve (handle to the left); load 0..1 is the flour still in it, spice adds brown flecks
+  function bwSieve(x, y, rot, load, spice) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    inkRect(-118, -6, 76, 12, '#ff8fb8', 1.8, 6); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(-110, -3, 56, 3);
+    const basket = P2('M-46,0 C-46,46 46,46 46,0 Z');
+    ink(basket, '#eef2f8', 2.2);
+    ctx.save(); ctx.clip(basket); ctx.strokeStyle = 'rgba(110,120,150,.45)'; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let i = -48; i <= 48; i += 7) { ctx.moveTo(i, 0); ctx.lineTo(i + 30, 46); ctx.moveTo(i, 0); ctx.lineTo(i - 30, 46); } ctx.stroke(); ctx.restore();
+    if (load > 0) {
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(0, -2, 38, 6 + load * 14, 0, Math.PI, TAU); ctx.fill();
+      ctx.fillStyle = '#f4ede0'; ellipse(8, -4, 18 * load, 4 * load);
+      if (spice) { ctx.fillStyle = '#9a5a2a'; for (let i = 0; i < 9; i++) circle(-28 + (i * 23) % 56, -3 - ((i * 7) % 10) * load, 1.6); }
+    }
+    ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.beginPath(); ctx.ellipse(0, 0, 47, 9, 0, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = '#c8ccd8'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(0, 0, 46, 8, 0, Math.PI + 0.3, Math.PI + 1.3); ctx.stroke();
+    ctx.restore();
+  }
+  // a box grater seen from the front, with a block of cheese rubbing on its face (left 0..1 = how much is left)
+  function bwGrater(x, y, cheeseY, left) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.strokeStyle = OL; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(0, -70, 16, Math.PI, TAU); ctx.stroke();
+    ctx.strokeStyle = '#ff8fb8'; ctx.lineWidth = 5; ctx.stroke();
+    const face = P2('M-26,-66 L26,-66 L36,60 L-36,60 Z');
+    ink(face, '#dfe3ec', 2.4);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(-22, -62); ctx.lineTo(-14, -62); ctx.lineTo(-24, 56); ctx.lineTo(-32, 56); ctx.closePath(); ctx.fill();
+    for (let r = 0; r < 7; r++) for (let c = -2; c <= 2; c++) {
+      const hy = -52 + r * 16, hx = c * (11 + r * 0.8);
+      ctx.fillStyle = '#5a6070'; ctx.beginPath(); ctx.ellipse(hx, hy, 3.4, 2.2, 0, 0, Math.PI); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(hx - 3, hy - 2.5, 6, 1.5);
+    }
+    ctx.restore();
+    if (left > 0) {
+      // the cheese block, pressed on the face of the grater
+      const w = 26 + 26 * left, cy = cheeseY;
+      ctx.save(); ctx.translate(x + 6, cy);
+      ink(P2(`M${-w / 2},-15 L${w / 2},-15 L${w / 2 + 10},-22 L${w / 2 + 10},6 L${w / 2},15 L${-w / 2},15 Z`), '#ffd84a', 2);
+      ctx.fillStyle = '#ffe98a'; ctx.beginPath(); ctx.moveTo(-w / 2, -15); ctx.lineTo(w / 2, -15); ctx.lineTo(w / 2 + 10, -22); ctx.lineTo(-w / 2 + 10, -22); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f0b830'; ctx.beginPath(); ctx.moveTo(w / 2, -15); ctx.lineTo(w / 2 + 10, -22); ctx.lineTo(w / 2 + 10, 6); ctx.lineTo(w / 2, 15); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = OL; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-w / 2, -15); ctx.lineTo(-w / 2 + 10, -22); ctx.lineTo(w / 2 + 10, -22); ctx.moveTo(w / 2, -15); ctx.lineTo(w / 2, 15); ctx.stroke();
+      ctx.fillStyle = '#e8b030'; for (const [a, b, rr] of [[-w / 4, -4, 3.4], [w / 6, 6, 2.6], [w / 3, -6, 2]]) circle(a, b, rr);
+      ctx.restore();
+    }
+  }
+  // a balloon whisk with its wires at (x, y), leaning by rot
+  function bwWhisk(x, y, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    for (const [lw, c] of [[5, OL], [2.6, '#e4e8f0']]) {
+      ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath();
+      for (const w of [5, 12, 19, 25]) { ctx.moveTo(0, -44); ctx.bezierCurveTo(-w * 1.25, -30, -w, 16, 0, 18); ctx.bezierCurveTo(w, 16, w * 1.25, -30, 0, -44); }
+      ctx.stroke();
+    }
+    inkRect(-6, -54, 12, 14, '#c8ccd8', 1.6, 3);
+    inkRect(-8, -126, 16, 76, '#ff8fb8', 2, 8); ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(-4, -118, 3, 58);
+    inkCircle(0, -118, 4, '#ffffff', 1.2);
+    ctx.restore();
+  }
+  // a squeezy bottle of maple syrup, nozzle at (x, y) pointing down
+  function bwSyrup(x, y, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ink(P2('M-5,-2 L5,-2 L8,-20 L-8,-20 Z'), '#fff2d8', 1.6);
+    inkRect(-16, -38, 32, 20, '#ff6fa0', 1.8, 5);
+    const body = P2('M-26,-38 C-30,-60 -30,-100 -24,-118 C-12,-126 12,-126 24,-118 C30,-100 30,-60 26,-38 C16,-32 -16,-32 -26,-38 Z');
+    ink(body, '#c87428', 2.2);
+    ctx.fillStyle = 'rgba(255,200,120,.55)'; ctx.fillRect(-18, -108, 6, 60);
+    rrect(-20, -92, 40, 26, 6, '#fff6e0', OL, 1.4); text('SYRUP', 0, -79, 10, '#a05a10', 'center', 800);
+    ctx.fillStyle = '#e8945a'; for (const d of [-1, 1]) { ctx.beginPath(); ctx.ellipse(d * 7, -98, 5, 3, d * 0.6, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+  // a piping bag full of white icing, tip at (x, y)
+  function bwPipingBag(x, y) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(0.6);
+    ink(P2('M-4,-6 L4,-6 L3,0 L-3,0 Z'), '#d8dce8', 1.4);
+    const bag = P2('M-4,-6 L-26,-74 C-24,-84 24,-84 26,-74 L4,-6 Z');
+    ink(bag, '#ffd6e6', 2.2);
+    ctx.save(); ctx.clip(bag); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.moveTo(-6, -6); ctx.lineTo(-14, -60); ctx.lineTo(10, -60); ctx.lineTo(4, -6); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,111,160,.5)'; ctx.lineWidth = 3; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(i * 3, -6); ctx.lineTo(i * 12, -80); } ctx.stroke(); ctx.restore();
+    ink(P2('M-26,-74 C-24,-84 24,-84 26,-74 L10,-90 L-10,-90 Z'), '#ff8fb8', 1.8);
+    ctx.restore();
+  }
+  // a bread knife, blade down with its tip near (x, y)
+  function bwKnife(x, y, rot) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ink(P2('M-6,-118 L8,-118 L8,8 C8,14 2,16 -2,12 L-6,-4 Z'), '#e6eaf2', 2);
+    ctx.strokeStyle = 'rgba(110,120,150,.6)'; ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = -110; i < 6; i += 8) { ctx.moveTo(-6, i); ctx.lineTo(-3, i + 4); ctx.lineTo(-6, i + 8); } ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(3, -112, 3, 110);
+    inkRect(-9, -168, 20, 54, '#ff8fb8', 2, 8); ctx.fillStyle = '#ffffff'; circle(1, -154, 3); circle(1, -128, 3);
+    ctx.restore();
+  }
+  // the dots a piped face follows, in a gingerbread friend's own space: two eyes, a smile, two buttons
+  const BW_PIPE = [[-5, -24], [5, -24], ...Array.from({ length: 6 }, (_, j) => { const a = 0.45 + j * (Math.PI - 0.9) / 5; return [Math.cos(a) * 7, -20 + Math.sin(a) * 6]; }), [0, -5], [0, 4]];
+  const BW_BIG = [600, 336, 2.7];                                 // where the big friend stands while you pipe
+  // the soft ball of dough being kneaded at (x, y): smooth 0..1, pull stretches it toward angle pa
+  function bwKneadDough(x, y, col, smooth, pull, pa, fold) {
+    ctx.save(); ctx.translate(x + Math.cos(pa) * pull * 34, y + Math.sin(pa) * pull * 22); ctx.rotate(pa);
+    const sq = fold > 0 ? Math.sin(fold / 0.45 * Math.PI) * 0.18 : 0;
+    ctx.scale(1 + pull * 0.55 - sq, 1 - pull * 0.22 + sq);
+    const lump = 1 - smooth, bumps = [[-50, -26, 16], [-8, -40, 18], [38, -30, 15], [56, 4, 13], [30, 34, 15], [-26, 36, 14], [-60, 6, 13]];
+    const outline = () => { ctx.beginPath(); ctx.ellipse(0, 0, 70, 46, 0, 0, TAU); for (const [a, b, rr] of bumps) { const k = rr * (0.3 + lump * 0.9); ctx.moveTo(a + k, b); ctx.arc(a, b, k, 0, TAU); } };
+    outline(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke();
+    ctx.fillStyle = col; ctx.fill();
+    ctx.fillStyle = mix(col, '#a06a30', 0.25); ctx.beginPath(); ctx.ellipse(4, 18, 60, 22, 0, 0, Math.PI); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.25 + smooth * 0.35) + ')'; ellipse(-18, -20, 28, 9, -0.15);
+    // creases and flour specks fade as it gets smooth
+    ctx.strokeStyle = `rgba(150,100,50,${0.55 * lump})`; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    for (const [a, b, w] of [[-30, -6, 18], [10, 8, 22], [24, -14, 14], [-14, 18, 12]]) { ctx.beginPath(); ctx.moveTo(a - w / 2, b); ctx.quadraticCurveTo(a, b - 6, a + w / 2, b); ctx.stroke(); }
+    ctx.fillStyle = `rgba(255,255,255,${0.9 * lump})`; for (let i = 0; i < 10; i++) circle(-44 + (i * 29) % 88, -24 + (i * 17) % 44, 2.2);
+    ctx.restore();
+  }
 
   // ------------------------------------------------------------------ the bowl and the workpieces
   function bwBowl(g, x, y, s) {
@@ -2919,6 +3052,19 @@
         ctx.globalAlpha = 1;
         if (items.includes('chips')) { ctx.fillStyle = '#4a2a1a'; for (let i = 0; i < 14; i++) circle(x + Math.cos(i * 2.2 + g.swirl * 0.3) * rx * 0.6 * ((i * 7) % 10) / 10, cy + Math.sin(i * 2.2 + g.swirl * 0.3) * ry * 0.45, 3 * s); }
       }
+      // whisking makes it frothy: a pale foam with bubbles that grow as you go
+      const fr = g.froth || 0;
+      if (fr > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${0.4 * fr})`; ellipse(x, cy, rx * (0.48 + lvl * 0.3), ry * (0.45 + lvl * 0.2));
+        const nb = Math.round(fr * 30);
+        for (let i = 0; i < nb; i++) {
+          const a = i * 2.39996, rr = Math.sqrt((i + 0.5) / 30), bx = x + Math.cos(a) * rx * 0.62 * rr, by = cy + Math.sin(a) * ry * 0.48 * rr + Math.sin(S.t * 3 + i) * 1.2;
+          const br = (2.2 + (i % 4) * 1.5) * s * (0.5 + fr * 0.7);
+          ctx.fillStyle = 'rgba(255,255,255,.85)'; circle(bx, by, br);
+          ctx.strokeStyle = 'rgba(140,160,200,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx, by, br, 0, TAU); ctx.stroke();
+          ctx.fillStyle = '#ffffff'; circle(bx - br * 0.35, by - br * 0.35, br * 0.32);
+        }
+      }
     }
     ctx.restore();
     // dough recipes become a soft ball once they're mixed
@@ -2940,6 +3086,7 @@
       case 'sugar': ctx.fillStyle = '#fffdf6'; ellipse(x, y, 18 * s, 8 * s); ctx.fillStyle = '#ffffff'; for (let i = 0; i < 5; i++) circle(x - 10 * s + i * 5 * s, y - 2 + (i % 2) * 3, 1.3); break;
       case 'milk': ctx.fillStyle = 'rgba(255,255,255,.9)'; ellipse(x, y, 34 * s, 12 * s); break;
       case 'water': ctx.fillStyle = 'rgba(160,215,255,.8)'; ellipse(x, y, 34 * s, 12 * s); break;
+      case 'spice': ctx.fillStyle = '#f2e2c8'; ellipse(x, y, 22 * s, 9 * s); ctx.fillStyle = '#9a5a2a'; for (let i = 0; i < 8; i++) circle(x - 16 * s + (i * 9 % 32) * s, y - 4 * s + (i * 5 % 9) * s, 1.4); break;
       case 'butter': ctx.fillStyle = '#ffe27a'; ctx.fillRect(x - 14 * s, y - 8 * s, 28 * s, 14 * s); ctx.fillStyle = '#fff2a8'; ctx.fillRect(x - 14 * s, y - 8 * s, 28 * s, 4 * s); break;
       case 'chips': ctx.fillStyle = '#4a2a1a'; for (let i = 0; i < 10; i++) circle(x - 22 * s + (i * 11) % 44 * s, y - 6 * s + (i * 7) % 12 * s, 3 * s); break;
       case 'banana': { const sq = g.mash || 0; if (sq < 1) { bwBanana(x - 20 * s, y - 2, 0.8 * s, 0.2, sq); bwBanana(x + 24 * s, y + 2, 0.8 * s, -0.3, sq); } ctx.fillStyle = `rgba(255,232,140,${sq})`; ellipse(x, y, 46 * s, 14 * s); ctx.fillStyle = `rgba(160,120,60,${sq * 0.5})`; for (let i = 0; i < 6; i++) circle(x - 30 * s + i * 12 * s, y + (i % 2) * 4, 2); break; }
@@ -2982,16 +3129,28 @@
       for (let i = 0; i < n; i++) { const yy = 50 - i * 22; inkEllipse(0, yy, 136 - i * 2, 32, 0, bwBakeCol(r, 0.72 + (i % 2) * 0.06), 1.6); ctx.fillStyle = '#fff0c8'; ellipse(0, yy - 5, 126 - i * 2, 25); }
       const ty = bwStackTop(p);
       ctx.fillStyle = r.gold; ellipse(0, ty, 126 - (n - 1) * 2, 25); ctx.fillStyle = 'rgba(255,255,255,.25)'; ellipse(-50, ty - 10, 30, 6, -0.1);
-      // syrup drips and a pat of butter
-      ctx.fillStyle = 'rgba(190,100,30,.8)'; ellipse(0, ty + 2, 96, 17); for (const dx of [-88, -34, 30, 86]) { ctx.beginPath(); ctx.roundRect(dx - 6, ty + 6, 12, 26 + (Math.abs(dx) % 3) * 6, 6); ctx.fill(); }
-      ctx.fillStyle = 'rgba(255,255,255,.35)'; ellipse(-30, ty - 2, 20, 4);
-      inkRect(-16, ty - 14, 32, 16, '#ffe27a', 1.4, 3);
+      if (p.zig) {
+        // a pat of butter, then the syrup zigzag the child traced (only the parts drizzled so far)
+        inkRect(-16, ty - 14, 32, 16, '#ffe27a', 1.4, 3);
+        const z = p.zig;
+        if (p.zigDone) { ctx.fillStyle = 'rgba(190,100,30,.85)'; for (const i of [0, z.length - 1]) { ctx.beginPath(); ctx.roundRect(z[i].x - 5, z[i].y, 10, 30, 5); ctx.fill(); } }
+        for (const [lw, c] of [[10, 'rgba(90,40,10,.75)'], [7, '#c8742a'], [2.5, '#f2b060']]) {
+          ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+          for (let i = 0; i < z.length; i++) { if (!z[i].on) continue; const pr = z[i - 1]; if (pr && pr.on) ctx.lineTo(z[i].x - (lw < 3 ? 2 : 0), z[i].y - (lw < 3 ? 2 : 0)); else { ctx.moveTo(z[i].x - (lw < 3 ? 2 : 0), z[i].y - (lw < 3 ? 2 : 0)); ctx.lineTo(z[i].x + 0.1, z[i].y); } }
+          ctx.stroke();
+        }
+      } else {
+        // syrup drips and a pat of butter
+        ctx.fillStyle = 'rgba(190,100,30,.8)'; ellipse(0, ty + 2, 96, 17); for (const dx of [-88, -34, 30, 86]) { ctx.beginPath(); ctx.roundRect(dx - 6, ty + 6, 12, 26 + (Math.abs(dx) % 3) * 6, 6); ctx.fill(); }
+        ctx.fillStyle = 'rgba(255,255,255,.35)'; ellipse(-30, ty - 2, 20, 4);
+        inkRect(-16, ty - 14, 32, 16, '#ffe27a', 1.4, 3);
+      }
       p.spots.forEach(sp => sp.top && bwTopping(sp.top, sp.x, sp.y, 0.9));
     } else if (p.kind === 'tray') {
       if (!p.noTray) { inkRect(-160, -100, 320, 200, '#b8bccc', 2.5, 14); inkRect(-150, -90, 300, 180, '#cfd3de', 1.5, 10); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-140, -84, 280, 6); }
       p.spots.forEach(sp => {
         if (!sp.done) return;
-        if (r.key === 'ginger') { bwMan(sp.x, sp.y, 1.25, col, bk > 0.5); if (sp.top) { bwTopping(sp.top, sp.x, sp.y - 4, 0.55); } if (sp.top2) bwTopping(sp.top2, sp.x, sp.y + 10, 0.55); return; }
+        if (r.key === 'ginger') { bwMan(sp.x, sp.y, 1.25, col, p.noIce ? !!sp.iced : bk > 0.5, p.noIce && sp.iced); if (sp.top) { bwTopping(sp.top, sp.x, sp.y - 4, 0.55); } if (sp.top2) bwTopping(sp.top2, sp.x, sp.y + 10, 0.55); return; }
         const rr = 26 + Math.min(bk, 0.8) * 10;
         inkCircle(sp.x, sp.y, rr, col, 1.5); ctx.fillStyle = 'rgba(255,255,255,.25)'; ellipse(sp.x - 8, sp.y - 9, 9, 4, -0.4);
         if (bk > 0.4) { ctx.strokeStyle = mix(col, '#5a3418', 0.3); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(sp.x - 10, sp.y + 4); ctx.lineTo(sp.x - 2, sp.y - 2); ctx.lineTo(sp.x + 8, sp.y + 6); ctx.stroke(); }
@@ -3023,6 +3182,12 @@
         ink(P2(`M-108,${-30} C-100,${-80 - bk * 10} 100,${-80 - bk * 10} 108,-30 L96,52 L-96,52 Z`), col, 2);
         ctx.strokeStyle = mix(col, '#5a3418', 0.35); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-60, -52); ctx.quadraticCurveTo(0, -66, 60, -52); ctx.stroke();
         ctx.fillStyle = 'rgba(255,255,255,.25)'; ellipse(-50, -58, 30, 7, -0.1);
+        if (p.cuts && p.cuts.length) {
+          // each slice cut shows a thin gap with the soft crumb beside it
+          ctx.save(); ctx.clip(P2(`M-108,${-30} C-100,${-80 - bk * 10} 100,${-80 - bk * 10} 108,-30 L96,52 L-96,52 Z`));
+          for (const cx of p.cuts) { ctx.fillStyle = '#5a3418'; ctx.fillRect(cx - 4, -100, 4, 152); ctx.fillStyle = '#f4dca8'; ctx.fillRect(cx + 1, -100, 7, 152); ctx.fillStyle = 'rgba(150,100,50,.5)'; for (let k = 0; k < 6; k++) circle(cx + 4, -50 + k * 18, 1.2); ctx.strokeStyle = OL; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, -100); ctx.lineTo(cx, 52); ctx.stroke(); }
+          ctx.restore();
+        }
       } else if (f > 0) {
         const top = 52 - 94 * f;
         ctx.fillStyle = r.batter; ctx.beginPath(); ctx.moveTo(-96 - 14 * (1 - f), 52); ctx.lineTo(-108 + 14 * (1 - f) * 0, top); ctx.lineTo(108, top); ctx.lineTo(96, 52); ctx.closePath(); ctx.fill();
@@ -3069,8 +3234,8 @@
       bwPiece(g, pp, 0, 0, 1);
     } else if (r.key === 'ginger') {
       inkEllipse(0, 30, 150, 60, 0, '#ffffff', 2.5); ctx.fillStyle = '#e8f2fa'; ellipse(0, 28, 120, 44);
-      const tops = p ? p.spots.filter(sp => sp.done).map(sp => [sp.top, sp.top2]) : [['gum', 'mint'], ['mint', 'choc'], ['choc', 'gum']];
-      [[-66, 10], [66, 10], [0, 0]].forEach(([dx, dy], i) => { bwMan(dx, dy, 1.7, bwBakeCol(r, p ? p.bake : 0.8), true); const t = tops[i % Math.max(1, tops.length)] || []; if (t[0]) bwTopping(t[0], dx, dy - 6, 0.7); if (t[1]) bwTopping(t[1], dx, dy + 12, 0.7); });
+      const tops = p ? p.spots.filter(sp => sp.done).map(sp => [sp.top, sp.top2]) : [];
+      [[-66, 10], [66, 10], [0, 0]].forEach(([dx, dy], i) => { bwMan(dx, dy, 1.7, bwBakeCol(r, p ? p.bake : 0.8), true, !p || p.noIce); const t = tops[i % Math.max(1, tops.length)] || []; if (t[0]) bwTopping(t[0], dx, dy - 6, 0.7); if (t[1]) bwTopping(t[1], dx, dy + 12, 0.7); });
     } else if (r.key === 'banana') {
       inkRect(-150, 40, 300, 26, '#d89a64', 2.5, 10);
       const c = bwBakeCol(r, p ? p.bake : 0.8);
@@ -3092,9 +3257,9 @@
 
   MG.bakewithpip = {
     kind: 'learn', title: () => 'Bake with Pip', icon: () => '👩‍🍳',
-    how: () => "Pick a recipe, then follow Pip's recipe card! Crack, pour, stir, roll and bake with your own hands.",
+    how: () => "Pick a recipe, then follow Pip's recipe card! Crack, whisk, knead, grate, drizzle and bake with your own hands.",
     init(g) {
-      Object.assign(g, { mode: 'pick', hover: -1, steps: [], si: 0, quality: [], bowl: [], mix: 0, swirl: 0, mash: 0, piece: null, wasDown: false, lx: 0, ly: 0, msg: '', msgT: 0, idle: 0, pause: 0, revealT: 0 });
+      Object.assign(g, { mode: 'pick', hover: -1, steps: [], si: 0, quality: [], bowl: [], mix: 0, swirl: 0, mash: 0, froth: 0, piece: null, wasDown: false, lx: 0, ly: 0, msg: '', msgT: 0, idle: 0, pause: 0, revealT: 0 });
       g.say = 'Which treat shall we bake? Tap a recipe card!';
       g.progress = 'Pick a recipe';
     },
@@ -3106,6 +3271,7 @@
         const st = { ...s, n: s.n ? s.n[g.tier - 1] : 1 };
         if (s.k === 'pour') st.frac = g.tier === 1 ? 1 : pick(g.tier === 2 ? [0.5, 1] : [0.25, 0.5, 0.75]);
         if (s.k === 'flip') st.n = (r.steps.find(q => q.k === 'fill').n || [3])[g.tier - 1];
+        if (s.k === 'pipe') st.n = (r.steps.find(q => q.k === 'cut').n || [3])[g.tier - 1];
         if (s.k === 'top') { st.kinds = s.tops.slice(0, Math.min(s.tops.length, g.tier)); st.n = s.n ? s.n[g.tier - 1] : 0; st.hidden = g.tier >= 3 && st.kinds.length > 1; }
         return st;
       });
@@ -3119,10 +3285,17 @@
       const st = g.st = { k: s.k, s, n: s.n, count: 0, miss: 0, carry: false, anim: 0, level: 0, meter: 0, angle: null, turns: 0, bar: 0, held: false, knocks: 0, done: false };
       const k = s.k;
       // where the bowl sits: centre stage for mixing, off to the side when filling a tray, put away otherwise
-      g.bowlAt = ['add', 'crack', 'pour', 'mash', 'stir', 'shake'].includes(k) && !(k === 'shake' && s.ing === 'cheese') ? BW_MAIN : ['fill', 'scoop'].includes(k) ? BW_SIDE : null;
+      g.bowlAt = ['add', 'crack', 'pour', 'mash', 'stir', 'shake', 'whisk', 'sift'].includes(k) && !(k === 'shake' && s.ing === 'cheese') ? BW_MAIN : ['fill', 'scoop'].includes(k) ? BW_SIDE : null;
       st.from = BW_SRC; st.to = [BW_MAIN[0], BW_MAIN[1] - 10];
-      if (k === 'mash' && !g.bowl.includes('banana')) g.bowl.push('banana');
+      if (k === 'mash' && s.ing !== 'butter' && !g.bowl.includes('banana')) g.bowl.push('banana');
+      if (k === 'fill' || k === 'scoop') g.mix = 1;   // the batter is always mixed by the time it goes in the pan
       if ((k === 'fill' || k === 'scoop') && !g.piece) g.piece = this.makePiece(g, s.n);
+      // the new hands-on steps: strokes counted by bwStroke, one tick when they're all done
+      if (k === 'whisk' || k === 'sift') { st.need = s.n; st.n = 1; st.strokes = 0; st.sdir = 0; st.slen = 0; st.off = 0; }
+      if (k === 'whisk') { st.from = [BW_MAIN[0] - 70, BW_MAIN[1] + 4]; st.to = [BW_MAIN[0] + 70, BW_MAIN[1] + 4]; }
+      if (k === 'sift') { st.from = BW_SRC; st.to = [BW_MAIN[0], BW_MAIN[1] - 90]; }
+      if (k === 'knead') { st.pull = 0; st.pa = 0; st.fold = 0; st.from = [BW_PX - 20, BW_PY - 10]; st.to = [BW_PX + 90, BW_PY - 10]; }
+      if (k === 'grate') { st.n = 1; g.piece.cheese = g.piece.cheese || []; st.gx = BW_SRC[0]; st.cy = BW_PY - 70; st.from = BW_SRC; st.to = [BW_PX, BW_PY - 60]; }
       if (k === 'roll') g.piece = { kind: r.piece === 'pizza' ? 'pizza' : 'sheet', roll: 0, spots: [], bake: 0 };
       const p = g.piece;
       if (k === 'fill' || k === 'scoop') { st.from = [BW_SIDE[0], BW_SIDE[1]]; st.to = [BW_PX + p.spots[0].x, BW_PY + p.spots[0].y]; }
@@ -3139,8 +3312,27 @@
         st.from = [BW_PX + p.areas[0][0] - 30, BW_PY + p.areas[0][1]]; st.to = [BW_PX + p.areas[0][0] + 30, BW_PY + p.areas[0][1]];
       }
       if (k === 'shake' && s.ing === 'cheese') { p.cheese = p.cheese || []; st.to = [BW_PX, BW_PY]; }
+      if ((k === 'top' || k === 'drizzle') && g.piece.kind === 'griddle') g.piece = { kind: 'stack', spots0: g.piece.spots.length, spots: [], bake: 0.8 };
+      if (k === 'drizzle') {
+        // a zigzag of dots across the top pancake, sampled every ~9px so tracing it fills in a syrup line
+        const q = g.piece, ty = bwStackTop(q), m = s.n, corners = Array.from({ length: m + 1 }, (_, i) => [-96 + i * 192 / m, ty + (i % 2 ? 13 : -13)]);
+        q.zig = [];
+        for (let i = 0; i < m; i++) { const [ax, ay] = corners[i], [bx2, by2] = corners[i + 1], L = Math.ceil(Math.hypot(bx2 - ax, by2 - ay) / 9); for (let j = 0; j < L; j++) q.zig.push({ x: ax + (bx2 - ax) * j / L, y: ay + (by2 - ay) * j / L, on: false }); }
+        q.zig.push({ x: corners[m][0], y: corners[m][1], on: false });
+        st.n = 1; st.off = 0; st.need = [0.85, 0.9, 0.92][g.tier - 1];
+        st.from = [BW_PX + corners[0][0], BW_PY + corners[0][1]]; st.to = [BW_PX + corners[1][0], BW_PY + corners[1][1]];
+      }
+      if (k === 'pipe') {
+        p.noIce = true; st.cur = 0; st.off = 0; st.n = p.spots.length;
+        p.spots.forEach(sp => { sp.icing = BW_PIPE.map(() => false); });
+        st.from = [BW_BIG[0] + BW_PIPE[2][0] * BW_BIG[2], BW_BIG[1] + BW_PIPE[2][1] * BW_BIG[2]]; st.to = [BW_BIG[0] + BW_PIPE[7][0] * BW_BIG[2], BW_BIG[1] + BW_PIPE[7][1] * BW_BIG[2]];
+      }
+      if (k === 'slice') {
+        st.lines = Array.from({ length: s.n }, (_, i) => ({ x: Math.round(-96 + (i + 1) * 192 / (s.n + 1)), cut: false }));
+        p.cuts = []; st.stroke = null; st.off = 0;
+        st.from = [BW_PX + st.lines[0].x, BW_PY - 80]; st.to = [BW_PX + st.lines[0].x, BW_PY + 50];
+      }
       if (k === 'top') {
-        if (r.piece === 'griddle') { g.piece = { kind: 'stack', spots0: g.piece.spots.length, spots: [], bake: 0.8 }; }
         const q = g.piece; let pts;
         if (q.kind === 'tin') pts = q.spots.map(sp => [sp.x, sp.y]);
         else if (q.kind === 'stack') { const ty = bwStackTop(q), gap = Math.min(60, 216 / Math.max(1, s.n - 1)); pts = Array.from({ length: s.n }, (_, i) => [(i - (s.n - 1) / 2) * gap, ty + (s.n > 3 ? (i % 2 ? 10 : -10) : 0)]); }
@@ -3263,7 +3455,12 @@
           else this.msg(g, 'A little more! Hold again.');
         }
       } else if (k === 'mash') {
-        if (pressedNow && inBowl) { st.press = 0.18; g.mash = Math.min(1, (st.count + 1) / st.n); tone(220 + st.count * 30, 0.08, 'triangle', 0.08); burst(P.x, P.y + 10, 5, { colors: ['#ffe680', '#fff2b0'], spread: 70, up: 40 }); this.tick(g); }
+        if (pressedNow && inBowl) {
+          st.press = 0.18;
+          // creaming butter and sugar turns the bowl pale and creamy (it stays a little lumpy until the flour goes in)
+          if (s.ing === 'butter') g.mix = Math.min(0.6, (st.count + 1) / st.n * 0.6); else g.mash = Math.min(1, (st.count + 1) / st.n);
+          tone(220 + st.count * 30, 0.08, 'triangle', 0.08); burst(P.x, P.y + 10, 5, { colors: s.ing === 'butter' ? ['#ffe27a', '#fffaf2'] : ['#ffe680', '#fff2b0'], spread: 70, up: 40 }); this.tick(g);
+        }
         st.press = Math.max(0, (st.press || 0) - dt);
       } else if (k === 'stir') {
         // count how far round the bowl the spoon has gone
@@ -3314,7 +3511,7 @@
         }
         if (k === 'cut' && st.done) {
           // the cut friends go onto a baking tray
-          g.piece = { kind: 'tray', bake: 0, spots: p.spots.map(q => ({ x: q.x, y: q.y, done: true })) };
+          g.piece = { kind: 'tray', bake: 0, noIce: g.steps.some(q => q.k === 'pipe'), spots: p.spots.map(q => ({ x: q.x, y: q.y, done: true })) };
         }
       } else if (k === 'roll') {
         if (pressedNow && near(BW_PX, BW_PY, 170)) st.carry = true;
@@ -3377,6 +3574,111 @@
         } else if (st.phase === 'out') {
           st.t += dt; st.px = lerp(st.px, BW_PX, Math.min(1, dt * 5));
           if (st.t > 0.9) { st.phase = 'done'; this.tick(g); }
+        }
+      } else if (k === 'whisk') {
+        // fast side-to-side swishes in the bowl: each turn-round is a stroke and the mix gets frothier
+        if (down && inBowl) {
+          const v = P.x - g.lx;
+          st.wv = v; st.held = true;
+          if (bwStroke(st, v, 34)) {
+            st.strokes++; g.froth = Math.min(1, st.strokes / st.need); g.mix = Math.max(g.mix, g.froth);
+            tone(640 + st.strokes * 30, 0.05, 'triangle', 0.05);
+            burst(P.x, by - 4, 3, { colors: ['#ffffff', r.batter], spread: 50, up: 40, size: [2, 5], kind: 'bubble' });
+            if (st.strokes >= st.need) { st.held = false; this.tick(g); }
+          }
+        } else { st.sdir = 0; st.held = false; st.wv = 0; }
+      } else if (k === 'sift') {
+        // shake the sieve side to side over the bowl and the flour snows down; shaking it over the counter spills
+        if (pressedNow && near(BW_SRC[0], BW_SRC[1], 85)) { st.carry = true; st.sdir = 0; SFX.pick(); }
+        if (!down) st.carry = false;
+        st.snow = Math.max(0, (st.snow || 0) - dt);
+        if (st.carry) {
+          const v = P.x - g.lx, over = Math.abs(P.x - bx) < 125 && P.y > by - 200 && P.y < by + 10;
+          st.wob = clamp(v / 12, -0.35, 0.35);
+          if (bwStroke(st, v, 18)) {
+            if (over) {
+              st.strokes++; st.snow = 0.45; tone(rand(1400, 1900), 0.04, 'triangle', 0.03);
+              if (st.strokes === 1) g.bowl.push('flour');
+              if (st.strokes >= st.need) { st.carry = false; if (s.ing === 'spice') g.bowl.push('spice'); burst(bx, by - 20, 14, { colors: ['#ffffff', '#fff8ec'], spread: 80, up: 40, size: [3, 7] }); this.tick(g); }
+            } else if (++st.off >= 4) { st.off = 0; st.miss++; SFX.miss(); burst(P.x, P.y + 30, 10, { colors: ['#ffffff'], spread: 60, up: 10 }); this.msg(g, 'Oops, flour on the counter! Shake it over the bowl.', true); }
+          }
+        }
+      } else if (k === 'knead') {
+        // press on the dough and push it away: each push folds it over and it gets a bit smoother
+        const dx0 = BW_PX, dy0 = BW_PY - 10;
+        st.fold = Math.max(0, st.fold - dt);
+        if (pressedNow && near(dx0, dy0, 110)) { st.carry = true; st.gx = P.x; st.gy = P.y; tone(150, 0.08, 'triangle', 0.05); }
+        if (st.carry) {
+          const d = Math.hypot(P.x - st.gx, P.y - st.gy);
+          st.pull = Math.min(1, d / 72); if (d > 4) st.pa = Math.atan2(P.y - st.gy, P.x - st.gx);
+          if (d >= 70) {
+            st.carry = false; st.pull = 0; st.fold = 0.45; tone(180 + st.count * 25, 0.12, 'triangle', 0.08, 0, 120);
+            burst(dx0 + Math.cos(st.pa) * 60, dy0 + Math.sin(st.pa) * 40, 6, { colors: ['#ffffff', '#fff8ec'], spread: 60, up: 30, size: [2, 5] });
+            this.tick(g);
+            if (st.done) g.piece = { kind: r.piece === 'pizza' ? 'pizza' : 'sheet', roll: 0, spots: [], bake: 0 };
+          } else if (!down) { st.carry = false; st.pull = 0; if (d > 12) this.msg(g, 'Push it further!'); }
+        } else st.pull = Math.max(0, st.pull - dt * 4);
+      } else if (k === 'grate') {
+        // hold the grater over the pizza and rub up and down: cheese shreds fall where the grater is
+        if (pressedNow && (near(BW_SRC[0], BW_SRC[1] - 20, 90) || (st.picked && near(st.gx, BW_PY - 70, 80)))) { st.carry = true; st.picked = true; SFX.pick(); }
+        if (!down) st.carry = false;
+        st.rub = Math.max(0, (st.rub || 0) - dt);
+        if (st.carry) {
+          st.gx = lerp(st.gx, clamp(P.x, BW_PX - 84, BW_PX + 84), Math.min(1, dt * 14));
+          st.cy = clamp(P.y, BW_PY - 112, BW_PY - 32);
+          const dyy = Math.min(40, Math.abs(P.y - g.ly)), over = Math.abs(P.x - BW_PX) < 130;
+          if (over && dyy > 1.5) {
+            st.meter += dyy / [1000, 1150, 1300][g.tier - 1]; st.rub = 0.2;
+            if (Math.random() < 0.35) SFX.scrub();
+            if (p.cheese.length < 170 && Math.random() < 0.7) for (let i = 0; i < 2; i++) { let cx = st.gx - BW_PX + rand(-34, 34), cy = rand(-10, 76); const dd = Math.hypot(cx, cy); if (dd > 84) { cx *= 84 / dd; cy *= 84 / dd; } p.cheese.push([cx, cy, rand(0, 3)]); }
+          }
+        }
+        if (st.meter >= 1) { st.carry = false; for (let i = 0; i < 40; i++) { const a = rand(0, TAU), rr = Math.sqrt(Math.random()) * 84; p.cheese.push([Math.cos(a) * rr, Math.sin(a) * rr, rand(0, 3)]); } this.tick(g); }
+      } else if (k === 'drizzle') {
+        // trace the zigzag with the syrup bottle; going far off the line drips syrup on the plate
+        if (down) {
+          let any = false, best = 1e9;
+          for (const d of p.zig) { const dd = Math.hypot(BW_PX + d.x - P.x, BW_PY + d.y - P.y); if (dd < best) best = dd; if (!d.on && dd < 24) { d.on = true; any = true; } }
+          if (any && Math.random() < 0.4) tone(rand(300, 380), 0.06, 'sine', 0.04);
+          if (best > 60 && P.y > 160 && P.x > 240) { st.off += Math.min(60, Math.hypot(P.x - g.lx, P.y - g.ly)); if (st.off > 260) { st.off = 0; st.miss++; SFX.miss(); this.msg(g, 'Oops, syrup on the plate! Follow the zigzag.', true); } }
+        }
+        st.cover = p.zig.filter(d => d.on).length / p.zig.length;
+        if (st.cover >= st.need) { p.zig.forEach(d => (d.on = true)); p.zigDone = true; this.tick(g); }
+      } else if (k === 'pipe') {
+        // trace each friend's dotted face and buttons with the piping bag, one friend at a time
+        const sp = p.spots[st.cur], [fx, fy, fs] = BW_BIG;
+        if (!sp) return;
+        if (down) {
+          let any = false, best = 1e9;
+          BW_PIPE.forEach(([a, b], i) => { const dd = Math.hypot(fx + a * fs - P.x, fy + b * fs - P.y); if (dd < best) best = dd; if (!sp.icing[i] && dd < 18) { sp.icing[i] = true; any = true; } });
+          if (any) tone(900 + sp.icing.filter(Boolean).length * 40, 0.05, 'sine', 0.04);
+          if (best > 70 && P.y > 160 && P.x > 400) { st.off += Math.min(60, Math.hypot(P.x - g.lx, P.y - g.ly)); if (st.off > 300) { st.off = 0; st.miss++; SFX.miss(); this.msg(g, 'Oops, icing on the tray! Follow the dots.', true); } }
+        }
+        if (sp.icing.every(Boolean)) {
+          sp.iced = true; burst(fx, fy - 60, 12); SFX.pop();
+          st.anim = st.wait = 0.7; st.then = () => { st.cur++; this.tick(g); };
+        }
+      } else if (k === 'slice') {
+        // drag the knife down a dashed line, from the top of the loaf to the bottom
+        const lineAt = x => st.lines.find(l => !l.cut && Math.abs(x - (BW_PX + l.x)) < 30);
+        if (pressedNow) st.stroke = { ln: lineAt(P.x), top: P.y, bot: P.y, len: 0 };
+        if (down && st.stroke) {
+          const sk = st.stroke;
+          if (!sk.ln) { sk.ln = lineAt(P.x); if (sk.ln) { sk.top = sk.bot = P.y; } }
+          else if (Math.abs(P.x - (BW_PX + sk.ln.x)) > 44) sk.ln = null;
+          sk.len += Math.abs(P.y - g.ly);
+          sk.top = Math.min(sk.top, P.y); sk.bot = Math.max(sk.bot, P.y);
+          if (sk.ln && Math.abs(P.y - g.ly) > 2 && Math.random() < 0.5) tone(rand(160, 220), 0.05, 'sawtooth', 0.025);
+          if (sk.ln && sk.top < BW_PY - 40 && sk.bot > BW_PY + 34) {
+            sk.ln.cut = true; p.cuts.push(sk.ln.x); st.stroke = null; st.anim = 0.4; st.ax = BW_PX + sk.ln.x;
+            burst(st.ax, BW_PY + 40, 8, { colors: ['#f2d8a0', '#c88a50'], spread: 50, up: 30, size: [2, 5] }); SFX.pop();
+            this.tick(g);
+          }
+        }
+        if (released && st.stroke) {
+          const sk = st.stroke; st.stroke = null;
+          if (!sk.ln && sk.bot - sk.top > 70 && Math.abs(P.x - BW_PX) < 130) { st.miss++; SFX.miss(); this.msg(g, 'Oops! Cut on a dashed line.', true); }
+          else if (sk.ln) this.msg(g, 'Cut all the way down!');
         }
       } else if (k === 'flip') {
         // the pancake cooks; tap Flip (or the pancake) when the arrow is in the green
@@ -3501,7 +3803,7 @@
           ctx.strokeStyle = '#d8dce8'; ctx.lineWidth = 4; ctx.stroke(); inkRect(mx - 34, my - 3, 68, 8, '#d8dce8', 1.6, 4);
         }
         rrect(b[0] - 90, 488, 180, 14, 7, 'rgba(255,255,255,.85)', OL, 1.5); rrect(b[0] - 90, 488, 180 * (st.count / st.n), 14, 7, '#ffd23a');
-        if (!P.down) bwTip('Tap the bananas to squish them!');
+        if (!P.down) bwTip(s.ing === 'butter' ? 'Tap to squish the butter and sugar!' : 'Tap the bananas to squish them!');
       } else if (k === 'stir') {
         ctx.setLineDash([8, 8]); ctx.strokeStyle = 'rgba(255,111,181,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(b[0], b[1] + 4, 80, 18, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
         const a = S.t * 3; ctx.fillStyle = '#ff6fb5'; tri(b[0] + Math.cos(a) * 80 - 6, b[1] + 4 + Math.sin(a) * 18 - 6, b[0] + Math.cos(a) * 80 + 6, b[1] + 4 + Math.sin(a) * 18, b[0] + Math.cos(a) * 80 - 6, b[1] + 4 + Math.sin(a) * 18 + 6);
@@ -3583,6 +3885,99 @@
         st.bins.forEach(bn => bwBin(bn.x, bn.y, bn.k, st.carry === bn.k));
         if (st.carry) bwTopping(st.carry, P.x, P.y, 1.25);
         else text('Drag ➜', 300, st.bins[st.bins.length - 1].y + 52, 15, '#5a2a6e', 'center', 800);
+      } else if (k === 'whisk') {
+        const on = P.down && st.held;
+        if (!on) {
+          // a double arrow under the bowl shows the side-to-side swish
+          const ay = b[1] + 116, sw = Math.sin(S.t * 6) * 8;
+          ctx.strokeStyle = OL; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(b[0] - 70 + sw, ay); ctx.lineTo(b[0] + 70 + sw, ay); ctx.stroke();
+          ctx.strokeStyle = '#ff6fb5'; ctx.lineWidth = 4; ctx.stroke();
+          for (const d of [-1, 1]) { ctx.fillStyle = OL; tri(b[0] + sw + d * 92, ay, b[0] + sw + d * 68, ay - 14, b[0] + sw + d * 68, ay + 14); ctx.fillStyle = '#ff6fb5'; tri(b[0] + sw + d * 86, ay, b[0] + sw + d * 71, ay - 9, b[0] + sw + d * 71, ay + 9); }
+        }
+        bwWhisk(on ? P.x : b[0] + 74, on ? P.y : b[1] - 4, on ? clamp((st.wv || 0) / 14, -0.5, 0.5) : 0.4);
+        rrect(b[0] - 90, 498, 180, 14, 7, 'rgba(255,255,255,.85)', OL, 1.5); rrect(b[0] - 90, 498, 180 * Math.min(1, st.strokes / st.need), 14, 7, '#9ad8ff');
+        if (!P.down) bwTip('Hold in the bowl and swish fast, side to side!');
+      } else if (k === 'sift') {
+        const load = 1 - st.strokes / st.need, x = st.carry ? P.x : BW_SRC[0] + 32, y = st.carry ? P.y : BW_SRC[1] + 6;
+        if (st.carry && st.snow > 0 && y + 30 < b[1]) {
+          // a curtain of flour snowing down from the mesh into the bowl
+          ctx.globalAlpha = Math.min(1, st.snow * 3);
+          for (let i = 0; i < 44; i++) {
+            const h1 = (Math.sin(i * 12.9898) * 43758.5453) % 1, h2 = (Math.sin(i * 78.233) * 12345.678) % 1;
+            const t = (S.t * 1.7 + Math.abs(h1)) % 1, sx = x + Math.abs(h2) * 76 - 38 + Math.sin(S.t * 5 + i) * 3, sy = y + 30 + t * (b[1] - y - 26);
+            ctx.fillStyle = s.ing === 'spice' && i % 4 === 0 ? '#9a5a2a' : '#ffffff'; circle(sx, sy, 2 + (i % 3) * 0.8);
+          }
+          ctx.globalAlpha = 1;
+        }
+        bwSieve(x, y, st.carry ? st.wob || 0 : 0, Math.max(0.15, load), s.ing === 'spice');
+        rrect(b[0] - 90, 498, 180, 14, 7, 'rgba(255,255,255,.85)', OL, 1.5); rrect(b[0] - 90, 498, 180 * Math.min(1, st.strokes / st.need), 14, 7, '#e8c890');
+        if (!st.carry) text('Grab the sieve!', BW_SRC[0] + 10, BW_SRC[1] + 70, 16, '#5a2a6e', 'center', 800);
+        else if (!(Math.abs(P.x - b[0]) < 125 && P.y < b[1] + 10)) bwTip('Hold it over the bowl!');
+        else bwTip('Shake it side to side!');
+      } else if (k === 'knead') {
+        // a floury patch of counter with the dough ball on it
+        ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.ellipse(BW_PX, BW_PY + 14, 160, 62, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(240,232,220,.9)'; for (let i = 0; i < 26; i++) circle(BW_PX - 150 + (i * 53) % 300, BW_PY - 30 + (i * 29) % 96, 2 + (i % 3));
+        bwKneadDough(BW_PX, BW_PY - 10, r.batter, st.count / st.n, st.pull, st.pa, st.fold);
+        if (st.carry) emoji('✋', P.x, P.y, 46);
+        else bwTip('Press the dough and push it away!');
+      } else if (k === 'grate') {
+        bwPiece(g, p, BW_PX, BW_PY, 1);
+        const up = st.carry || st.picked, gx = up ? st.gx : BW_SRC[0], gy = up ? BW_PY - 70 : BW_SRC[1] - 6;
+        if (st.carry) st.picked = true;
+        if (st.rub > 0) { ctx.fillStyle = '#ffe680'; for (let i = 0; i < 12; i++) { const t = (S.t * 2.2 + i * 0.31) % 1; ctx.save(); ctx.translate(gx + ((i * 23) % 60) - 30, gy + 62 + t * 70); ctx.rotate(i); ctx.fillRect(-5, -1.5, 10, 3); ctx.restore(); } }
+        bwGrater(gx, gy, up ? st.cy : gy - 12, 1 - Math.min(1, st.meter) * 0.75);
+        rrect(BW_PX - 90, 514, 180, 14, 7, 'rgba(255,255,255,.85)', OL, 1.5); rrect(BW_PX - 90, 514, 180 * Math.min(1, st.meter), 14, 7, '#ffd23a');
+        if (!st.carry) up ? bwTip('Hold the grater and rub up and down!') : text('Grab the grater!', BW_SRC[0], BW_SRC[1] + 82, 16, '#5a2a6e', 'center', 800);
+      } else if (k === 'drizzle') {
+        bwPiece(g, p, BW_PX, BW_PY, 1);
+        // the dotted zigzag still to go
+        ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(140,80,30,.7)'; ctx.lineWidth = 1.2;
+        p.zig.forEach((d, i) => { if (d.on || i % 2) return; ctx.beginPath(); ctx.arc(BW_PX + d.x, BW_PY + d.y, 3.4, 0, TAU); ctx.fill(); ctx.stroke(); });
+        if (!p.zig[0].on) vecStar(BW_PX + p.zig[0].x - 16, BW_PY + p.zig[0].y - 14, 9, '#ffd23a', 1.4);
+        if (P.down) {
+          ctx.strokeStyle = 'rgba(90,40,10,.75)'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(P.x, P.y - 32); ctx.lineTo(P.x, P.y); ctx.stroke();
+          ctx.strokeStyle = '#d8843a'; ctx.lineWidth = 4; ctx.stroke();
+          bwSyrup(P.x, P.y - 32, 0.15);
+        } else bwSyrup(BW_SRC[0], BW_SRC[1] - 70, Math.PI);
+        const c = st.cover || 0;
+        rrect(BW_PX - 90, 514, 180, 14, 7, 'rgba(255,255,255,.85)', OL, 1.5); rrect(BW_PX - 90, 514, 180 * Math.min(1, c / st.need), 14, 7, '#c8742a');
+        if (!P.down) bwTip('Hold down and follow the zigzag!');
+      } else if (k === 'pipe') {
+        // the tray of friends sits small on the left; the one being iced stands big in the middle
+        bwPiece(g, p, 330, 446, 0.42);
+        const sp = p.spots[Math.min(st.cur, p.spots.length - 1)], [fx, fy, fs] = BW_BIG;
+        if (sp && !sp.iced) { ctx.strokeStyle = '#ff6fb5'; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(330 + sp.x * 0.42, 446 + sp.y * 0.42, 22, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+        inkEllipse(fx, fy + 36 * fs, 130, 20, 0, '#ffffff', 2.5); ctx.fillStyle = '#e8f2fa'; ellipse(fx, fy + 36 * fs - 2, 104, 12);
+        const col = bwBakeCol(r, p.bake);
+        if (sp.iced) { bwMan(fx, fy, fs, col, true, true); bwSparkles(fx, fy - 20, 220, 200, 8); }
+        else {
+          bwMan(fx, fy, fs, col, false);
+          const pts = BW_PIPE.map(([a, b2]) => [fx + a * fs, fy + b2 * fs]);
+          // the guide: a dashed smile and dotted eyes and buttons
+          ctx.setLineDash([4, 6]); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 3; ctx.beginPath(); for (let i = 2; i <= 7; i++) i === 2 ? ctx.moveTo(...pts[i]) : ctx.lineTo(...pts[i]); ctx.stroke(); ctx.setLineDash([]);
+          pts.forEach(([x, y], i) => { if (sp.icing[i]) return; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(x, y, 8, 0, TAU); ctx.stroke(); ctx.setLineDash([]); });
+          // the icing piped so far
+          for (const [lw, c2] of [[12, 'rgba(120,80,60,.45)'], [8, '#ffffff']]) {
+            ctx.strokeStyle = c2; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.beginPath();
+            for (let i = 3; i <= 7; i++) if (sp.icing[i] && sp.icing[i - 1]) { ctx.moveTo(...pts[i - 1]); ctx.lineTo(...pts[i]); }
+            ctx.stroke();
+          }
+          pts.forEach(([x, y], i) => { if (!sp.icing[i]) return; ctx.fillStyle = 'rgba(120,80,60,.45)'; circle(x, y + 1, 7.5); ctx.fillStyle = '#ffffff'; circle(x, y, 6); ctx.fillStyle = 'rgba(220,230,245,1)'; circle(x + 2, y + 2, 2); });
+        }
+        if (P.down) bwPipingBag(P.x, P.y); else bwPipingBag(BW_SRC[0] + 12, BW_SRC[1] - 100);
+        if (!P.down && !sp.iced) bwTip('Trace the dots: eyes, a smile and buttons!');
+      } else if (k === 'slice') {
+        inkRect(BW_PX - 150, BW_PY + 46, 300, 26, '#d89a64', 2.5, 10);
+        bwPiece(g, p, BW_PX, BW_PY, 1);
+        for (const l of st.lines) {
+          if (l.cut) continue;
+          const x = BW_PX + l.x, live = st.stroke && st.stroke.ln === l;
+          ctx.setLineDash([9, 7]); ctx.strokeStyle = live ? '#2fbf5a' : '#ffffff'; ctx.lineWidth = live ? 5 : 4; ctx.beginPath(); ctx.moveTo(x, BW_PY - 88); ctx.lineTo(x, BW_PY + 54); ctx.stroke(); ctx.setLineDash([]);
+          if (!live) { const ay = BW_PY - 108 + Math.abs(Math.sin(S.t * 4)) * 6; ctx.fillStyle = OL; tri(x - 11, ay - 4, x + 11, ay - 4, x, ay + 12); ctx.fillStyle = '#ff6fb5'; tri(x - 7, ay - 2, x + 7, ay - 2, x, ay + 8); }
+        }
+        if (P.down) bwKnife(P.x, P.y + 8, 0); else bwKnife(BW_SRC[0] + 104, BW_SRC[1] + 50, -Math.PI / 2);
+        if (!P.down) bwTip('Drag the knife down each dashed line!');
       } else if (k === 'bake') {
         this.drawBake(g);
       } else if (k === 'flip') {
