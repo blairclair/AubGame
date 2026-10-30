@@ -35,7 +35,7 @@ function loadImages() {
     const im = new Image();
     im.onload = () => { if (hero) (HERO_IMG[hero] ??= {})[key] = im; else IMG[key] = im; resolve(); };
     im.onerror = () => reject(new Error(`Couldn't load ${src}`));
-    im.src = src;
+    im.src = window.ASSET_DATA?.[src] || src; // the one-file download (tools/build_dist.py) carries its pictures inside
   }))).then(() => useHero(savedHeroId() || 'aubrey'));
 }
 
@@ -116,7 +116,9 @@ let speakTok = 0, speakVoice = null, speakNow = null;
 function pickVoice() {
   const v = window.speechSynthesis ? speechSynthesis.getVoices() : [];
   const en = v.filter(x => /^en[-_]/i.test(x.lang));
-  speakVoice = en.find(x => x.localService && /^en[-_]US/i.test(x.lang) && /Samantha|Ava|Allison|Susan|Karen|Moira|Tessa/.test(x.name))
+  // a downloaded Premium or Enhanced voice (Mac System Settings) sounds the most natural, so it wins
+  speakVoice = en.find(x => x.localService && /Premium|Enhanced/i.test(x.name))
+    || en.find(x => x.localService && /^en[-_]US/i.test(x.lang) && /Samantha|Ava|Allison|Susan|Karen|Moira|Tessa/.test(x.name))
     || en.find(x => x.localService && /^en[-_]US/i.test(x.lang)) || en.find(x => x.localService) || en[0] || null;
 }
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to play Secret Pet ({{SYSTEM}})</title>
+<style>
+  :root { --ink: #3d2350; --soft: #6b5580; --pink: #ff6fb5; --lilac: #f4ecff; --line: #e6d8f5; --bg: #fffafd; --card: #ffffff; --tip: #fff6d6; --tipline: #f0d77a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #f3e9ff; --soft: #c9b6dc; --pink: #ff8fc8; --lilac: #2c1f3d; --line: #463658; --bg: #1b1326; --card: #241a31; --tip: #3a3218; --tipline: #8a7430; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 19px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 18px 60px; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 6px; }
+  h2 { font-size: 25px; margin: 44px 0 12px; padding-top: 18px; border-top: 2px solid var(--line); }
+  .lede { color: var(--soft); margin: 0 0 22px; }
+  img.shot { width: 100%; border-radius: 14px; border: 1px solid var(--line); display: block; }
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; }
+  ol.steps > li { counter-increment: s; position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px 16px 70px; margin: 12px 0; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 16px; top: 14px; width: 38px; height: 38px; border-radius: 50%; background: var(--pink); color: #fff; font-weight: 700; display: grid; place-items: center; }
+  ol.steps b { display: block; font-size: 20px; margin-bottom: 2px; }
+  kbd { display: inline-block; min-width: 1.6em; padding: 1px 7px; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 7px; background: var(--lilac); font: 600 16px/1.4 ui-monospace, Menlo, Consolas, monospace; text-align: center; }
+  .file { font-weight: 700; background: var(--lilac); padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
+  .tip { background: var(--tip); border: 1px solid var(--tipline); border-radius: 12px; padding: 12px 16px; margin: 14px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 9px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { white-space: nowrap; width: 1%; padding-right: 16px; }
+  dl dt { font-weight: 700; margin-top: 16px; }
+  dl dd { margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>How to play Secret Pet</h1>
+  <p class="lede">A guide for a {{SYSTEM}} computer. Nothing to install, no account and no internet needed once it's downloaded.</p>
+  <img class="shot" src="{{TITLE_SHOT}}" alt="The game's first screen: pick Aubrey, Charlotte, Ashton or Levi, then a unicorn or a baby dinosaur">
+
+  <h2>Getting it ready (once)</h2>
+<!--mac-->
+  <ol class="steps">
+    <li><b>Download the game</b>Click the download link for <span class="file">Secret-Pet-Mac.zip</span>. It goes into your <b style="display:inline">Downloads</b> folder.</li>
+    <li><b>Open your Downloads folder</b>Click the smiling blue <b style="display:inline">Finder</b> face in the Dock at the bottom of the screen, then click <b style="display:inline">Downloads</b> on the left.</li>
+    <li><b>Unzip it</b>If you already see a folder called <span class="file">Secret Pet</span>, your Mac has unzipped it for you. If you only see <span class="file">Secret-Pet-Mac.zip</span>, double-click it and the <span class="file">Secret Pet</span> folder appears next to it.</li>
+    <li><b>Move it somewhere safe (recommended)</b>Drag the <span class="file">Secret Pet</span> folder onto <b style="display:inline">Documents</b> on the left of the Finder window, so it doesn't get tidied away with your other downloads.</li>
+  </ol>
+<!--/mac-->
+<!--windows-->
+  <ol class="steps">
+    <li><b>Download the game</b>Click the download link for <span class="file">Secret-Pet-Windows.zip</span>. It goes into your <b style="display:inline">Downloads</b> folder. If your browser asks whether to keep the file, choose <b style="display:inline">Keep</b>.</li>
+    <li><b>Open your Downloads folder</b>Click the yellow folder icon (<b style="display:inline">File Explorer</b>) on the taskbar at the bottom of the screen, then click <b style="display:inline">Downloads</b> on the left.</li>
+    <li><b>Unzip it</b><b style="display:inline">Right-click</b> <span class="file">Secret-Pet-Windows.zip</span> and choose <b style="display:inline">Extract All…</b>, then click <b style="display:inline">Extract</b>. A new window opens with the <span class="file">Secret Pet</span> folder inside.</li>
+    <li><b>Move it somewhere safe (recommended)</b>Drag the <span class="file">Secret Pet</span> folder onto <b style="display:inline">Documents</b> on the left of the File Explorer window, so it doesn't get tidied away with your other downloads.</li>
+  </ol>
+<!--/windows-->
+
+  <h2>Playing</h2>
+  <ol class="steps">
+<!--mac-->
+    <li><b>Open the game</b>Open the <span class="file">Secret Pet</span> folder and double-click <span class="file">Play Secret Pet.html</span>. It opens in your web browser (Safari or Chrome). It takes a few seconds to load the first time.</li>
+<!--/mac-->
+<!--windows-->
+    <li><b>Open the game</b>Open the <span class="file">Secret Pet</span> folder and double-click <span class="file">Play Secret Pet.html</span>. It opens in your web browser (Microsoft Edge or Chrome). It takes a few seconds to load the first time. If Windows asks which app to use, pick <b style="display:inline">Microsoft Edge</b> or <b style="display:inline">Google Chrome</b>.</li>
+<!--/windows-->
+    <li><b>Click the game once</b>Browsers keep pages quiet until you click them, so the first click switches on the sound, the music and the voice that reads everything aloud.</li>
+<!--mac-->
+    <li><b>Make it big (optional)</b>Press <kbd>Control</kbd> + <kbd>⌘ Command</kbd> + <kbd>F</kbd> for full screen. Press the same keys again (or <kbd>Esc</kbd>) to get out.</li>
+<!--/mac-->
+<!--windows-->
+    <li><b>Make it big (optional)</b>Press <kbd>F11</kbd> for full screen. Press <kbd>F11</kbd> again to get out. (On some laptops it's <kbd>Fn</kbd> + <kbd>F11</kbd>.)</li>
+<!--/windows-->
+    <li><b>Pick a player and a pet</b>Tap Aubrey, Charlotte, Ashton or Levi, then tap the unicorn or the baby dinosaur to start the story.</li>
+  </ol>
+  <div class="tip"><b>Good to know:</b> the story starts over each time the game is closed, so leave the window open between play sessions if your child is in the middle of an adventure. The game does remember which child was picked last, and whether the music was on.</div>
+
+  <h2>Controls</h2>
+  <table>
+    <tr><td>Mouse, trackpad or touch screen</td><td>Tap the buttons, cards and things on screen. Most games can be played with just taps.</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td><td>Walk, steer and choose.</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>Jump, and move the story on to the next line.</td></tr>
+    <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd></td><td>Pick answer 1, 2, 3 or 4 in the quiz games.</td></tr>
+    <tr><td><kbd>R</kbd></td><td>Read aloud on or off.</td></tr>
+    <tr><td><kbd>M</kbd></td><td>All sound on or off.</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Music on or off (sound effects stay on).</td></tr>
+  </table>
+
+  <h2>Shortcut for next time</h2>
+<!--mac-->
+  <p><b>Right-click</b> (or hold <kbd>Control</kbd> and click) <span class="file">Play Secret Pet.html</span> and choose <b>Make Alias</b>. Drag the new alias onto your Desktop. Double-click it whenever you want to play.</p>
+<!--/mac-->
+<!--windows-->
+  <p><b>Right-click</b> <span class="file">Play Secret Pet.html</span>, choose <b>Show more options</b> (Windows 11 only), then <b>Send to</b> → <b>Desktop (create shortcut)</b>. Double-click the new icon on your Desktop whenever you want to play.</p>
+<!--/windows-->
+
+  <h2>If something isn't right</h2>
+  <dl>
+    <dt>There's no sound or no voice</dt>
+    <dd>Click once on the game. Check the computer's volume isn't turned down or muted. Look at the bottom-right corner of the game: if it says <i>sound off</i> press <kbd>M</kbd>, and if it says <i>read aloud off</i> press <kbd>R</kbd>.</dd>
+<!--mac-->
+    <dt>It opened in the wrong app (for example, a text editor)</dt>
+    <dd>Right-click <span class="file">Play Secret Pet.html</span>, choose <b>Open With</b>, then pick <b>Safari</b> or <b>Google Chrome</b>.</dd>
+<!--/mac-->
+<!--windows-->
+    <dt>It opened in the wrong app (for example, Notepad)</dt>
+    <dd>Right-click <span class="file">Play Secret Pet.html</span>, choose <b>Open with</b>, then pick <b>Microsoft Edge</b> or <b>Google Chrome</b>.</dd>
+<!--/windows-->
+    <dt>The screen stays dark or says "Loading…" for a long time</dt>
+    <dd>Close the window and double-click <span class="file">Play Secret Pet.html</span> again.<!--mac--> If it still doesn't start in Safari, try Google Chrome.<!--/mac--> Make sure you opened the file from the unzipped <span class="file">Secret Pet</span> folder, not from inside the zip.</dd>
+    <dt>The voice sounds robotic</dt>
+<!--mac-->
+    <dd>The game uses your Mac's own voices. For a nicer one, open <b>System Settings → Accessibility → Spoken Content</b>, click the <b>i</b> or <b>Manage Voices…</b> next to System Voice, and download an English voice marked <b>Enhanced</b> or <b>Premium</b>. Then close and reopen the game.</dd>
+<!--/mac-->
+<!--windows-->
+    <dd>The game uses the English voice built into Windows. It's clear, though a little robotic, and there isn't a way to change it from inside the game yet.</dd>
+<!--/windows-->
+  </dl>
+</main>
+</body>
+</html>

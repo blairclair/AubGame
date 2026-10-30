@@ -6,3 +6,6 @@
 
 # errata daemon runtime state (databases, locks) — machine-local
 .errata/
+
+# the downloadable game, built by tools/build_dist.py
+/dist/
