@@ -2573,13 +2573,13 @@
   const NB_AS = 0.5;
   // where Aubrey's hand is on screen (the carried bit sits there)
   function nbHand(g) {
-    const fr = g.frame || 'jump', im = IMG[fr], p = NB_POSE(fr), nat = AUB_NATIVE[fr] || 1, flip = g.facing && nat !== Math.sign(g.facing) ? -1 : 1;
+    const fr = g.frame || 'jump', im = IMG[fr], p = NB_POSE(fr), nat = AUB_NATIVE[fr] || 1, flip = AUB_NATIVE[fr] && g.facing && nat !== Math.sign(g.facing) ? -1 : 1; // front-on photos never flip
     return [g.px + (-im.width / 2 + p[3]) * NB_AS * flip, g.py + 195 * NB_AS / 2 + (-im.height + p[4]) * NB_AS];
   }
   function nbCarried(kind, x, y, a = 0) { if (kind === 'twig') nbTwig(x, y, a - 0.4, 40); else if (kind === 'mud') nbMud(x, y, 11); else if (kind === 'feather') nbFeather(x, y, a - 0.3, 0.9, '#ffd8e8'); }
   function nbAubrey(g) {
     const fr = g.frame || 'jump', im = IMG[fr], s = NB_AS, w = im.width * s, h = im.height * s, p = NB_POSE(fr);
-    const feet = g.py + 195 * s / 2, nat = AUB_NATIVE[fr] || 1, flip = g.facing && nat !== Math.sign(g.facing) ? -1 : 1;
+    const feet = g.py + 195 * s / 2, nat = AUB_NATIVE[fr] || 1, flip = AUB_NATIVE[fr] && g.facing && nat !== Math.sign(g.facing) ? -1 : 1;
     // her shadow on the lawn, smaller the higher she flies
     const hi = clamp((520 - feet) / 380, 0, 1);
     ctx.fillStyle = `rgba(40,20,60,${0.24 - hi * 0.14})`; ellipse(g.px, 522, 30 * (1 - hi * 0.5), 6 * (1 - hi * 0.4));

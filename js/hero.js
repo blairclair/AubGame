@@ -122,6 +122,8 @@ function heroText(str) {
   heroTextCache.set(str, out);
   return out;
 }
+// a hero's own name that heroText leaves alone (an invisible word joiner splits "Aubrey"), for the hero picker
+function heroOwnName(h) { return h.name.replace('Aubrey', 'Aub⁠rey'); }
 // all canvas text goes through heroText, so every label, line and floating word follows the hero
 for (const fn of ['fillText', 'strokeText', 'measureText']) {
   const orig = CanvasRenderingContext2D.prototype[fn];

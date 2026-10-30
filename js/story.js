@@ -344,7 +344,7 @@ SCENES.title = {
       ctx.drawImage(im, x + w / 2 - im.width * s / 2, y + lift + ch - 42 - im.height * s, im.width * s, im.height * s);
       ctx.restore();
       rrect(x, y + lift, w, ch, 20, null, on ? '#ffd23f' : 'rgba(255,255,255,.9)', on ? 6 : 3);
-      button(`hero:${i}`, x + 12, y + lift + ch - 38, w - 24, 32, h.name, { color: on ? '#ff6fb5' : h.boy ? '#4fa8e0' : '#c86ae8', size: 17 });
+      button(`hero:${i}`, x + 12, y + lift + ch - 38, w - 24, 32, heroOwnName(h), { color: on ? '#ff6fb5' : h.boy ? '#4fa8e0' : '#c86ae8', size: 17 });
     });
     ctx.globalAlpha = 0.7 + 0.3 * Math.sin(S.t * 4 + 1);
     outlined('Who will your secret pet be?', W / 2, 328, 22, '#fff6a8');
