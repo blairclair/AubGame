@@ -83,6 +83,45 @@
       inkRect(-7, -6, 14, 5, '#ffd23f', 1.2, 2);
     }
   };
+  const towel = wet => {
+    line([[-34, -22], [34, -22]], OL, 3);
+    INK = OL;
+    const col = wet ? '#6a7ad8' : '#ff9ad0';
+    ink(P2(wet ? 'M-22,-22 L22,-22 L20,22 C10,28 -10,28 -20,22 Z' : 'M-24,-22 L24,-22 L24,20 L-24,20 Z'), col, 2);
+    ctx.fillStyle = wet ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.55)'; ctx.fillRect(-20, -4, 40, 5); ctx.fillRect(-20, 8, 40, 3);
+    inkRect(-6, -27, 12, 9, '#ffe08a', 1, 2);
+    if (wet) { ctx.fillStyle = '#7ac8ff'; for (let i = 0; i < 3; i++) ellipse(-12 + i * 12, 30 + ((S.t * 40 + i * 9) % 18), 3, 4.5); }
+    else for (let i = 0; i < 2; i++) star(-14 + i * 30, 30 + Math.sin(S.t * 4 + i) * 2, 6, '#fff6a8');
+  };
+  const bowl = inside => {
+    INK = OL;
+    const bx = inside ? 0 : -8;
+    inkRect(bx - 18, 22, 36, 6, '#b89070', 1.5, 3);
+    ctx.globalAlpha = 0.8; inkCircle(bx, 0, 24, 'rgba(200,235,255,.55)', 2); ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(80,160,240,.5)'; ctx.beginPath(); ctx.arc(bx, 0, 22, 0.2, Math.PI - 0.2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ellipse(bx - 10, -10, 4, 7, 0.5);
+    if (inside) emoji('🐠', Math.sin(S.t * 2) * 5, 6, 24);
+    else { const hop = Math.abs(Math.sin(S.t * 4)) * 8; ctx.save(); ctx.translate(26, 14 - hop); ctx.rotate(-0.4); emoji('🐠', 0, 0, 24); ctx.restore(); }
+  };
+  const cairn = tall => {
+    INK = OL;
+    const stones = tall ? [[0, 20, 22, 9], [2, 4, 18, 8], [-1, -10, 15, 7], [1, -22, 11, 6], [0, -32, 8, 5]] : [[0, 20, 22, 9]];
+    for (const [x, y, rx, ry] of stones) inkEllipse(x, y, rx, ry, 0, '#a0aac8', 1.5);
+  };
+  const arrow = up => {
+    ctx.save(); if (!up) ctx.scale(1, -1);
+    INK = OL; ink(P2('M0,-30 L24,-4 L10,-4 L10,28 L-10,28 L-10,-4 L-24,-4 Z'), '#ffd23a', 2);
+    ctx.restore();
+  };
+  const lantern = on => {
+    INK = OL;
+    if (on) glow(0, 4, 50, '255,210,120', 0.8);
+    inkRect(-3, -34, 6, 10, '#4a3a5a', 1, 2);
+    inkRect(-16, -26, 32, 6, '#4a3a5a', 1.5, 2);
+    inkRect(-13, -20, 26, 36, on ? '#ffe08a' : '#4a4a6a', 2, 6);
+    inkRect(-16, 16, 32, 6, '#4a3a5a', 1.5, 2);
+    if (on) { ctx.fillStyle = '#ff9a3a'; ellipse(0, 2 + Math.sin(S.t * 8), 4, 8); ctx.fillStyle = '#fff6c0'; ellipse(0, 4, 2, 4); }
+  };
   const em = (ch, size = 50, extra) => () => { if (extra) extra(); emoji(ch, 0, 0, size); };
   const speedLines = () => { for (let i = 0; i < 3; i++) line([[36 + ((S.t * 60 + i * 9) % 14), -8 + i * 10], [50 + ((S.t * 60 + i * 9) % 14), -8 + i * 10]], 'rgba(255,255,255,.85)', 3); };
   const soundWaves = () => { ctx.strokeStyle = 'rgba(255,240,160,.9)'; ctx.lineWidth = 3; for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.arc(-16, 0, 30 + i * 10 + Math.sin(S.t * 8) * 2, -0.6, 0.6); ctx.stroke(); } };
