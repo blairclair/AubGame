@@ -6,7 +6,12 @@ const nameBox = document.getElementById('nameBox');
 function update(dt) {
   S.t += dt;
   updateFx(dt);
-  if (pressed.r) { readAloud = !readAloud; if (!readAloud && window.speechSynthesis) speechSynthesis.cancel(); }
+  // R, M and N are letters in Secret Code, where the child can type the answer, so they don't switch things there
+  const typing = scene === 'minigame' && SCENES.minigame.g?.type === 'secretcode' && SCENES.minigame.g.phase === 'play';
+  if (pressed.r && !typing) { readAloud = !readAloud; if (!readAloud && window.speechSynthesis) speechSynthesis.cancel(); }
+  if (pressed.m && !typing) muted = !muted;
+  if (pressed.n && !typing) toggleMusic();
+  musicUpdate();
   if (!nameBox.hidden) return;
   if (dlg) return updateDialog(dt);
   SCENES[scene].update?.(dt);
@@ -16,7 +21,7 @@ function render() {
   ctx.clearRect(0, 0, W, H);
   SCENES[scene].draw();
   if (dlg) drawDialog();
-  if (scene !== 'loading') text(`R: read aloud ${readAloud ? 'on' : 'off'}  ·  M: sound ${muted ? 'off' : 'on'}`, W - 14, H - 8, 11, 'rgba(255,255,255,.75)', 'right', 500);
+  if (scene !== 'loading') text(`R: read aloud ${readAloud ? 'on' : 'off'}  ·  M: sound ${muted ? 'off' : 'on'}  ·  N: music ${musicOn ? 'on' : 'off'}`, W - 14, H - 8, 11, 'rgba(255,255,255,.75)', 'right', 500);
 }
 let last = performance.now();
 function frame(now) {

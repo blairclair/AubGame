@@ -137,7 +137,6 @@ function findUnicorn() {
 SCENES.world = {
   update(dt) {
     const a = WS.a, u = WS.uni;
-    if (pressed.m) muted = !muted;
     if (a.poseT > 0) a.poseT -= dt;
     const busy = a.poseT > 0;
 

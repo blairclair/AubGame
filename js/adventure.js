@@ -21,7 +21,6 @@ const kindIcon = type => (MG[type].kind === 'learn' ? '🧠' : '⚡');
 SCENES.map = {
   enter() { this.hover = null; },
   update() {
-    if (pressed.m) muted = !muted;
     const id = clickedButton();
     if (!id) return;
     if (id === 'home') return goHome();
