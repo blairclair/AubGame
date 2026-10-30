@@ -152,10 +152,24 @@ def defringe(a):
     return a
 
 
-def cut(sheet, box, sess, white=False):
+def drop_floor(a):
+    """a sitting pose can keep a strip of white floor under it: drop pale patches reaching the bottom few rows"""
+    solid = a[..., 3] > 20
+    rows = np.nonzero(solid.any(axis=1))[0]
+    if not len(rows): return a
+    rgb = a[..., :3].astype(int)
+    pale = solid & (rgb.min(axis=2) > 200) & (rgb.max(axis=2) - rgb.min(axis=2) < 30)
+    lab, n = ndimage.label(pale)
+    floor = set(lab[rows[-1] - 6:rows[-1] + 1].ravel()) - {0}
+    for k in floor: a[lab == k, 3] = 0
+    return a
+
+
+def cut(sheet, box, sess, white=False, sitting=False):
     img = remove(sheet.crop(box), session=sess, post_process_mask=True)
     a = np.array(img); a[..., 3] = largest_blob(a[..., 3])
     if white: a = defringe(a)
+    if white and sitting: a = drop_floor(a)
     img = Image.fromarray(a)
     return img.crop(img.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox())
 
@@ -166,7 +180,7 @@ def main(sheets, out, names):
         h = HEROES[name]
         sheet = Image.open(Path(sheets) / f"{name}.png").convert("RGBA")
         d = Path(out) / name; (d / "sprites").mkdir(parents=True, exist_ok=True); (d / "faces").mkdir(parents=True, exist_ok=True)
-        cuts = {k: cut(sheet, tuple(b[:4]), sess, h.get("white")) for k, b in h["poses"].items()}
+        cuts = {k: cut(sheet, tuple(b[:4]), sess, h.get("white"), k == "crouch") for k, b in h["poses"].items()}
         k0 = FRONT_H / cuts["idle_front"].height
         for k, im in cuts.items():
             b = h["poses"][k]; k1 = k0 * (b[4] if len(b) > 4 else 1)  # a 5th number: that source's scale vs idle_front's
