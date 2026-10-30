@@ -136,7 +136,8 @@
     // Aubrey
     if (r.tuck) {
       // tucked in small: her crouch, leaning forward
-      const im = IMG.crouch, sc = 0.52;
+      // (each hero's crouch photo has its own size: match her head to her standing photo's, heroHead in js/hero.js)
+      const im = IMG.crouch, sc = 0.52 * 1.1 * heroHead('idle_front').r / heroHead('crouch').r;
       ctx.save(); ctx.translate(-10, -6); ctx.rotate(0.2);
       ctx.drawImage(im, -im.width * sc / 2, -im.height * sc, im.width * sc, im.height * sc);
       ctx.restore();

@@ -20,7 +20,7 @@ function showTime() {
     ['narrator', null, `Morning comes. The supplies are all packed, and ${S.name} is wide awake and wiggly.`],
     ['aubrey', 'determined', `Today's the day, ${S.name}. We're taking you HOME!`],
     ['dino', 'joy', '*an excited little squeak*'],
-    ['narrator', null, `The path to Dinosaur Valley goes over a river of big, friendly dinosaurs. Aubrey puts ${S.name} on her back and gets ready to hop!`],
+    ['narrator', null, `The path to Dinosaur Valley goes over a river of big, friendly dinosaurs. Aubrey puts ${S.name} on {her|his} back and gets ready to hop!`],
   ], () => setScene(SCENES.dinohop ? 'dinohop' : SCENES.dinodefense ? 'dinodefense' : 'dinoend'));
 }
 
@@ -205,7 +205,7 @@ SCENES.show = {
         ['mom', null, "I followed you! I KNEW something was going on in that shed. The glitter. The 'lawnmower'..."],
         ['aubrey', 'determined', `Her name is ${S.name}. She won the show, so she's allowed to stay. Can she, Mom? PLEASE?`],
         ['mom', null, '...Well. Rules are rules. She can stay.'],
-        ['mom', null, 'But YOU are cleaning up all that glitter, young lady.'],
+        ['mom', null, 'But YOU are cleaning up all that glitter, young {lady|man}.'],
         ['aubrey', 'laughing', 'DEAL!!!'],
       ], () => setScene('end'));
     } else {
@@ -276,16 +276,25 @@ function dreamy(top, bottom) {
   for (let i = 0; i < 46; i++) star((i * 197) % W, (i * 89) % (H - 140), 2 + (i % 3), `rgba(255,255,255,${0.3 + 0.7 * Math.abs(Math.sin(S.t * 1.5 + i))})`);
 }
 SCENES.loading = { update() {}, draw() { dreamy('#3b1d6e', '#ff9ec7'); outlined('Loading...', W / 2, H / 2, 28, '#fff'); } };
-// the title screen is also the pet picker: a unicorn or a baby dinosaur
+// the title screen is also where you pick who you are (js/hero.js) and your secret pet
 const PET_CHOICES = [
-  { id: 'unicorn', label: 'A Unicorn', say: 'A sparkly unicorn!', x: 70 },
-  { id: 'dino', label: 'A Baby Dinosaur', say: 'A baby dinosaur!', x: 560 },
+  { id: 'unicorn', label: 'A Unicorn', say: 'A sparkly unicorn!', x: 150 },
+  { id: 'dino', label: 'A Baby Dinosaur', say: 'A baby dinosaur!', x: 510 },
 ];
 const TITLE_DINO = { head: 'd_flowers', neck: 'd_bandana', back: null, tail: 'd_tailbow', feet: null };
+const HERO_CARD = { w: 150, h: 172, y: 134, gap: 18 };
+const heroCardX = i => (W - (HEROES.length * HERO_CARD.w + (HEROES.length - 1) * HERO_CARD.gap)) / 2 + i * (HERO_CARD.w + HERO_CARD.gap);
+const PET_CARD = { w: 300, h: 176, y: 344 };
 SCENES.title = {
   enter() {
     this.sel = this.sel ?? null; this.t = 0;
-    speak("Aubrey's Secret Pet! Who will your secret pet be? Press 1 for a unicorn, or 2 for a baby dinosaur.");
+    speak("Aubrey's Secret Pet! Who are you? Tap a friend. Then pick your secret pet: press 1 for a unicorn, or 2 for a baby dinosaur.");
+  },
+  pickHero(i) {
+    const h = HEROES[(i + HEROES.length) % HEROES.length];
+    if (h === HERO) return;
+    audioInit(); SFX.pick(); useHero(h.id); this.heroPop = 0;
+    speak(`${h.name}!`);
   },
   choose(i) {
     const c = PET_CHOICES[i];
@@ -293,16 +302,20 @@ SCENES.title = {
     startGame(c.id);
   },
   update(dt) {
-    this.t += dt;
+    this.t += dt; this.heroPop = (this.heroPop ?? 1) + dt;
     const id = clickedButton();
     if (id === 'stages') return setScene('stages');
     if (id?.startsWith('pet:')) return this.choose(+id.slice(4));
-    const hover = PET_CHOICES.findIndex(c => inRect({ x: c.x, y: 168, w: 330, h: 330 }));
+    if (id?.startsWith('hero:')) return this.pickHero(+id.slice(5));
+    const hover = PET_CHOICES.findIndex(c => inRect({ x: c.x, y: PET_CARD.y, w: PET_CARD.w, h: PET_CARD.h }));
     if (hover >= 0 && hover !== this.hover) { this.sel = hover; }
     this.hover = hover;
+    const hi = HEROES.indexOf(HERO);
+    if (pressed.arrowleft || pressed.a) this.pickHero(hi - 1);
+    if (pressed.arrowright || pressed.d) this.pickHero(hi + 1);
     const was = this.sel;
-    if (pressed.arrowleft || pressed.a) this.sel = 0;
-    if (pressed.arrowright || pressed.d) this.sel = 1;
+    if (pressed.arrowup || pressed.w) this.sel = 0;
+    if (pressed.arrowdown || pressed.s) this.sel = 1;
     if (this.sel !== was && this.sel !== null) { SFX.click(); speak(PET_CHOICES[this.sel].say); }
     if ((advancePressed()) && this.sel !== null) return this.choose(this.sel);
     if (advancePressed()) { this.sel = 0; speak(PET_CHOICES[0].say); }
@@ -312,30 +325,48 @@ SCENES.title = {
     dreamy('#3b1d6e', '#ff9ec7');
     ctx.fillStyle = '#7fbf75'; ellipse(W / 2, H + 60, 720, 150);
     ctx.fillStyle = '#8fcf85'; ellipse(W / 2, H + 80, 640, 130);
-    outlined("Aubrey's", W / 2, 50, 44, '#fff');
-    outlined('Secret Pet', W / 2, 100, 50, '#ffd1ec');
+    outlined(`${HERO.name}'s Secret Pet`, W / 2, 40, 44, '#fff');
     ctx.globalAlpha = 0.7 + 0.3 * Math.sin(S.t * 4);
-    outlined('Who will your secret pet be?', W / 2, 146, 22, '#fff6a8');
+    outlined('Who are you?', W / 2, 98, 22, '#fff6a8');
+    ctx.globalAlpha = 1;
+    // the four heroes: the one you are waves and bounces
+    HEROES.forEach((h, i) => {
+      const on = h === HERO, x = heroCardX(i), { w, h: ch, y } = HERO_CARD;
+      const lift = on ? -6 - Math.abs(Math.sin(S.t * 3)) * 4 : 0;
+      ctx.save();
+      ctx.shadowColor = on ? 'rgba(255,240,150,.9)' : 'rgba(40,10,60,.4)'; ctx.shadowBlur = on ? 24 : 8; ctx.shadowOffsetY = 4;
+      rrect(x, y + lift, w, ch, 20, h.card);
+      ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.roundRect(x + 6, y + lift + 6, w - 12, ch - 44, 15); ctx.clip();
+      const bg = ctx.createLinearGradient(0, y, 0, y + ch); bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, h.card);
+      ctx.fillStyle = bg; ctx.fillRect(x, y + lift, w, ch);
+      const im = HERO_IMG[h.id][on ? 'twirl' : 'idle_front'], s = 118 / HERO_IMG[h.id].idle_front.height * (on ? 1 + 0.06 * Math.max(0, 1 - this.heroPop * 4) : 1);
+      ctx.drawImage(im, x + w / 2 - im.width * s / 2, y + lift + ch - 42 - im.height * s, im.width * s, im.height * s);
+      ctx.restore();
+      rrect(x, y + lift, w, ch, 20, null, on ? '#ffd23f' : 'rgba(255,255,255,.9)', on ? 6 : 3);
+      button(`hero:${i}`, x + 12, y + lift + ch - 38, w - 24, 32, h.name, { color: on ? '#ff6fb5' : h.boy ? '#4fa8e0' : '#c86ae8', size: 17 });
+    });
+    ctx.globalAlpha = 0.7 + 0.3 * Math.sin(S.t * 4 + 1);
+    outlined('Who will your secret pet be?', W / 2, 328, 22, '#fff6a8');
     ctx.globalAlpha = 1;
     PET_CHOICES.forEach((c, i) => {
-      const on = this.sel === i, x = c.x, y = 168, w = 330, h = 330;
+      const on = this.sel === i, x = c.x, { y, w, h } = PET_CARD;
       const lift = on ? -6 - Math.abs(Math.sin(S.t * 3)) * 4 : 0;
       ctx.save();
       ctx.shadowColor = on ? 'rgba(255,240,150,.9)' : 'rgba(40,10,60,.4)'; ctx.shadowBlur = on ? 26 : 10; ctx.shadowOffsetY = 4;
-      rrect(x, y + lift, w, h, 26, i ? '#e6fbe0' : '#fbe9ff');
+      rrect(x, y + lift, w, h, 24, i ? '#e6fbe0' : '#fbe9ff');
       ctx.restore();
-      rrect(x, y + lift, w, h, 26, null, on ? '#ffd23f' : 'rgba(255,255,255,.9)', on ? 6 : 4);
-      ctx.save(); ctx.beginPath(); ctx.roundRect(x + 8, y + lift + 8, w - 16, h - 78, 20); ctx.clip();
+      rrect(x, y + lift, w, h, 24, null, on ? '#ffd23f' : 'rgba(255,255,255,.9)', on ? 6 : 4);
+      ctx.save(); ctx.beginPath(); ctx.roundRect(x + 8, y + lift + 8, w - 16, h - 64, 18); ctx.clip();
       const bg = ctx.createLinearGradient(0, y, 0, y + h); bg.addColorStop(0, i ? '#c8f0ff' : '#ffe3f3'); bg.addColorStop(1, i ? '#a6e09a' : '#e8d6ff');
       ctx.fillStyle = bg; ctx.fillRect(x, y + lift, w, h);
-      if (i) drawBabyDino(x + 150, y + lift + 238, 0.92, TITLE_DINO, { facing: 1, mood: on ? 'joy' : undefined, moving: on, glow: on ? 0.6 : 0, t: S.t });
-      else drawUnicorn(x + 150, y + lift + 250, 0.82, TITLE_LOOK, { facing: 1, glow: on ? 0.9 : 0.4, mood: on ? 'joy' : undefined, moving: on, t: S.t });
+      if (i) drawBabyDino(x + 150, y + lift + 104, 0.42, TITLE_DINO, { facing: 1, mood: on ? 'joy' : undefined, moving: on, glow: on ? 0.6 : 0, t: S.t });
+      else drawUnicorn(x + 150, y + lift + 108, 0.37, TITLE_LOOK, { facing: 1, glow: on ? 0.9 : 0.4, mood: on ? 'joy' : undefined, moving: on, t: S.t });
       ctx.restore();
-      button(`pet:${i}`, x + 24, y + lift + h - 62, w - 48, 50, c.label, { color: i ? '#3fae6a' : '#c86ae8', size: 21, key: String(i + 1) });
+      button(`pet:${i}`, x + 24, y + lift + h - 50, w - 48, 42, c.label, { color: i ? '#3fae6a' : '#c86ae8', size: 19, key: String(i + 1) });
     });
-    drawAubrey(W / 2, 512, 'twirl', 1, 0, 0.5);
-    text('Tap a card, press 1 or 2, or use ← → and Space', W / 2, H - 22, 14, 'rgba(255,255,255,.85)', 'center', 600);
-    if (DEV) button('stages', 14, H - 52, 160, 38, 'Pick a stage', { icon: '🧪', color: '#9a6ae0', size: 15 });
+    text('Tap a friend (or ← →), then tap a pet (or press 1 or 2)', 14, H - 8, 12, 'rgba(255,255,255,.85)', 'left', 600);
+    if (DEV) button('stages', 14, 14, 140, 34, 'Pick a stage', { icon: '🧪', color: '#9a6ae0', size: 14 });
   },
 };
 // testing only (?dev): jump straight to any story stage or adventure place

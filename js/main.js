@@ -34,8 +34,9 @@ function frame(now) {
 }
 
 // ?jump=<where> skips ahead while iterating, e.g. ?jump=stages (the stage picker), ?jump=map, ?jump=place&id=volcano, ?jump=game&type=count&tier=2
-// add &pet=dino to any jump for the baby-dinosaur route; the dino* jumps set it themselves
+// add &pet=dino to any jump for the baby-dinosaur route; the dino* jumps set it themselves; &hero=levi plays as Levi
 function debugJump(where, q = new URLSearchParams(location.search)) {
+  if (q.get('hero')) useHero(q.get('hero'));
   const pet = where.startsWith('dino') || q.get('pet') === 'dino' ? 'dino' : 'unicorn';
   S = newGame(pet);
   S.shine = 100;

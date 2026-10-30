@@ -18,6 +18,7 @@ function newGame(pet = 'unicorn') {
   return {
     t: 0, day: 1, visitsToday: 0, deck, log: [],
     pet, // 'unicorn' | 'dino' — chosen on the title screen; saves without it are unicorn games
+    hero: HERO.id, // who the player is (js/hero.js), also chosen on the title screen
     name: pet === 'dino' ? 'Sprout' : 'Sparkle',
     equip: { mane: 'natural', style: 'flowing', head: null, neck: null, back: null, tail: null, hooves: null, dhead: null, dneck: null, dback: null, dtail: null, dfeet: null },
     owned: Object.fromEntries(WARDROBE.filter(i => i.free).map(i => [i.id, true])),
@@ -113,7 +114,8 @@ let dlg = null;
 const SPEAKERS = { mamadino: 'Mama Dino', papadino: 'Papa Dino', aubrey: 'Aubrey', mom: 'Mom', ranger: 'Ranger Rosa', neighbor: 'Mrs. Pickett', fairy: 'Fairy Fizzlewick', narrator: '' };
 function say(lines, done) {
   // the dino route swaps unicorn words in story/place lines (petText is a no-op for the unicorn)
-  dlg = { lines: lines.filter(Boolean).map(l => (isDino() ? [l[0], l[1], petText(l[2]), l[3]] : l)), i: 0, chars: 0, done };
+  // the hero's name and {her|his} words are filled in up front, so the typewriter never shows half a token
+  dlg = { lines: lines.filter(Boolean).map(l => [l[0], l[1], heroText(isDino() ? petText(l[2]) : l[2]), l[3]]), i: 0, chars: 0, done };
   showLine();
 }
 function showLine() {

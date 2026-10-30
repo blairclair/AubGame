@@ -26,39 +26,17 @@ const FACES = ['neutral', 'happy', 'excited', 'determined', 'focused', 'surprise
   'serious', 'thinking', 'sad', 'angry', 'silly', 'winky'];
 const IMG = {};
 function loadImages() {
+  // the heroes' photos and portraits (js/hero.js), then the shared props
   const list = [
-    ...['idle_front', 'idle_back', 'crouch', 'jump', 'twirl', 'cast', 'run1', 'run2', 'run3', 'run4', 'run5']
-      .map(n => [n, `assets/sprites/${n}.png`]),
-    ...FACES.map(n => [`face_${n}`, `assets/faces/face_${n}.png`]),
-    ...['book', 'bubbles', 'tiara', 'butterfly', 'necklace'].map(n => [`item_${n}`, `assets/items/item_${n}.png`]),
+    ...heroImageList(),
+    ...['book', 'bubbles', 'tiara', 'butterfly', 'necklace'].map(n => [null, `item_${n}`, `assets/items/item_${n}.png`]),
   ];
-  return Promise.all(list.map(([key, src]) => new Promise((resolve, reject) => {
+  return Promise.all(list.map(([hero, key, src]) => new Promise((resolve, reject) => {
     const im = new Image();
-    im.onload = () => { IMG[key] = im; resolve(); };
+    im.onload = () => { if (hero) (HERO_IMG[hero] ??= {})[key] = im; else IMG[key] = im; resolve(); };
     im.onerror = () => reject(new Error(`Couldn't load ${src}`));
     im.src = src;
-  }))).then(() => { for (const k in AUB_SMILES) smileSprite(k, AUB_SMILES[k]); });
-}
-// Aubrey looks a bit serious in her standing photo, so her smiling portrait is blended over its face once it
-// loads: scaled (sx, sy) and turned (rot) so the portrait's eye-line point
-// (fx, fy) lands on the sprite's (bx, by), inside a soft oval (cx, cy, rx, ry). Every game then draws her smiling.
-const AUB_SMILES = {
-  idle_front: { sx: 0.4, sy: 0.46, fx: 48, fy: 60, bx: 49.5, by: 25, cx: 49.5, cy: 34, rx: 11.5, ry: 14.5, edge: 0.55, rot: 0 },
-};
-function smileSprite(key, o) {
-  const im = IMG[key], f = IMG.face_happy;
-  if (!im || !f) return;
-  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
-  const x = c.getContext('2d'); x.drawImage(im, 0, 0);
-  const t = document.createElement('canvas'); t.width = im.width; t.height = im.height;
-  const tx = t.getContext('2d');
-  tx.translate(o.bx, o.by); tx.rotate(o.rot); tx.scale(o.sx, o.sy); tx.drawImage(f, -o.fx, -o.fy);
-  tx.setTransform(1, 0, 0, 1, 0, 0); tx.globalCompositeOperation = 'destination-in';
-  tx.translate(o.cx, o.cy); tx.rotate(o.rot); tx.scale(o.rx, o.ry);
-  const g = tx.createRadialGradient(0, 0, 0, 0, 0, 1); g.addColorStop(0, '#000'); g.addColorStop(o.edge, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');
-  tx.fillStyle = g; tx.fillRect(-1, -1, 2, 2);
-  x.drawImage(t, 0, 0);
-  IMG[key + '_plain'] = im; IMG[key] = c;
+  }))).then(() => useHero(savedHeroId() || 'aubrey'));
 }
 
 // ---------------------------------------------------------------------------
@@ -144,7 +122,7 @@ function pickVoice() {
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
 function speak(str) {
   if (!readAloud || muted || !window.speechSynthesis) return;
-  const clean = str.replace(/\p{Extended_Pictographic}|️|‍/gu, '').replace(/[*_]/g, '').trim();
+  const clean = heroText(str).replace(/\p{Extended_Pictographic}|️|‍/gu, '').replace(/[*_]/g, '').trim();
   if (!clean) return;
   const make = () => {
     const u = new SpeechSynthesisUtterance(clean);
@@ -227,7 +205,8 @@ function emoji(ch, x, y, size) {
 function wrap(str, maxW, size, weight = 500) {
   ctx.font = `${weight} ${size}px ${FONT}`;
   const out = [];
-  for (const para of str.split('\n')) {
+  // {girl|boy} pairs are picked before the words are split up (a pair can hold spaces)
+  for (const para of heroText(str).split('\n')) {
     let line = '';
     for (const word of para.split(' ')) {
       const test = line ? `${line} ${word}` : word;

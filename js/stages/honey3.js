@@ -63,17 +63,15 @@
 
   // =============================================================================================
   // Aubrey's explorer hat: a little khaki pith helmet, perched on her hair so her face shows.
-  // HEAD = her head's x offset in each sprite frame (side-on frames face right natively).
+  // Her head is found in each photo frame (heroHead in js/hero.js) and flipped the way drawAubrey flips it.
   // =============================================================================================
-  const HEAD = { idle_front: 1.5, idle_back: 0, run1: 12.5, run2: 28.5, run3: 24, run4: 23, run5: 28.5, jump: -30, crouch: -7, twirl: 2 };
   function aubreyExplorer(x, feet, frame, f, lift, s) {
     drawAubrey(x, feet, frame, f, lift, s);
     const im = IMG[frame]; if (!im) return null;
-    // run frames flip to face f, jump faces left natively, crouch is never flipped
-    const side = /run|jump/.test(frame);
-    const hx = x + (HEAD[frame] || 0) * s * (side ? (frame === 'jump' ? -f : f) : 1);
-    const hy = feet - lift - im.height * s + (frame === 'crouch' ? 4.6 : 4) * s / 0.3;
-    explorerHat(hx, hy, s / 0.3 * 0.6, side ? f : 1);
+    const hd = heroHead(frame), nat = AUB_NATIVE[frame], fl = nat && f && nat !== Math.sign(f) ? -1 : 1;
+    const hx = x + (hd.cx - im.width / 2) * s * fl;
+    const hy = feet - lift - (im.height - hd.top - hd.r * 0.4) * s;
+    explorerHat(hx, hy, s / 0.3 * 0.6 * clamp(hd.r / 22, 0.75, 1.3), nat ? f : 1);
     return { hx, hy };
   }
   function explorerHat(x, y, k, f = 1) {

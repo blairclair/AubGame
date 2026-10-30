@@ -1795,7 +1795,7 @@ MG.memory = {
 // Dress-up looks: core pieces are always used; at the top tier one random extra joins them.
 const OF_CATS = [
   { name: 'Casual', classic: true, icon: '☀️', sky: ['#bfe9ff', '#d4f7c0'], deco: ['☀️', '🌳'], cheer: 'Comfy and cool, ready to play!', core: ['tee', 'skirt', 'sneakers'], extra: ['cap'] },
-  { name: 'Fancy', classic: true, icon: '✨', sky: ['#d9b8ff', '#fff0c2'], deco: ['✨', '💎'], cheer: 'So fancy! A royal princess!', core: ['gown', 'tiara', 'heels'], extra: ['pearls'] },
+  { name: 'Fancy', classic: true, icon: '✨', sky: ['#d9b8ff', '#fff0c2'], deco: ['✨', '💎'], cheer: 'So fancy! A royal {princess|prince}!', core: ['gown', 'tiara', 'heels'], extra: ['pearls'] },
   { name: 'Pajamas', classic: true, icon: '🌙', sky: ['#2b2f77', '#6a5acd'], deco: ['🌙', '⭐'], cheer: 'Cozy pajamas! Sweet dreams!', core: ['nightgown', 'nightcap', 'slippers'], extra: ['teddy'] },
   { name: 'Swimming', classic: true, icon: '🌊', sky: ['#7fd6ff', '#ffe6a8'], deco: ['🌊', '🐚'], cheer: 'Splish splash, ready to swim!', core: ['swimsuit', 'ring', 'flipflops'], extra: ['sunglasses'] },
   { name: 'Snow Day', classic: true, icon: '❄️', sky: ['#dceeff', '#ffffff'], deco: ['❄️', '⛄'], cheer: 'Warm and snuggly for the snow!', core: ['coat', 'beanie', 'boots'], extra: ['scarf'] },
@@ -1806,11 +1806,11 @@ const OF_CATS = [
   { name: 'Astronaut', icon: '🚀', sky: ['#0d1240', '#3a2b7a'], deco: ['🪐', '⭐'], cheer: 'Three, two, one, blast off!', core: ['asSuit', 'asHelmet', 'asBoots'], extra: ['asFlag'] },
   { name: 'Chef', icon: '🍳', sky: ['#fff3d6', '#ffd9c2'], deco: ['🥐', '🍰'], cheer: 'Yum yum! A cheerful chef!', core: ['chefJacket', 'chefHat', 'chefSpoon'], extra: ['chefMitt'] },
   { name: 'Firefighter', icon: '🚒', sky: ['#ffd1a8', '#ffefc2'], deco: ['🔥', '🧯'], cheer: 'Firefighter to the rescue!', core: ['ffCoat', 'ffHelmet', 'ffBoots'], extra: ['ffHose'] },
-  { name: 'Ballerina', icon: '🩰', sky: ['#ffd6ec', '#fff0f7'], deco: ['🎀', '🌸'], cheer: 'Twirl! A beautiful ballerina!', core: ['balTutu', 'balShoes', 'balCrown'], extra: ['balBow'] },
+  { name: 'Ballerina', icon: '🩰', sky: ['#ffd6ec', '#fff0f7'], deco: ['🎀', '🌸'], cheer: '{Twirl! A beautiful ballerina!|Leap! A brilliant dancer!}', core: ['balTutu', 'balShoes', 'balCrown'], extra: ['balBow'] },
   { name: 'Wizard', icon: '🔮', sky: ['#3b1f6e', '#7a4fc4'], deco: ['🌙', '✨'], cheer: 'Abracadabra, a wonderful wizard!', core: ['wizRobe', 'wizHat', 'wizWand'], extra: ['wizBeard'] },
   { name: 'Superhero', icon: '⚡', sky: ['#ff8a8a', '#ffe27a'], deco: ['💥', '⚡'], cheer: 'Super Aubrey saves the day!', core: ['shSuit', 'shCape', 'shBoots'], extra: ['shMask'] },
-  { name: 'Cowgirl', icon: '🌵', sky: ['#ffcf8a', '#ffefc8'], deco: ['🌵', '⭐'], cheer: 'Yee-haw, a cool cowgirl!', core: ['cbVest', 'cbHat', 'cbBoots'], extra: ['cbBandana'] },
-  { name: 'Mermaid', icon: '🧜', sky: ['#5fd4e8', '#2a7fc8'], deco: ['🐚', '🐠'], cheer: 'Splash! A magical mermaid!', core: ['mmTail', 'mmShells', 'mmCrown'], extra: ['mmTrident'] },
+  { name: 'Cowgirl', icon: '🌵', sky: ['#ffcf8a', '#ffefc8'], deco: ['🌵', '⭐'], cheer: 'Yee-haw, a cool {cowgirl|cowboy}!', core: ['cbVest', 'cbHat', 'cbBoots'], extra: ['cbBandana'] },
+  { name: 'Mermaid', icon: '🧜', sky: ['#5fd4e8', '#2a7fc8'], deco: ['🐚', '🐠'], cheer: 'Splash! A magical {mermaid|merman}!', core: ['mmTail', 'mmShells', 'mmCrown'], extra: ['mmTrident'] },
 ];
 // looks that are easy to mix up: the top tier always puts one of these pairs side by side
 const OF_ALIKE = [['Doctor', 'Scientist'], ['Pirate', 'Cowgirl'], ['Wizard', 'Pajamas'], ['Ballerina', 'Fancy'], ['Mermaid', 'Swimming'],
@@ -2413,8 +2413,126 @@ function ofFlowers(lw, far) {
   for (const [x, y, c] of petals) { ctx.fillStyle = c; circle(x, y, r); }
   for (const [x, y, c] of fl) { ctx.fillStyle = c === '#ffd23f' ? '#ff8c42' : '#ffd23f'; circle(x, y, r * 0.6); }
 }
-const ofPiece = id => OF_WEAR[id] || CLOTHES[id];
-const ofName = id => OF_WEAR[id]?.name || OF_OLD_NAMES[id] || id;
+// ---- boy heroes wear these instead (same looks, same scoring; the girls' pieces above are unchanged)
+// trousers from the waist to the ankles, in Aubrey's photo space
+const OF_TROUSERS = P2('M26,94 L72,94 C76,130 82,170 86,210 L60,212 C58,180 54,150 50,132 C46,150 44,180 43,212 L20,210 C20,170 22,130 26,94 Z');
+const OF_SHORTS = P2('M26,90 L72,90 C76,112 80,138 82,166 C72,169 62,169 54,167 L50,140 L48,140 L44,167 C36,169 26,169 16,166 C18,138 22,112 26,90 Z');
+const ofBowTie = (lw, x, y, col, k = 1) => {
+  const l = P2(`M${x},${y} L${x - 9 * k},${y - 5 * k} L${x - 9 * k},${y + 5 * k} Z`), r = P2(`M${x},${y} L${x + 9 * k},${y - 5 * k} L${x + 9 * k},${y + 5 * k} Z`);
+  ofInkAll([[l, ofLG(y - 5 * k, y + 5 * k, col)], [r, ofLG(y - 5 * k, y + 5 * k, col)]], lw);
+  inkCircle(x, y, 2.4 * k, col, lw * 0.6); ofShine(x - 5 * k, y - 1.5 * k, 1.6 * k, 1 * k, 0, 0.6);
+};
+const OF_BOY = {
+  skirt: { layer: 0, name: 'jean shorts', box: [14, 86, 84, 172], draw(lw) {
+    ink(OF_SHORTS, ofLG(90, 170, '#4f7fc8'), lw);
+    rrect(26, 87, 46, 8, 3, '#3a64a8', OL, lw * 0.8); inkCircle(49, 91, 2, '#ffd23f', lw * 0.4);
+    ofLine([[49, 95], [49, 128]], '#3a64a8', 1.2);
+    ctx.strokeStyle = '#ffd23f'; ctx.setLineDash([2, 2]); ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.moveTo(19, 162); ctx.lineTo(44, 163); ctx.moveTo(54, 163); ctx.lineTo(80, 162); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = '#3a64a8'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(33, 104, 6, 0.2, Math.PI - 0.2); ctx.moveTo(71, 104); ctx.arc(65, 104, 6, 0.2, Math.PI - 0.2); ctx.stroke();
+  } },
+  // Fancy: a purple and gold suit
+  gown: { layer: 0, name: 'smart suit', box: [16, 50, 88, 214], draw(lw) {
+    ink(OF_TROUSERS, ofLG(94, 212, '#7a3fc8'), lw);
+    ofLine([[22, 104], [21, 208]], '#ffd23f', 1.6); ofLine([[76, 104], [84, 208]], '#ffd23f', 1.6);
+    const jacket = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,68 72,82 72,96 L74,124 C66,127 56,126 50,120 C44,126 32,127 24,124 L26,96 C26,82 24,68 27,57 Z');
+    ink(jacket, ofLG(54, 126, '#9b5de5'), lw);
+    ink(P2('M39,55 C44,58 54,58 59,55 L49,92 Z'), '#ffffff', lw * 0.8);
+    ink(P2('M37,54 L49,92 L44,95 L30,62 Z'), ofLG(54, 95, '#6a2fb8'), lw * 0.8); ink(P2('M61,54 L49,92 L54,95 L68,62 Z'), ofLG(54, 95, '#6a2fb8'), lw * 0.8);
+    for (const y of [100, 110]) inkCircle(49, y, 2, '#ffd23f', lw * 0.4);
+    ink(P2('M58,72 L66,70 L66,75 L58,77 Z'), '#ffd23f', lw * 0.6);
+  }, over(lw) { ofSleeves(lw, '#9b5de5'); ofCuffs(lw, '#ffffff', 120, 5); } },
+  tiara: { layer: 1, name: 'crown', box: [30, -14, 68, 12], draw(lw) {
+    ink(P2('M31,9 L31,-6 L39,1 L44,-12 L49,-1 L54,-12 L59,1 L67,-6 L67,9 C56,12 42,12 31,9 Z'), ofLG(-12, 11, '#ffd23f'), lw);
+    for (const [x, y] of [[31, -6], [44, -12], [54, -12], [67, -6]]) inkCircle(x, y, 1.7, '#fff6a8', lw * 0.4);
+    rrect(31, 4, 36, 5, 2, '#e8a800', null);
+    inkCircle(49, 5, 2.2, '#ff5fa2', lw * 0.5); inkCircle(39, 6, 1.5, '#5fb8f0', lw * 0.4); inkCircle(59, 6, 1.5, '#5fb8f0', lw * 0.4);
+  } },
+  heels: { layer: 1, pair: true, name: 'shiny shoes', box: [0, -8, 30, 9], one(x, y, lw) {
+    ink(P2(`M${x - 8},${y + 6} C${x - 9},${y - 3} ${x - 4},${y - 6} ${x + 1},${y - 5} C${x + 6},${y - 4} ${x + 11},${y} ${x + 11},${y + 6} Z`), ofLG(y - 6, y + 6, '#3a2d52'), lw);
+    ofShine(x - 3, y - 2, 3, 1.3, -0.2, 0.7); rrect(x - 1, y - 4, 5, 3, 1, '#ffd23f', OL, lw * 0.5);
+  } },
+  pearls: { layer: 1, name: 'bow tie', box: [36, 50, 62, 66], draw(lw) { ofBowTie(lw, 49, 58, '#ffd23f'); } },
+  // Pajamas: a starry top and trousers
+  nightgown: { layer: 0, name: 'pyjamas', box: [16, 50, 88, 214], draw(lw) {
+    ink(OF_TROUSERS, ofLG(94, 212, '#9fd3ff'), lw);
+    for (const [x, y] of [[30, 140], [68, 150], [34, 185], [74, 190], [28, 112], [70, 118]]) star(x, y, 3.2, '#fff6a8', 5);
+    ctx.fillStyle = '#fff6a8'; ctx.beginPath(); ctx.arc(66, 170, 4, 0.6, 5.7); ctx.arc(68, 170, 3.2, 5.4, 0.9, true); ctx.fill();
+    rrect(20, 204, 21, 6, 2.5, '#ffffff', OL, lw * 0.8); rrect(65, 204, 21, 6, 2.5, '#ffffff', OL, lw * 0.8);
+    const top = P2('M37,54 C42,60 56,60 61,54 L71,57 C74,68 71,80 71,92 L73,118 C58,122 40,122 25,118 L27,92 C27,80 24,68 27,57 Z');
+    ink(top, ofLG(54, 120, '#7fb8f0'), lw);
+    for (const [x, y] of [[40, 80], [60, 100], [36, 106], [58, 76]]) star(x, y, 3.2, '#fff6a8', 5);
+    ofLine([[49, 62], [49, 118]], '#5b8fd8', 1.2); for (const y of [72, 88, 104]) inkCircle(52, y, 1.6, '#ffffff', lw * 0.4);
+    ink(P2('M37,55 C40,64 47,65 49,60 C51,65 58,64 61,55 C56,59 42,59 37,55 Z'), '#ffffff', lw * 0.7);
+  }, over(lw) { ofSleeves(lw, '#7fb8f0'); ofCuffs(lw, '#ffffff', 120, 5); } },
+  // Swimming: a short-sleeved swim shirt and swim trunks
+  swimsuit: { layer: 0, low: true, name: 'swim shirt and trunks', box: [14, 48, 84, 160], draw(lw) {
+    const trunks = P2('M25,98 L73,98 C76,116 79,136 80,156 C72,159 62,159 54,157 L50,138 L48,138 L44,157 C36,159 26,159 18,156 C19,136 22,116 25,98 Z');
+    ink(trunks, ofLG(98, 158, '#ff7a59'), lw);
+    ofClip(trunks, () => { ctx.fillStyle = 'rgba(255,255,255,.75)'; for (const x of [22, 76]) ctx.fillRect(x - 2, 96, 4, 64); });
+    ink(P2('M37,54 C42,60 56,60 61,54 L71,57 C74,66 71,80 71,92 L72,106 C58,110 40,110 26,106 L27,92 C27,80 24,66 27,57 Z'), ofLG(54, 108, '#2ec4b6'), lw);
+    ofLine([[38, 56], [49, 64], [60, 56]], '#1ea89b', 1.6);
+    dots([[40, 76], [58, 74], [49, 86], [36, 96], [62, 98]], 2.4, '#ffffff');
+  }, over(lw) { for (const s of OF_SHORT) ink(s, ofLG(56, 90, '#2ec4b6'), lw); ofLine([[13, 84], [29, 85]], '#1ea89b', 1.4); ofLine([[69, 85], [85, 84]], '#1ea89b', 1.4); } },
+  // Dancer: a sparkly tunic with a belt, white tights, soft dance shoes, a star headband, a bow tie
+  balTutu: { layer: 0, low: true, name: 'dance tunic and tights', box: [16, 50, 88, 214], draw(lw) {
+    ink(OF_TROUSERS, ofLG(94, 212, '#f4f0fb'), lw);
+    ofLine([[37, 140], [36, 176]], 'rgba(150,130,190,.4)', 1.2); ofLine([[63, 140], [70, 176]], 'rgba(150,130,190,.4)', 1.2);
+    const p = P2('M33,56 C40,61 58,61 65,56 L70,62 C71,74 69,86 71,96 L74,124 C58,128 40,128 24,124 L27,96 C29,86 27,74 28,62 Z');
+    ink(p, ofLG(56, 126, '#5b7fe0'), lw);
+    dots([[40, 70], [49, 76], [58, 70], [44, 84], [54, 84], [36, 110], [49, 114], [62, 110]], 1.3, '#fff6a8');
+    ofLine([[25, 121], [49, 125], [73, 121]], '#ffd23f', 2);
+    rrect(26, 96, 46, 7, 3, '#ff5fa2', OL, lw * 1.1); inkCircle(49, 99.5, 3, '#ffd23f', lw * 0.5);
+  }, over(lw) { for (const s of OF_SHORT) ink(s, ofLG(56, 90, '#5b7fe0'), lw); } },
+  balShoes: { layer: 1, pair: true, name: 'dance shoes', box: [-4, -8, 34, 10], one(x, y, lw) {
+    inkEllipse(x + 1, y + 3, 9, 5, 0, ofLG(y - 2, y + 8, '#ffffff'), lw);
+    ofRope([[x - 5, y + 1], [x + 6, y + 1]], '#5b7fe0', 1.2);
+    ofShine(x - 2, y + 1, 3, 1.4, 0, 0.7);
+  } },
+  balCrown: { layer: 1, name: 'star headband', box: [24, -10, 76, 16], draw(lw) {
+    ink(P2('M27,12 C34,2 64,2 73,12 L72,16 C62,8 38,8 28,16 Z'), ofLG(4, 16, '#5b7fe0'), lw * 0.8);
+    ofOutlinedStar(50, 3, 6.5, '#ffd23f', 5); dots([[50, 3]], 1.4, '#fff6a8');
+    ofOutlinedStar(36, 8, 3, '#ffffff', 5); ofOutlinedStar(64, 8, 3, '#ffffff', 5);
+  } },
+  balBow: { layer: 1, name: 'satin bow tie', box: [36, 50, 62, 66], draw(lw) { ofBowTie(lw, 49, 58, '#ff5fa2'); } },
+  // Cowboy: the same shirt and fringe vest, with jeans and leather chaps instead of the skirt
+  cbVest: { ...OF_WEAR.cbVest, name: 'fringe vest and chaps', box: [6, 48, 92, 214], draw(lw) {
+    ink(OF_TROUSERS, ofLG(94, 212, '#4f7fc8'), lw);
+    for (const s of [-1, 1]) {
+      const x = s < 0 ? 20 : 78, p = s < 0 ? P2('M24,100 L38,100 C36,140 34,176 34,206 L20,206 C19,170 20,134 24,100 Z') : P2('M60,100 L74,100 C78,134 82,170 84,206 L70,206 C68,176 64,140 60,100 Z');
+      ink(p, ofLG(100, 206, '#c98a4b'), lw);
+      for (let y = 110; y < 204; y += 5) ofRope([[x + (y - 100) * (s < 0 ? -0.02 : 0.06), y], [x + s * 6 + (y - 100) * (s < 0 ? -0.02 : 0.06), y + 2]], '#c98a4b', 1.2);
+    }
+    rrect(25, 92, 48, 8, 3, '#6b3f2a', OL, lw * 0.9); rrect(44, 91, 10, 10, 2, '#ffd23f', OL, lw * 0.8);
+    ink(OF_TORSO, '#e63946', lw);
+    ofClip(OF_TORSO, () => { ctx.fillStyle = 'rgba(110,10,30,.35)'; for (let x = 18; x < 82; x += 9) ctx.fillRect(x, 50, 4, 50); for (let y = 58; y < 96; y += 9) ctx.fillRect(10, y, 80, 4); });
+    ink(P2('M27,57 L39,58 C41,74 41,86 39,98 L25,99 C25,84 25,70 27,57 Z'), ofLG(56, 98, '#8a5a3c'), lw);
+    ink(P2('M71,57 L59,58 C57,74 57,86 59,98 L73,99 C73,84 73,70 71,57 Z'), ofLG(56, 98, '#8a5a3c'), lw);
+    ctx.save(); ctx.lineCap = 'round'; for (let y = 64; y <= 96; y += 4) { ofRope([[25.5, y], [21, y + 3]], '#c98a4b', 1.2); ofRope([[72.5, y], [77, y + 3]], '#c98a4b', 1.2); } ctx.restore();
+    ofOutlinedStar(32, 74, 4.6, '#e8eef8', 5);
+  } },
+  cbHat: { ...OF_WEAR.cbHat, name: 'cowboy hat' },
+  cbBoots: { ...OF_WEAR.cbBoots, name: 'cowboy boots' },
+  // Merman: the tail, and a fish-scale vest with a shell necklace instead of the shell top
+  mmTail: { ...OF_WEAR.mmTail, name: 'merman tail' },
+  mmShells: { layer: 0, name: 'shell vest', box: [12, 48, 86, 100], draw(lw) {
+    ink(OF_TORSO, ofLG(54, 96, '#8a5fe0'), lw);
+    ofClip(OF_TORSO, () => { ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.1; for (let y = 62, r = 0; y < 100; y += 7, r++) for (let x = 20 + (r % 2) * 4; x < 80; x += 8) { ctx.beginPath(); ctx.arc(x, y, 4, 0.2, Math.PI - 0.2); ctx.stroke(); } });
+    ctx.save(); ctx.lineCap = 'round';
+    const cord = new Path2D(); cord.moveTo(34, 54); cord.quadraticCurveTo(49, 76, 64, 54);
+    ctx.strokeStyle = OL; ctx.lineWidth = 2.6; ctx.stroke(cord); ctx.strokeStyle = '#c98a4b'; ctx.lineWidth = 1.2; ctx.stroke(cord);
+    ctx.restore();
+    for (const [x, y, s, c] of [[40, 63, 0.7, '#ffc2df'], [49, 68, 1, '#c77dff'], [58, 63, 0.7, '#ffd9a0']]) {
+      ink(P2(`M${x},${y + 9 * s} L${x - 7 * s},${y + 2 * s} C${x - 5 * s},${y - 4 * s} ${x + 5 * s},${y - 4 * s} ${x + 7 * s},${y + 2 * s} Z`), ofLG(y - 4 * s, y + 9 * s, c), lw);
+      for (const d of [-4, 0, 4]) ofLine([[x, y + 8 * s], [x + d * s, y - 1 * s]], 'rgba(255,255,255,.6)', 0.9);
+    }
+  }, over(lw) { for (const s of OF_SHORT) ink(s, ofLG(56, 90, '#8a5fe0'), lw); } },
+};
+// the looks' names, with the boys' versions
+const OF_LABEL = { Cowgirl: '{Cowgirl|Cowboy}', Ballerina: '{Ballerina|Dancer}', Mermaid: '{Mermaid|Merman}' };
+const ofLabel = nm => OF_LABEL[nm] || nm;
+const ofPiece = id => (isBoy() && OF_BOY[id]) || OF_WEAR[id] || CLOTHES[id];
+const ofName = id => (isBoy() && OF_BOY[id]?.name) || OF_WEAR[id]?.name || OF_OLD_NAMES[id] || id;
 // ---- fitting the clothes onto her photo, so they look worn rather than stuck on
 // her feet splay out: each shoe sits on its own foot, toe pointing outwards, its shaft leaning with the leg
 const OF_FEET = [[29, 219, -1, -0.1], [84, 219, 1, 0.33]];
@@ -2426,42 +2544,41 @@ const ofOnHead = c => c.layer === 1 && !c.pair && c.box[3] <= 24;
 // locks of hair that fall over her shoulders (they go back on top of collars)
 // (and, for a mermaid tail or space suit that replaces her legs, the sprite with nothing below the waist but her hands)
 let ofBaseCv = null, ofHairCv = null, ofNoLegsCv = null, ofFullCv = null;
-// Aubrey smiles while she dresses up: her smiling portrait is scaled so the eyes line up with the body
-// photo's, then blended over its face inside a soft-edged oval (hair and outline stay from the body photo)
-const OF_SMILE = { sx: 0.4, sy: 0.46, fx: 48, fy: 60, bx: 49.5, by: 25, cx: 49.5, cy: 34, rx: 11.5, ry: 14.5, edge: 0.55 };
-function ofSmile(dst) {
-  const f = IMG.face_happy, o = OF_SMILE;
-  if (!f) return;
-  const t = document.createElement('canvas'); t.width = 97; t.height = 80;
-  const tx = t.getContext('2d');
-  tx.setTransform(o.sx, 0, 0, o.sy, o.bx - o.fx * o.sx, o.by - o.fy * o.sy); tx.drawImage(f, 0, 0);
-  tx.setTransform(1, 0, 0, 1, 0, 0); tx.globalCompositeOperation = 'destination-in';
-  tx.translate(o.cx, o.cy); tx.scale(o.rx, o.ry);
-  const g = tx.createRadialGradient(0, 0, 0, 0, 0, 1); g.addColorStop(0, '#000'); g.addColorStop(o.edge, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');
-  tx.fillStyle = g; tx.fillRect(-1, -1, 2, 2);
-  dst.drawImage(t, 0, 0);
-}
 function ofCutouts() {
   if (ofBaseCv) return;
   const im = IMG.idle_front, mk = () => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; return c; };
   const src = mk(), sx = src.getContext('2d'); sx.drawImage(im, 0, 0);
-  ofSmile(sx);
   // the whole smiling photo (skirt puff and all), for when nothing covers her dress
   ofFullCv = mk(); ofFullCv.getContext('2d').drawImage(src, 0, 0);
   const d = sx.getImageData(0, 0, im.width, im.height), p = d.data;
   const hair = sx.createImageData(im.width, im.height), hp = hair.data;
+  // Aubrey's puffy skirt, or the other heroes' own skirt or shorts (HERO_FIT in art.js); trousers just stay
+  const f = heroFit(), aub = !heroFitted(), cut = aub ? { y0: 112, y1: 185 } : f.cut;
   for (let y = 0; y < im.height; y++) for (let i = 0; i < im.width; i++) {
     const k = (y * im.width + i) * 4, skin = p[k] > p[k + 2] + 28 && p[k + 2] <= p[k + 1] + 4;
     // hair over the shoulders: darker brown pixels beside her neck
     const hairy = clamp((204 - p[k]) / 16, 0, 1) * clamp((p[k] - p[k + 2] - 44) / 14, 0, 1);
-    if (y > 40 && y < 70 && (i < 35 || i > 63) && hairy > 0) hp.set([p[k], p[k + 1], p[k + 2], p[k + 3] * hairy * clamp((70 - y) / 6, 0, 1)], k);
+    if (f.hair && y > 40 && y < 70 && (i < 35 || i > 63) && hairy > 0) hp.set([p[k], p[k + 1], p[k + 2], p[k + 3] * hairy * clamp((70 - y) / 6, 0, 1)], k);
     // the skirt puff goes (her arms and hands stay)
-    if (y >= 112 && y <= 185 && !(skin && (i < 25 || i > 68))) p[k + 3] = 0;
+    if (cut && y >= cut.y0 && y <= cut.y1 && !(aub && skin && (i < 25 || i > 68))) p[k + 3] = 0;
   }
   sx.putImageData(d, 0, 0);
-  ofNoLegsCv = mk(); const nl = ofNoLegsCv.getContext('2d'); nl.drawImage(src, 0, 0); nl.clearRect(0, 159, im.width, im.height);
+  // the other heroes' arms and hands go back (cut along their arm outlines)
+  if (!aub && cut) sx.drawImage(aubArmsImage(), 0, 0);
+  ofNoLegsCv = mk(); const nl = ofNoLegsCv.getContext('2d'); nl.drawImage(src, 0, 0); nl.clearRect(0, Math.round(fitY(159)), im.width, im.height);
   ofHairCv = mk(); ofHairCv.getContext('2d').putImageData(hair, 0, 0);
   ofBaseCv = mk();
+  if (!aub) {
+    // their legs carry on up to the hips where the skirt or shorts were: each leg's top row, widened towards the hips
+    const b = ofBaseCv.getContext('2d');
+    if (cut) for (const [[h0, h1], [l0, l1]] of cut.legs) for (let y = cut.y0; y <= cut.y1; y++) {
+      const k = (y - cut.y0) / (cut.y1 - cut.y0), x0 = lerp(h0, l0, k), x1 = lerp(h1, l1, k);
+      b.drawImage(im, l0, cut.row, l1 - l0, 1, x0, y, x1 - x0, 1.5);
+    }
+    if (cut) { b.globalCompositeOperation = 'source-atop'; b.fillStyle = 'rgba(90,60,80,.14)'; b.fillRect(0, cut.y0, im.width, 8); b.globalCompositeOperation = 'source-over'; }
+    b.drawImage(src, 0, 0);
+    return;
+  }
   // her legs in tights from the hips to below the knee (the photo's were hidden or shadowed by the skirt),
   // in the photo's own shading, fading into the photo's lower legs so the join doesn't show
   const thighs = mk(), t = thighs.getContext('2d');
@@ -2497,6 +2614,8 @@ function ofLayer(n, fn) {
   return c;
 }
 const ofPut = (c, dx = 0, dy = 0) => ctx.drawImage(c, -OF_LX + dx, -OFL_Y + dy, OF_LW, OF_LH);
+// the same, fitted onto the hero's body (fitPut in art.js; just ofPut for Aubrey)
+const ofFitPut = (c, dx = 0, dy = 0) => fitPut(c, -OF_LX, -OFL_Y, OF_LW, OF_LH, dx, dy);
 // paint over what is already in a scratch layer only (so shading stays inside the clothes)
 function ofOnto(fn) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; fn(); ctx.restore(); }
 // a dark copy of a layer, for its shadow
@@ -2508,6 +2627,7 @@ function ofShadowOf(c, n) {
   return s;
 }
 let ofArmShadow = null;
+onHeroChange(() => { ofBaseCv = ofHairCv = ofNoLegsCv = ofFullCv = ofArmShadow = null; });
 // round shading for a body garment: darker down her sides and under her arms, the chin's shadow on the chest,
 // a little shade under the waist, and the shadows her arms throw onto it
 function ofShadeBody() {
@@ -2557,11 +2677,13 @@ function ofDressed(x, gy, h, worn, lift = 0, ghosts = [], snaps = {}) {
     const [cx, cy] = c.pair ? [0, 0] : [(c.box[0] + c.box[2]) / 2, (c.box[1] + c.box[3]) / 2];
     ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy); fn(); ctx.restore();
   };
-  const paint = (id, c) => (c.pair ? OF_FEET.forEach(([fx, fy, dir, lean]) => {
+  // shoes go on each of this hero's feet (HERO_FIT in art.js); everything else is drawn on Aubrey's body and fitted
+  const paint = (id, c) => (c.pair ? heroFit().feet.forEach(([fx, fy, dir, lean]) => {
     const k = snaps[id] || 1; ctx.save(); ctx.translate(fx, fy); ctx.transform(1, 0, lean, 1, 0, 0); ctx.scale(k * dir, k); c.one(0, 0, lw); ctx.restore();
   }) : sized(id, c, () => c.draw(lw)));
   // the backs of hats (brims and crowns behind her head) go behind her
-  for (const [id, c] of on(c => c.back)) sized(id, c, () => c.back(lw));
+  const backs = on(c => c.back);
+  if (backs.length) fitDraw(() => { for (const [id, c] of backs) sized(id, c, () => c.back(lw)); }, 1);
   ctx.drawImage(on(c => ofLow(c) && c.legs).length ? ofNoLegsCv : on(ofLow).length ? ofBaseCv : ofFullCv, 0, 0);
   if (ghosts.length) {
     // dashed 'ghost' outlines of the pieces still to find (cached; drawn in sprite space)
@@ -2572,30 +2694,32 @@ function ofDressed(x, gy, h, worn, lift = 0, ghosts = [], snaps = {}) {
   }
   const body = on(c => c.layer === 0), over = on(c => c.over), top = on(c => c.layer === 1 && !c.pair), feet = on(c => c.layer === 1 && c.pair);
   if (body.length) {
-    ofPut(ofLayer(0, () => { for (const [id, c] of body) paint(id, c); ofShadeBody(); }));
+    ofFitPut(ofLayer(0, () => { for (const [id, c] of body) paint(id, c); ofShadeBody(); }));
     ctx.drawImage(aubArmsImage(), 0, 0);
   }
   if (over.length) {
     // sleeves throw a little shadow onto the body, then go on, rounded over her arms
     const sl = ofLayer(1, () => { for (const [id, c] of over) sized(id, c, () => c.over(lw)); ofShadeArms(); });
-    ctx.save(); ctx.globalAlpha = 0.18; ofPut(ofShadowOf(sl, 2), 0, 1.5); ctx.restore();
-    ofPut(sl);
+    ctx.save(); ctx.globalAlpha = 0.18; fitArmPut(ofShadowOf(sl, 2), -OF_LX, -OFL_Y, OF_LW, OF_LH, 0, 1.5); ctx.restore();
+    fitArmPut(sl, -OF_LX, -OFL_Y, OF_LW, OF_LH);
   }
   // her long hair falls over the shoulders of whatever she wears
   if (body.length || over.length) ctx.drawImage(ofHairCv, 0, 0);
   for (const [id, c] of feet) paint(id, c);
   for (const [id, c] of top) {
     if (!ofOnHead(c)) {
-      paint(id, c);
-      // things she holds: her fingers go back round the handle
-      if (c.hand) { ctx.save(); ctx.beginPath(); c.hand === 'L' ? ctx.rect(6, 127, 18, 17) : ctx.rect(72, 125, 18, 19); ctx.clip(); ctx.drawImage(aubArmsImage(), 0, 0); ctx.restore(); }
+      if (!c.hand) { fitDraw(() => paint(id, c), 2); continue; }
+      // things she holds go in this hero's hand, and her fingers go back round the handle
+      const [hx, hy] = fitHand(c.hand === 'L' ? 0 : 1);
+      ctx.save(); ctx.translate(hx, hy); paint(id, c); ctx.restore();
+      ctx.save(); ctx.beginPath(); c.hand === 'L' ? ctx.rect(6 + hx, 127 + hy, 18, 17) : ctx.rect(72 + hx, 125 + hy, 18, 19); ctx.clip(); ctx.drawImage(aubArmsImage(), 0, 0); ctx.restore();
       continue;
     }
     // head pieces: a soft shadow on her hair and forehead just under them
-    const L = ofLayer(3, () => paint(id, c));
-    ctx.save(); ctx.beginPath(); ctx.ellipse(50, 30, 30, 40, 0, 0, Math.PI * 2); ctx.clip();
-    ctx.globalAlpha = 0.26; ofPut(ofShadowOf(L, 4), 0.5, 3); ctx.restore();
-    ofPut(L);
+    const L = ofLayer(3, () => paint(id, c)), f = heroFit(), hy = fitY(30), hr = (fitY(70) - fitY(-10)) / 2;
+    ctx.save(); ctx.beginPath(); ctx.ellipse(50, hy, 30 * f.head, hr, 0, 0, Math.PI * 2); ctx.clip();
+    ctx.globalAlpha = 0.26; ofFitPut(ofShadowOf(L, 4), 0.5, 3); ctx.restore();
+    ofFitPut(L);
   }
   ctx.restore();
 }
@@ -2921,7 +3045,7 @@ MG.outfits = {
     } else {
       if (m) {
         g.wrong++; it.miss++; m.shake = 0.45; SFX.miss();
-        speak(it.miss >= 2 ? `Oops! The ${ofName(it.id)} goes with the ${g.models[it.o].name} look. Look for the glow!` : `Oops! The ${ofName(it.id)} doesn't go with ${m.name}. Try another one!`);
+        speak(it.miss >= 2 ? `Oops! The ${ofName(it.id)} goes with the ${ofLabel(g.models[it.o].name)} look. Look for the glow!` : `Oops! The ${ofName(it.id)} doesn't go with ${ofLabel(m.name)}. Try another one!`);
       }
       it.x = it.hx; it.y = it.hy;
     }
@@ -2945,7 +3069,7 @@ MG.outfits = {
           // the finished card makes way for the next look
           const s = g.slots.indexOf(r.i), next = g.queue.shift();
           g.slots[s] = next; g.models[next].cx = W + 220; this.refill(g);
-          speak(`Next up: ${g.models[next].name}!`);
+          speak(`Next up: ${ofLabel(g.models[next].name)}!`);
         }
       }
       return;
@@ -3010,7 +3134,7 @@ MG.outfits = {
           text(String(k + 1), x, y + 1, 14, '#9a7aaa', 'center', 800);
         }
       }
-      ofBanner(m.cx, top + OF_CH, m.name, acc);
+      ofBanner(m.cx, top + OF_CH, ofLabel(m.name), acc);
       if (hint) {
         const ay = top + 84 + Math.sin(S.t * 8) * 6;
         ctx.fillStyle = OL; tri(m.cx - 18, ay - 22, m.cx + 18, ay - 22, m.cx, ay + 4);
@@ -3076,7 +3200,7 @@ MG.outfits = {
       const a = S.t * 1.4 + k * Math.PI / 4, rr = 128 + Math.sin(S.t * 3 + k) * 10;
       star(W / 2 + Math.cos(a) * rr, 270 + Math.sin(a) * rr * 1.2, 6 + Math.sin(S.t * 7 + k) * 2, ['#fff6a8', '#ffb3e0', '#b8e6ff'][k % 3], 4);
     }
-    ofBanner(W / 2, 450, c.name, OF_THEME[c.name][1]);
+    ofBanner(W / 2, 450, ofLabel(c.name), OF_THEME[c.name][1]);
     ctx.restore();
     outlined(c.cheer, W / 2, 496, 30 + Math.sin(Math.min(1, r.t / 0.5) * Math.PI) * 8, '#ffe36b', 'center');
   },

@@ -576,10 +576,9 @@
       const s = frame === 'twirl' ? SCALE * 0.85 : SCALE, im = IMG[frame], f = g.facing;
       const lift = g.cheer > 0 ? Math.sin(g.cheer * Math.PI) * 10 : 0;
       drawAubrey(x, feet, frame, f, lift, s);
-      // head position in this frame (side-on frames face right natively)
-      const HEAD = { idle_front: 1.5, idle_back: 0, run1: 12.5, run2: 28.5, run3: 24, run4: 23, run5: 28.5, jump: -30, crouch: -7, twirl: 2 };
-      const side = /run|jump|crouch/.test(frame);
-      const hx = x + (HEAD[frame] || 0) * s * (side ? (frame === 'jump' || frame === 'crouch' ? -f : f) : 1), hy = feet - lift - im.height * s + 4;
+      // head position in this frame (heroHead in js/hero.js), flipped the way drawAubrey flips it
+      const hd = heroHead(frame), nat = AUB_NATIVE[frame], side = !!nat, fl = nat && f && nat !== Math.sign(f) ? -1 : 1;
+      const hx = x + (hd.cx - im.width / 2) * s * fl, hy = feet - lift - (im.height - hd.top) * s + 4, hk = clamp(hd.r / 22, 0.75, 1.3);
       // pickaxe in her hand (behind the helmet), swinging when she chips
       const ph = g.swing, sd = g.swingDir;
       const base = sd === 'down' ? 1.9 : sd === 'up' ? -0.3 : 1.1;
@@ -587,7 +586,7 @@
       if (frame !== 'twirl') pickaxe(x + f * 9, feet - lift - im.height * s * 0.5, ang, f);
       // miner's helmet with a headlamp
       // her head is only ~14px across at this scale, so the helmet is drawn small and perched on her hair, leaving her face showing
-      ctx.save(); ctx.translate(hx, hy); ctx.scale(0.62, 0.62);
+      ctx.save(); ctx.translate(hx, hy); ctx.scale(0.62 * hk, 0.62 * hk);
       ink(P2('M-10,2 C-10,-10 10,-10 10,2 Z'), '#ffcf2e', 1.1, '#2a1446');
       ink(P2('M-13,1 L13,1 L13,4 L-13,4 Z'), '#f0a820', 0.9, '#2a1446');
       ctx.fillStyle = 'rgba(255,255,255,.55)'; ellipse(-4, -4, 3, 1.8, -0.5);

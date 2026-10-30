@@ -41,20 +41,10 @@
   };
 
   // --- Aubrey in her clear bubble helmet (as in moon2.js) -----------------------------------------
-  const heads = {};
+  // (heroHead in js/hero.js, cached per hero)
   function headOf(frame) {
-    if (heads[frame]) return heads[frame];
-    const im = IMG[frame], c = document.createElement('canvas');
-    c.width = im.width; c.height = im.height;
-    const x = c.getContext('2d'); x.drawImage(im, 0, 0);
-    const rows = Math.round(im.height * (frame === 'crouch' ? 0.4 : frame === 'twirl' ? 0.3 : 0.25));
-    const d = x.getImageData(0, 0, im.width, rows).data;
-    let x0 = im.width, x1 = 0, y0 = rows;
-    for (let y = 0; y < rows; y++) for (let i = 0; i < im.width; i++) if (d[(y * im.width + i) * 4 + 3] > 60) {
-      x0 = Math.min(x0, i); x1 = Math.max(x1, i); y0 = Math.min(y0, y);
-    }
-    const w = Math.min(x1 - x0, im.width * 0.6);
-    return (heads[frame] = { dx: (x0 + x1) / 2 - im.width / 2, cy: y0 + (rows - y0) * 0.5, r: Math.max(w, rows - y0) * 0.5 });
+    const h = heroHead(frame);
+    return { dx: h.cx - IMG[frame].width / 2, cy: h.cy + h.r * 0.05, r: h.r * 1.15 };
   }
   function drawAstronaut(x, feet, frame, facing, lift, s) {
     drawAubrey(x, feet, frame, facing, lift, s);

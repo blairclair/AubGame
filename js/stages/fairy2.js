@@ -56,7 +56,7 @@
   };
 
   // her photo frames, posed with transforms. pivot 'feet' squashes from the floor, 'mid' spins round her middle
-  const NATIVE = { jump: -1, cast: -1 }, SC = 1.12;
+  const NATIVE = AUB_NATIVE, SC = 1.12; // which way each of this hero's photos faces (js/hero.js)
   const aub = (frame, x, gy, facing, o = {}) => {
     const im = IMG[frame]; if (!im) return;
     const s = (o.s ?? 1) * SC, w = im.width * s, h = im.height * s, lift = o.lift || 0;
@@ -68,7 +68,19 @@
     ctx.restore();
   };
   // where the wand's star is in the cast frame when she faces right
-  const castTip = (x, gy, lift = 0, s = SC) => [x - 219 * s / 2 + 207 * s, gy - lift - 206 * s + 62 * s];
+  // (the hand furthest out on her right, high up, found in this hero's photo; kept per hero)
+  const castHands = {};
+  const castHand = () => {
+    const im = IMG.cast, c = castHands[HERO.id];
+    if (c && c.im === im) return c;
+    const W = im.width, H = im.height, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const x = cv.getContext('2d'); x.drawImage(im, 0, 0);
+    const d = x.getImageData(0, 0, W, H).data, flip = NATIVE.cast === -1;
+    let bx = flip ? W : -1, by = H * 0.3;
+    for (let y = 0; y < H * 0.6; y++) for (let i = 0; i < W; i++) if (d[(y * W + i) * 4 + 3] > 120 && (flip ? i < bx : i > bx)) { bx = i; by = y; }
+    return (castHands[HERO.id] = { im, dx: flip ? W / 2 - bx : bx - W / 2, y: by - H });
+  };
+  const castTip = (x, gy, lift = 0, s = SC) => { const h = castHand(); return [x + h.dx * s, gy - lift + h.y * s]; };
 
   // --- sparkles of our own (stars, hearts, petals) --------------------------------------------
   const spark = (g, x, y, n, o = {}) => {

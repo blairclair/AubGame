@@ -210,7 +210,7 @@
         if (g.st === 'miss' && g.stT > 1.6) { g.st = 'aim'; g.stT = 0; g.th = HS.rest; g.drag = false; }
         if (g.st === 'yay' && g.stT > 2.1) {
           if (g.endT) { g.done = true; }
-          else if (g.round + 1 >= g.rounds) { g.endT = 1; g.stT = 0.6; g.msg = 'Strongest at the fair!'; g.msgT = 2; speak('Ta-da! The strongest girl at the carnival!'); burst(W / 2, 200, 40); }
+          else if (g.round + 1 >= g.rounds) { g.endT = 1; g.stT = 0.6; g.msg = 'Strongest at the fair!'; g.msgT = 2; speak('Ta-da! The strongest {girl|boy} at the carnival!'); burst(W / 2, 200, 40); }
           else { g.round++; this.next(g); }
         }
       }

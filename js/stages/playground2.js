@@ -37,14 +37,14 @@
     const im = IMG[frame]; if (!im) return;
     const w = im.width * s, h = im.height * s;
     ctx.save(); ctx.translate(x, feetY);
-    const native = { jump: -1, cast: -1, run1: 1, run2: 1, run3: 1, run4: 1, run5: 1 }[frame];
+    const native = AUB_NATIVE[frame]; // which way this hero's photo faces (js/hero.js)
     if (native && facing && native !== Math.sign(facing)) ctx.scale(-1, 1);
     ctx.drawImage(im, -w / 2, -h, w, h);
     ctx.restore();
   }
   const shadow = (x, y, rx) => { ctx.fillStyle = 'rgba(40,20,60,.2)'; ellipse(x, y, rx, rx * 0.22); };
   const runFrame = t => `run${1 + (Math.floor(t * 12) % 5)}`;
-  function arm(x0, y0, x1, y1) { tubes([[[x0, y0], [x1, y1]], SKIN, 7]); inkCircle(x1, y1, 5.5, SKIN, 1.5); }
+  function arm(x0, y0, x1, y1, col = SKIN, hand = SKIN) { tubes([[[x0, y0], [x1, y1]], col, 7]); inkCircle(x1, y1, 5.5, hand, 1.5); }
 
   // --- a ribbon bow, the prize ---------------------------------------------------------------
   const BOW = {
@@ -148,7 +148,7 @@
     kind: 'action',
     title: () => 'Playground Race!',
     icon: () => '🏃‍♀️',
-    how: () => 'Race Maya across the playground! Use the arrow keys and SPACE to jump. Or hold your finger where Aubrey should run, and tap above her to jump. Grab the ribbons!',
+    how: () => 'Race Maya across the playground! Use the arrow keys and SPACE to jump. Or hold your finger where Aubrey should run, and tap above {her|him} to jump. Grab the ribbons!',
     init(g) {
       const t = g.tier, L = buildLevel(g);
       g.pr = {
@@ -691,10 +691,13 @@
       if (o.mode === 'finish' && p.x >= FINISH + 30) { shadow(p.x, GY + 2, 22); aub(p.x, GY + 2 - Math.abs(Math.sin(t * 6)) * 14, 'twirl', 1, 0.52); return; }
       if (p.inv > 0 && Math.sin(t * 30) > 0.3 && p.inv < 1.1) ctx.globalAlpha = 0.5;
       if (p.mode === 'hang') {
-        const b = p.bar, hh = IMG.jump.height * 0.56;
-        // arms up to the bar from behind her shoulders, then her body hanging and swinging
-        const sx = b.x + Math.sin(p.th) * (R - hh * 0.42), sy = b.y + Math.cos(p.th) * (R - hh * 0.42);
-        arm(sx - 7, sy, b.x - 7, b.y + 2); arm(sx + 7, sy, b.x + 7, b.y + 2);
+        const b = p.bar, hh = IMG.jump.height * 0.56, hd = heroHead('jump');
+        // arms up to the bar from behind her shoulders (just under her neck in the photo, heroHead in
+        // js/hero.js), then her body hanging and swinging
+        // they go up either side of her head, in her sleeve colour (heroArmLook)
+        const d = R + 6 - hh + (hd.neck + 6) * 0.56, sw = hd.r * 0.56 + 4, A = heroArmLook()[1];
+        const sx = b.x + Math.sin(p.th) * d, sy = b.y + Math.cos(p.th) * d;
+        if (!hd.armsUp) { arm(sx - sw, sy, b.x - sw, b.y + 2, A.fore, A.hand); arm(sx + sw, sy, b.x + sw, b.y + 2, A.fore, A.hand); }
         ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(-p.th); aub(0, R + 6, 'jump', p.face, 0.56); ctx.restore();
       } else if (p.mode === 'climb' || p.mode === 'ladder') {
         const top = p.y - IMG.idle_back.height * s;
@@ -709,7 +712,8 @@
           ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(0.35); aub(0, 6, 'jump', 1, s); ctx.restore();
         } else {
           const frame = p.stun > 0 ? 'crouch' : !p.grounded ? 'jump' : Math.abs(p.vx) > 40 ? runFrame(t) : 'idle_front';
-          aub(p.x, p.y + 3, frame, p.face, frame === 'crouch' ? 0.46 : s);
+          // (each hero's crouch photo has its own size: match her head to her standing photo's)
+          aub(p.x, p.y + 3, frame, p.face, frame === 'crouch' ? 0.46 * 1.1 * heroHead('idle_front').r / heroHead('crouch').r : s);
         }
       }
       ctx.globalAlpha = 1;

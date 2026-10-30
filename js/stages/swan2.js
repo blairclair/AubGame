@@ -38,8 +38,6 @@
   // =============================================================================================
   // small shared art: goat horns for Aubrey, story goats, edelweiss, fir trees, the Troll
   // =============================================================================================
-  // where Aubrey's head is in each photo frame, in the sprite's own pixels from her feet (facing right)
-  const HEAD = { idle_front: [0, -222, 21], jump: [17, -190, 19], crouch: [-6, -121, 19], run1: [10, -198, 19], run2: [10, -198, 19], run3: [10, -198, 19], run4: [10, -198, 19], run5: [10, -198, 19] };
   // horn length, horn base width (sprite pixels) and Aubrey's size for each Billy Goat she plays
   const ROLE = { little: [34, 11, 0.44], middle: [46, 13, 0.53], big: [64, 16, 0.64], leap: [34, 11, 0.5] };
   function horn(bx, by, dir, len, bw) {
@@ -58,8 +56,9 @@
   function drawGoatGirl(x, gy, frame, facing, role = 'little', lift = 0) {
     const [len, bw, s] = ROLE[role];
     drawAubrey(x, gy, frame, facing, lift, s);
-    const h = HEAD[frame] || HEAD.idle_front, fx = AUB_NATIVE[frame] ? Math.sign(facing || 1) : 1;
-    const hx = x + h[0] * s * fx, hy = gy - lift + h[1] * s + 14 * s, sep = h[2] * s * 0.62;
+    // her head, measured from the photo (heroHead in js/hero.js), flipped the way drawAubrey flips it
+    const im = IMG[frame], hd = heroHead(frame), nat = AUB_NATIVE[frame], fx = nat && facing && nat !== Math.sign(facing) ? -1 : 1;
+    const hx = x + (hd.cx - im.width / 2) * s * fx, hy = gy - lift + (hd.top + (hd.cy - hd.top) * 0.55 - im.height) * s, sep = hd.r * s * 0.55;
     // floppy goat ears, then two ridged horns curling outwards
     for (const k of [-1, 1]) inkEllipse(hx + k * sep * 1.75, hy + 6 * s, 10 * s, 4.5 * s, k * 0.5, '#c8925a', 0.9);
     const hl = horn(hx - sep, hy, -1, len * s, bw * s), hr = horn(hx + sep, hy, 1, len * s, bw * s);
@@ -761,9 +760,9 @@
       after: 'Yes! Their tummies were empty, SO they set off for the bridge. But under that bridge lived a grumpy old Troll...',
     },
     trick: {
-      ask: '"I\'m going to GOBBLE you up!" roars the Troll. The Little Billy Goat must think fast. What should she say?',
+      ask: '"I\'m going to GOBBLE you up!" roars the Troll. The Little Billy Goat must think fast. What should {she|he} say?',
       opts: [['🐐', '"Wait for my brother. He\'s much BIGGER!"', true], ['🍽️', '"Yes please, gobble me up!"', false], ['🐄', '"Moo! I\'m a cow!"', false]],
-      hint: 'Hmm, would that keep the Little Billy Goat safe? Think about her big brothers!',
+      hint: 'Hmm, would that keep the Little Billy Goat safe? Think about {her|his} big brothers!',
       after: '"Bigger, eh?" grumbled the Troll. "Then off you go!" And the Little Billy Goat trip-trapped over to the green grass.',
     },
     middle: {

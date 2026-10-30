@@ -148,7 +148,7 @@
 
   // Aubrey as a bat: her own 'jump' sprite (mirrored to fly right) with flapping membrane wings from
   // her back and pointy bat ears on her head, so she's still clearly Aubrey
-  const AB_S = 0.36, AB_ROOT = [84, 70], AB_HEAD = [-30, 30]; // sprite px: wing root on her back; head centre from image centre/top
+  const AB_S = 0.36;
   const AB_WING = P2('M0,0 C8,-34 40,-58 78,-52 C72,-40 70,-30 72,-20 C62,-26 52,-24 46,-14 C40,-20 30,-18 24,-6 C18,-8 10,-4 0,6 Z');
   const batWing = (a, col, bone) => {
     ctx.save(); ctx.rotate(a);
@@ -160,17 +160,25 @@
   };
   const aubBat = (x, y, t, tilt = 0) => {
     const im = IMG.jump, w = im.width * AB_S, h = im.height * AB_S, f = Math.sin(t * 14);
-    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(-1, 1);
-    ctx.save(); ctx.translate(-w / 2 + AB_ROOT[0] * AB_S, -h / 2 + AB_ROOT[1] * AB_S);
-    ctx.save(); ctx.scale(0.85, 0.9); batWing(-0.2 - f * 0.5, '#4a3080', '#2a1a4a'); ctx.restore();
-    batWing(-0.4 - f * 0.6, '#7a5ac0', '#3a2560');
-    ctx.restore();
+    // a side-on jump photo is turned to face right with its wings on her back; a front-on one gets a wing
+    // each side, behind her shoulders (her head and neck from heroHead in js/hero.js)
+    const side = AUB_NATIVE.jump, hd = heroHead('jump');
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(side === -1 ? -1 : 1, 1);
+    if (side) {
+      ctx.save(); ctx.translate(-w / 2 + (hd.cx - side * hd.r * 0.6) * AB_S, -h / 2 + (hd.neck + 14) * AB_S);
+      ctx.save(); ctx.scale(0.85, 0.9); batWing(-0.2 - f * 0.5, '#4a3080', '#2a1a4a'); ctx.restore();
+      batWing(-0.4 - f * 0.6, '#7a5ac0', '#3a2560');
+      ctx.restore();
+    } else for (const d of [-1, 1]) {
+      ctx.save(); ctx.translate(-w / 2 + hd.cx * AB_S, -h / 2 + (hd.neck + 14) * AB_S); ctx.scale(d * 0.62, 0.62);
+      batWing(0.35 - f * 0.55, '#7a5ac0', '#3a2560');
+      ctx.restore();
+    }
     ctx.drawImage(im, -w / 2, -h / 2, w, h);
-    // bat ears poking up out of her curls
-    // small and set back on her curls (+x is behind her here) so they never cover her face
-    const hx = AB_HEAD[0] * AB_S + 5, hy = -h / 2 + AB_HEAD[1] * AB_S - 6;
+    // bat ears poking up out of her hair, set back (+x is behind her side-on) so they never cover her face
+    const hx = (hd.cx - im.width / 2) * AB_S - (side || 0) * 5, hy = -h / 2 + (hd.top + hd.r * 0.45) * AB_S;
     for (const d of [-1, 1]) {
-      const ex = hx + d * 4.5;
+      const ex = hx + d * (side ? 4.5 : hd.r * AB_S * 0.6);
       ink(P2(`M${ex - 3.5},${hy + 3} L${ex + d * 2},${hy - 10} L${ex + 4},${hy + 2} Z`), '#7a5ac0', 1.1);
       ctx.fillStyle = '#ff9ad0'; tri(ex - 1.5, hy + 1.5, ex + d * 1.6, hy - 5.5, ex + 2, hy + 1.5);
     }
@@ -180,7 +188,7 @@
   const EB_X = 220;
   MG.echoflight = {
     kind: 'action', title: () => 'Echo Flight', icon: () => '🦇',
-    how: () => 'It is dark! Press Space or click to squeak and light up the walls. Aubrey is a bat! Steer her with the arrows or the mouse, and grab the crystals!',
+    how: () => 'It is dark! Press Space or click to squeak and light up the walls. Aubrey is a bat! Steer {her|him} with the arrows or the mouse, and grab the crystals!',
     init(g) {
       const gap = [240, 210, 186][g.tier - 1], speed = [140, 160, 182][g.tier - 1], seg = 160;
       const len = speed * 40, n = Math.ceil((len + W + 400) / seg), lo = 72 + gap / 2, hi = H - 14 - gap / 2;
@@ -594,8 +602,9 @@
       ctx.fillStyle = 'rgba(20,0,10,.35)'; ellipse(x, feet + 2, 46, 8);
       ctx.save(); ctx.translate(x, feet - hop); ctx.rotate(lean);
       drawAubrey(0, 0, 'idle_front', 1, 0, s);
-      // the controller in her hands, with a big button for each flipper
-      const cy = -h * 0.44;
+      // the controller in her hands (the bottom of her arm outlines in js/hero.js), with a big button for each flipper
+      const handY = HERO.arms.reduce((m, a) => m + Math.max(...a.map(p => p[1])), 0) / HERO.arms.length;
+      const cy = -(im.height - handY + 12) * s;
       ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(44, cy + 4); ctx.bezierCurveTo(100, cy + 60, 120, cy - 40, 150 - lean * 200, -150 + hop); ctx.stroke();
       ctx.strokeStyle = '#3a2a4a'; ctx.lineWidth = 4; ctx.stroke();
       inkRect(-46, cy - 18, 92, 40, '#7a3a9a', 2, 16);
@@ -995,7 +1004,7 @@
   };
   MG.wishfishing = {
     kind: 'action', title: () => 'Wish Fishing', icon: () => '🪣',
-    how: () => 'Aubrey rides the bucket! Move it up and down with the arrows or the mouse, and she grabs the wish-coins she can reach. Then pull her up to the top to wish! Dodge the bats and spiders.',
+    how: () => 'Aubrey rides the bucket! Move it up and down with the arrows or the mouse, and {she|he} grabs the wish-coins {she|he} can reach. Then pull {her|him} up to the top to wish! Dodge the bats and spiders.',
     init(g) {
       Object.assign(g, { timeLeft: 70, target: [8, 10, 12][g.tier - 1], banked: 0, held: 0, by: WF.top + 14, inv: 0, crank: 0, drops: [], jolt: 0 });
       g.coins = [214, 274, 334, 394, 454].map(y => this.coin(y));
@@ -1055,7 +1064,9 @@
     },
     // one hand holds the rope; the other reaches for the nearest wish-coin (and snatches it when she grabs one)
     drawArms(g, ax, atop, ah, bx) {
-      const sy = atop + ah * 0.255, bcy = g.by + 22; // her shoulders in the photo
+      // her shoulders and sleeve/skin colours in the photo (heroArmLook in js/hero.js)
+      const s = ah / IMG.idle_front.height, look = heroArmLook(), bcy = g.by + 22;
+      const shx = A => ax + (A.sh[0] - IMG.idle_front.width / 2) * s * 0.8, sy = atop + (look[0].sh[1] + 6) * s;
       let tx = null, ty = null;
       if (g.grab > 0) { tx = g.grabX; ty = g.grabY; }
       else if (g.held < 3) {
@@ -1065,18 +1076,22 @@
       // a two-part arm the size of her real ones (upper arm + forearm), bending outward at the elbow
       const SEG = 17;
       const arm = (x0, y0, x1, y1, out) => {
+        const A = look[out < 0 ? 0 : 1];
         let dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
         if (d > SEG * 2 - 1) { const k = (SEG * 2 - 1) / d; x1 = x0 + dx * k; y1 = y0 + dy * k; dx *= k; dy *= k; d = SEG * 2 - 1; }
         const m = Math.sqrt(Math.max(0, SEG * SEG - d * d / 4)), nx = -dy / d, ny = dx / d, sgn = nx * out >= 0 ? 1 : -1;
         const ex = x0 + dx / 2 + nx * m * sgn, ey = y0 + dy / 2 + ny * m * sgn;
         ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 5.5;
         ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(ex, ey); ctx.lineTo(x1, y1); ctx.stroke();
-        ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 3; ctx.stroke(); inkCircle(x1, y1, 3, '#f6cfb0', 1);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = A.fore; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.strokeStyle = A.upper; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(ex, ey); ctx.stroke();
+        inkCircle(x1, y1, 3, A.hand, 1);
       };
-      const right = tx !== null && tx > ax;
+      const right = tx !== null && tx > ax, xl = shx(look[0]), xr = shx(look[1]);
       // right hand on the rope unless it's reaching right; left hand reaches left or rests on the rim
-      if (right) arm(ax + 8, sy, tx, ty, 1); else arm(ax + 8, sy, bx - 1, sy - 12, 1);
-      if (tx !== null && !right) arm(ax - 8, sy, tx, ty, -1); else arm(ax - 8, sy, ax - 17, g.by + 7, -1);
+      if (right) arm(xr, sy, tx, ty, 1); else arm(xr, sy, bx - 1, sy - 12, 1);
+      if (tx !== null && !right) arm(xl, sy, tx, ty, -1); else arm(xl, sy, ax - 17, g.by + 7, -1);
     },
     draw(g) {
       const t = S.t, bx = WF.x + (g.jolt ? Math.sin(g.jolt * 60) * 6 : 0);
@@ -1486,8 +1501,9 @@
       const AS = 0.4;
       if (g.hop > 0) { const k = 1 - g.hop / 0.26, ty = this.rowY(g, g.toRow); x = lerp(g.from[0], g.toX, k); y = lerp(g.from[1], ty, k); lift = Math.sin(k * Math.PI) * 26; }
       const fr = g.hop > 0 ? 'jump' : 'idle_front', im = IMG[fr], feet = y + 6 - lift; // feet in the middle of the floe, not at its front edge
-      // top of her head in this frame (the side-on jump sprite's head sits forward of centre)
-      const hx = x + (fr === 'jump' ? 30 * AS * g.face : 1.5 * AS), hy = feet - im.height * AS + 4;
+      // top of her head in this frame (heroHead in js/hero.js), flipped the way drawAubrey flips it
+      const hd = heroHead(fr), nat = AUB_NATIVE[fr], fl = nat && g.face && nat !== Math.sign(g.face) ? -1 : 1;
+      const hx = x + (hd.cx - im.width / 2) * AS * fl, hy = feet - (im.height - hd.top) * AS + 4;
       const pengOnHead = (px, py) => penguin(px, py, 0.42, g.hop > 0 ? 0 : t, true, g.face);
       if (g.splash > 0) {
         const k = 1 - g.splash / 0.9;

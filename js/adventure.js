@@ -137,7 +137,7 @@ function playPlaceGame(i) {
 function goHome() {
   // the dino route spends each night in the shed with him: feed, dress up, cuddle, sleep (js/pet.js)
   const craft = isDino() ? () => setScene('dinonight', { onDone: bedtime }) : () => setScene('style', { mode: 'craft', onDone: bedtime });
-  say([['narrator', null, isDino() ? `The sun is setting. Aubrey hurries home to the shed with her supplies. ${S.name} will be waiting!` : `The sun is setting. Aubrey hurries home to ${S.name} with her treasures.`]], () => {
+  say([['narrator', null, isDino() ? `The sun is setting. Aubrey hurries home to the shed with {her|his} supplies. ${S.name} will be waiting!` : `The sun is setting. Aubrey hurries home to ${S.name} with {her|his} treasures.`]], () => {
     // Mom gets curious on a couple of evenings
     if (S.day === 2 || S.day === 4) setScene('hide', craft);
     else craft();

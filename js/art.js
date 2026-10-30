@@ -827,21 +827,91 @@ function drawAubrey(x, gy, frame, facing, lift = 0, s = AUB_SCALE) {
 // drawn in the idle_front sprite's own pixels (97 x 226, feet at the bottom) so they sit on her body.
 // layer 0 goes under her arms (her photo arms are redrawn on top), layer 1 over them.
 const AUB_FEET = [[32, 219], [81, 219]];
-// her arms and hands cut out of the photo, so they can go back on top of skirts: keep only the
-// skin-coloured pixels beside her body (the dress is pink, with more blue than green; skin is much redder than blue)
+// where each hero's body is in their standing photo (every idle_front is 97 x 226), so clothes drawn on Aubrey's
+// body can be fitted onto theirs:
+// y: the rows of their head top, eyes, neck, waist, knees and soles (Aubrey's are FIT_Y); head / body: how wide
+// their head and body are next to Aubrey's; feet: [x, y, toe direction, how the leg leans] for each shoe;
+// hands: where each hand holds things; arms: each arm's [shoulder, wrist] (sleeves are fitted along them) and armW
+// how thick the arms are; hair: long hair that falls over the shoulders;
+// cut: the rows of their own skirt or shorts, taken out under clothes that cover the legs, with each leg redrawn
+// there from row `row` (hip span at y0 -> leg span at y1)
+const FIT_Y = [0, 27, 54, 90, 175, 219], FIT_CX = 49.5;
+const HERO_FIT = {
+  aubrey: { y: FIT_Y, head: 1, body: 1, feet: [[29, 219, -1, -0.1], [84, 219, 1, 0.33]], hands: [[15, 135], [81, 134]],
+    arms: [[[24, 58], [16, 125]], [[74, 58], [81, 125]]], armW: 1, hair: true },
+  charlotte: { y: [2, 39, 58, 100, 180, 219], head: 1, body: 1, feet: [[35, 217, -1, -0.1], [58, 217, 1, 0.05]], hands: [[20, 119], [73, 100]],
+    arms: [[[24, 60], [19, 112]], [[74, 60], [78, 96]]], armW: 1,
+    cut: { y0: 113, y1: 158, row: 162, legs: [[[27, 49], [29, 46]], [[49, 71], [47, 63]]] } },
+  ashton: { y: [0, 29, 51, 92, 180, 220], head: 0.88, body: 1.02, feet: [[25, 219, -1, -0.3], [79, 219, 1, 0.35]], hands: [[24, 136], [83, 136]],
+    arms: [[[25, 55], [23, 126]], [[75, 55], [83, 126]]], armW: 1.1,
+    cut: { y0: 139, y1: 167, row: 169, legs: [[[25, 50], [28, 44]], [[50, 76], [59, 74]]] } },
+  levi: { y: [2, 30, 57, 96, 178, 218], head: 0.95, body: 1.06, feet: [[35, 220, -1, -0.1], [67, 213, 1, 0.15]], hands: [[40, 138], [81, 136]],
+    arms: [[[24, 62], [31, 129]], [[76, 62], [81, 128]]], armW: 1.2 },
+};
+const heroFit = () => HERO_FIT[HERO.id] || HERO_FIT.aubrey;
+const heroFitted = () => heroFit() !== HERO_FIT.aubrey;
+// a row on Aubrey's photo -> the same place on the hero's (above the head it follows the head's size)
+function fitY(y, f = heroFit()) {
+  const a = FIT_Y, b = f.y;
+  if (y <= a[0]) return b[0] + (y - a[0]) * f.head;
+  for (let i = 1; i < a.length; i++) if (y <= a[i]) return b[i - 1] + (y - a[i - 1]) * (b[i] - b[i - 1]) / (a[i] - a[i - 1]);
+  return b[b.length - 1] + (y - a[a.length - 1]);
+}
+// draw a canvas laid out over Aubrey's photo space (x0..x0+w, y0..y0+h) onto the hero's body, band by band, so
+// hats land on the head, collars on the neck and skirts on the waist
+function fitPut(c, x0, y0, w, h, dx = 0, dy = 0) {
+  const f = heroFit();
+  if (f === HERO_FIT.aubrey) return ctx.drawImage(c, x0 + dx, y0 + dy, w, h);
+  const ky = c.height / h, cuts = [y0, ...FIT_Y.filter(y => y > y0 && y < y0 + h), y0 + h];
+  for (let i = 0; i < cuts.length - 1; i++) {
+    const a = cuts[i], b = cuts[i + 1], s = a < FIT_Y[2] ? f.head : f.body, ta = fitY(a, f), tb = fitY(b, f);
+    // each band overlaps the next by a hair so no seam shows
+    const pad = i < cuts.length - 2 ? 0.6 : 0, sp = pad * (b - a) / Math.max(0.1, tb - ta);
+    ctx.drawImage(c, 0, (a - y0) * ky, c.width, Math.min(c.height - (a - y0) * ky, (b - a + sp) * ky),
+      FIT_CX + (x0 - FIT_CX) * s + dx, ta + dy, w * s, tb - ta + pad);
+  }
+}
+// draw a canvas of sleeves laid out over Aubrey's photo space onto the hero's arms: each half is turned and
+// stretched so Aubrey's shoulder-to-wrist line lies along theirs
+function fitArmPut(c, x0, y0, w, h, dx = 0, dy = 0) {
+  const f = heroFit();
+  if (f === HERO_FIT.aubrey) return ctx.drawImage(c, x0 + dx, y0 + dy, w, h);
+  f.arms.forEach(([s1, w1], i) => {
+    const [s0, w0] = HERO_FIT.aubrey.arms[i];
+    const a0 = Math.atan2(w0[1] - s0[1], w0[0] - s0[0]), a1 = Math.atan2(w1[1] - s1[1], w1[0] - s1[0]);
+    const L = Math.hypot(w1[0] - s1[0], w1[1] - s1[1]) / Math.hypot(w0[0] - s0[0], w0[1] - s0[1]);
+    ctx.save(); ctx.translate(s1[0] + dx, s1[1] + dy); ctx.rotate(a1); ctx.scale(L, f.armW); ctx.rotate(-a0); ctx.translate(-s0[0], -s0[1]);
+    ctx.beginPath(); ctx.rect(i ? FIT_CX : x0, y0, i ? x0 + w - FIT_CX : FIT_CX - x0, h); ctx.clip();
+    ctx.drawImage(c, x0, y0, w, h);
+    ctx.restore();
+  });
+}
+// how far the hero's hand is from Aubrey's (0 left, 1 right), for things held in it
+const fitHand = i => { const a = HERO_FIT.aubrey.hands[i], b = heroFit().hands[i]; return [b[0] - a[0], b[1] - a[1]]; };
+// paint something drawn in Aubrey's photo space straight onto the hero (drawn into a scratch canvas and fitted)
+// (n picks the scratch canvas, so a fitted drawing can be nested in another; arms: fit it to the arms instead)
+const fitScratch = [];
+function fitDraw(fn, n = 0, arms = false, x0 = -50, y0 = -90, w = 200, h = 340) {
+  if (!heroFitted()) return fn();
+  const T = ctx.getTransform(), r = Math.min(6, Math.max(1, Math.hypot(T.a, T.b)));
+  const c = fitScratch[n] || (fitScratch[n] = document.createElement('canvas')), cw = Math.ceil(w * r), ch = Math.ceil(h * r);
+  if (c.width !== cw || c.height !== ch) { c.width = cw; c.height = ch; }
+  const o = c.getContext('2d'), main = ctx;
+  o.setTransform(1, 0, 0, 1, 0, 0); o.globalCompositeOperation = 'source-over'; o.globalAlpha = 1; o.clearRect(0, 0, cw, ch);
+  o.setTransform(r, 0, 0, r, -x0 * r, -y0 * r); o.lineJoin = 'round'; o.lineCap = 'round';
+  ctx = o;
+  try { fn(); } finally { ctx = main; }
+  (arms ? fitArmPut : fitPut)(c, x0, y0, w, h);
+}
+// the hero's arms and hands cut out of the standing photo (along the arm outlines in js/hero.js), so they
+// can go back on top of skirts
 let aubArms = null;
 function aubArmsImage() {
   if (aubArms) return aubArms;
   const im = IMG.idle_front, c = document.createElement('canvas');
   c.width = im.width; c.height = im.height;
   const x = c.getContext('2d');
-  x.drawImage(im, 0, 0);
-  const d = x.getImageData(0, 0, c.width, c.height), p = d.data;
-  for (let y = 0; y < c.height; y++) for (let i = 0; i < c.width; i++) {
-    const k = (y * c.width + i) * 4, side = i < 31 || i > 66;
-    if (!(side && y > 64 && y < 146 && p[k] > p[k + 2] + 28 && p[k + 2] <= p[k + 1] + 4)) p[k + 3] = 0;
-  }
-  x.putImageData(d, 0, 0);
+  x.clip(heroArmsPath()); x.drawImage(im, 0, 0);
   return (aubArms = c);
 }
 // her standing photo with those arms cut away, for scenes that draw her arms doing something else

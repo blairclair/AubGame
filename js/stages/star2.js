@@ -26,7 +26,7 @@
 
   MG.starhopscotch = {
     kind: 'learn', title: () => 'Star Hopscotch', icon: () => '⭐',
-    how: () => 'Aubrey hops along the star path counting by twos, fives or tens. Aim her hop at the missing number with the arrows or by tapping a star, then press Hop!',
+    how: () => 'Aubrey hops along the star path counting by twos, fives or tens. Aim {her|his} hop at the missing number with the arrows or by tapping a star, then press Hop!',
     init(g) {
       const rounds = [5, 6, 6][g.tier - 1];
       Object.assign(g, { round: 0, rounds, total: 0, fx: 0, parts: [] });

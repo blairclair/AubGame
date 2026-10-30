@@ -278,8 +278,10 @@
     const im = IMG.idle_front, s = h / im.height, lw = 1.25 / s;
     ctx.save(); ctx.translate(0, -lift); ctx.rotate(tilt); ctx.scale(sx * s, sy * s); ctx.translate(-im.width / 2, -im.height);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    ink(P2('M49,-8 C78,-8 90,14 86,40 C84,56 76,64 66,64 L32,64 C22,64 14,56 12,40 C8,14 20,-8 49,-8 Z'), '#ffd23a', lw); // hood behind her head
+    // drawn on Aubrey's body; fitDraw (art.js) fits it onto the other heroes' heads, bodies and arms
+    fitDraw(() => ink(P2('M49,-8 C78,-8 90,14 86,40 C84,56 76,64 66,64 L32,64 C22,64 14,56 12,40 C8,14 20,-8 49,-8 Z'), '#ffd23a', lw)); // hood behind her head
     ctx.drawImage(im, 0, 0);
+    fitDraw(() => {
     ink(P2('M30,52 C40,58 58,58 68,52 L74,58 C88,96 102,128 102,152 C70,160 28,160 -4,152 C-4,128 10,96 24,58 Z'), '#ffd23a', lw);
     ctx.strokeStyle = '#e0a810'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(49, 60); ctx.lineTo(49, 154); ctx.stroke();
@@ -287,12 +289,17 @@
     inkRect(12, 118, 22, 14, '#ffc21a', lw * 0.8, 3); inkRect(64, 118, 22, 14, '#ffc21a', lw * 0.8, 3);
     for (const y of [74, 96, 118, 140]) inkCircle(54, y, 2.8, '#3a8ad0', lw * 0.5);
     ink(P2('M30,52 L46,72 L49,59 Z'), '#ffe27a', lw * 0.8); ink(P2('M68,52 L52,72 L49,59 Z'), '#ffe27a', lw * 0.8);
+    });
     ctx.drawImage(aubArmsImage(), 0, 0);
+    fitDraw(() => {
     ink(P2('M25,57 C15,64 12,90 13,124 L28,124 C29,100 30,82 32,66 Z'), '#ffd23a', lw);
     ink(P2('M73,57 C83,64 86,90 85,124 L70,124 C69,100 68,82 66,66 Z'), '#ffd23a', lw);
     inkRect(11, 120, 19, 7, '#3a8ad0', lw * 0.7, 3); inkRect(68, 120, 19, 7, '#3a8ad0', lw * 0.7, 3);
-    for (const [fx, d] of [[32, -1], [81, 1]]) {
-      ctx.save(); ctx.translate(fx, 0); ctx.scale(d, 1);
+    }, 0, true);
+    // the boots go on this hero's feet, as tall as their shins
+    const f = heroFit(), bootH = (f.y[5] - f.y[4]) / 44;
+    for (const [fx, d, sole] of heroFitted() ? f.feet.map(([x, y, dd]) => [x, dd, y]) : [[32, -1, 219], [81, 1, 219]]) {
+      ctx.save(); ctx.translate(fx, sole); ctx.scale(d, bootH); ctx.translate(0, -219);
       const boot = P2('M-11,178 L11,178 L12,206 C22,207 27,212 26,220 L-13,220 C-13,206 -12,190 -11,178 Z');
       ink(boot, '#ff3f62', lw);
       ctx.save(); ctx.clip(boot); ctx.fillStyle = '#ffffff';
@@ -2108,7 +2115,7 @@
   }
   MG.webdots = {
     kind: 'learn', title: () => 'Web Dot-to-Dot', icon: () => '🕸️',
-    how: g => `Help Aubrey spin a silk picture! Move her with the arrow keys, or lead her with your finger, and run to the dots in order: ${g.tier === 3 ? '2, 4, 6, 8... count by twos!' : '1, 2, 3...'}`,
+    how: g => `Help Aubrey spin a silk picture! Move {her|him} with the arrow keys, or lead {her|him} with your finger, and run to the dots in order: ${g.tier === 3 ? '2, 4, 6, 8... count by twos!' : '1, 2, 3...'}`,
     init(g) {
       Object.assign(g, { round: 0, rounds: 3, total: 0, pics: shuffle(WEB_SETS[g.tier - 1]).slice(0, 3), step: g.tier === 3 ? 2 : 1, shake: {} });
       this.next(g);
@@ -2240,7 +2247,7 @@
   const dustPuff = (g, x, y, vx, vy, r) => g.puffs.push({ x, y, vx, vy, r, life: rand(0.6, 1.1), max: 1 });
   MG.dustsweep = {
     kind: 'action', title: () => 'Dust Bunny Sweep', icon: () => '🧹',
-    how: () => 'Help Aubrey sweep the attic! Move her with the arrow keys, or lead her broom with your finger. Push the hopping dust bunnies into the dustpan on the right!',
+    how: () => 'Help Aubrey sweep the attic! Move {her|him} with the arrow keys, or lead {her|his} broom with your finger. Push the hopping dust bunnies into the dustpan on the right!',
     init(g) {
       const n = [5, 7, 9][g.tier - 1], dust = [];
       // a grey film of dust all over the floor, which her broom clears as she goes
@@ -2557,16 +2564,21 @@
     ctx.restore();
   }
   // per sprite frame: wing root and hand (sprite pixels), and whether we see her from the front
-  const NB_POSE = { jump: [84, 64, 0, 2, 82], run1: [44, 62, 0, 100, 96], run2: [52, 62, 0, 112, 92], run3: [44, 62, 0, 92, 100], run4: [54, 62, 0, 118, 92], run5: [58, 64, 0, 124, 92], idle_front: [48, 74, 1, 86, 140], twirl: [100, 82, 1, 170, 134] };
+  // (from her head and neck in the photo, heroHead in js/hero.js; she holds things in front of her chest)
+  const NB_POSE = fr => {
+    const hd = heroHead(fr), H = IMG[fr].height, nat = AUB_NATIVE[fr], body = H - hd.neck;
+    if (!nat) return [hd.cx, hd.neck + body * 0.1, 1, hd.cx + hd.r * 0.3, hd.neck + body * 0.22];
+    return [hd.cx - nat * hd.r * 0.3, hd.neck + body * 0.05, 0, hd.cx + nat * hd.r * 0.9, hd.neck + body * 0.22];
+  };
   const NB_AS = 0.5;
   // where Aubrey's hand is on screen (the carried bit sits there)
   function nbHand(g) {
-    const fr = g.frame || 'jump', im = IMG[fr], p = NB_POSE[fr], nat = AUB_NATIVE[fr] || 1, flip = g.facing && nat !== Math.sign(g.facing) ? -1 : 1;
+    const fr = g.frame || 'jump', im = IMG[fr], p = NB_POSE(fr), nat = AUB_NATIVE[fr] || 1, flip = g.facing && nat !== Math.sign(g.facing) ? -1 : 1;
     return [g.px + (-im.width / 2 + p[3]) * NB_AS * flip, g.py + 195 * NB_AS / 2 + (-im.height + p[4]) * NB_AS];
   }
   function nbCarried(kind, x, y, a = 0) { if (kind === 'twig') nbTwig(x, y, a - 0.4, 40); else if (kind === 'mud') nbMud(x, y, 11); else if (kind === 'feather') nbFeather(x, y, a - 0.3, 0.9, '#ffd8e8'); }
   function nbAubrey(g) {
-    const fr = g.frame || 'jump', im = IMG[fr], s = NB_AS, w = im.width * s, h = im.height * s, p = NB_POSE[fr];
+    const fr = g.frame || 'jump', im = IMG[fr], s = NB_AS, w = im.width * s, h = im.height * s, p = NB_POSE(fr);
     const feet = g.py + 195 * s / 2, nat = AUB_NATIVE[fr] || 1, flip = g.facing && nat !== Math.sign(g.facing) ? -1 : 1;
     // her shadow on the lawn, smaller the higher she flies
     const hi = clamp((520 - feet) / 380, 0, 1);
@@ -2602,7 +2614,7 @@
   const nbTip = (g, text, t = 2.4) => { g.tip = { text, t }; };
   MG.nestbuild = {
     kind: 'action', title: () => 'Build the Nest', icon: () => '🪺',
-    how: () => 'Aubrey has fairy wings! Fly her with the mouse or the arrow keys. Bring twigs, then mud, then feathers to the nest. Bump the squirrel to shoo it away!',
+    how: () => 'Aubrey has fairy wings! Fly {her|him} with the mouse or the arrow keys. Bring twigs, then mud, then feathers to the nest. Bump the squirrel to shoo it away!',
     init(g) {
       const t = g.tier - 1, per = [4, 5, 6][t];
       Object.assign(g, {

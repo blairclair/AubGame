@@ -419,7 +419,7 @@ function momVisitFail(onDone) {
       : ['mom', 'shock', 'Aubrey, why is there GLITTER all over the floor? And is that a... hoofprint?'],
     isDino() ? ['aubrey', 'serious', "It's for a school project! About... dinosaurs. Pretend ones."]
       : ['aubrey', 'serious', "It's for a school project! About... horses. Sparkly horses."],
-    ['mom', null, "Hmm. I'm tidying up this mess, missy."],
+    ['mom', null, "Hmm. I'm tidying up this mess, {missy|mister}."],
     ['narrator', null, `Phew — she didn't spot ${S.name}!${lost}`],
   ], onDone);
 }

@@ -1162,9 +1162,13 @@
 
   // --- Aubrey with the baby dino on her back --------------------------------------------------
   // where he sits for each of her poses (in her own coords, facing right; his origin is at his feet)
-  const CARRY = { idle_front: { x: -6, y: -60, s: 0.22, f: -1, hands: [[-11, -80], [10, -81]] }, twirl: { x: -5, y: -64, s: 0.22, f: -1, hands: [[-11, -84], [12, -85]] } };
+  // (his hands go on her shoulders, just under her neck in the photo: heroHead in js/hero.js)
+  const CARRY = frame => {
+    const im = IMG[frame], hd = heroHead(frame), dx = (hd.cx - im.width / 2) * SC, hy = -(im.height - hd.neck - 12) * SC, w = hd.r * 0.95 * SC;
+    return { x: dx - 6, y: hy + 20, s: 0.22, f: -1, hands: [[dx - w, hy], [dx + w, hy - 1]] };
+  };
   function drawCarry(g, x, y, frame, mood, alpha = 1) {
-    const a = g.a, d = CARRY[frame];
+    const a = g.a, d = CARRY(frame);
     ctx.save(); ctx.translate(x, y); ctx.scale(a.facing, 1); ctx.globalAlpha = alpha;
     if (a.wob > 0) { const w = Math.sin(a.wob * 22) * 0.18 * a.wob; ctx.translate(0, -30); ctx.rotate(w); ctx.translate(0, 30); }
     const c = a.charging ? a.charge : 0, ld = a.land / 0.15, up = !a.on && g.state === 'play' ? clamp(-a.vy / 700, 0, 1) * 0.07 : 0;

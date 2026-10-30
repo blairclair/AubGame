@@ -72,29 +72,28 @@
   };
   const COST = {};
   function costumed(frame, look) {
-    const key = frame + ':' + look;
+    const key = HERO.id + ':' + frame + ':' + look;
     if (COST[key]) return COST[key];
     const im = IMG[frame], w = im.width, h = im.height;
     const c = document.createElement('canvas'); c.width = w; c.height = h;
     const x = c.getContext('2d'); x.drawImage(im, 0, 0);
     const d = x.getImageData(0, 0, w, h), p = d.data;
-    // the top of her head, and where it sits across
-    let top = 0;
-    find: for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) if (p[(y * w + i) * 4 + 3] > 140) { top = y; break find; }
-    let sx = 0, n = 0, minX = w, maxX = 0;
-    for (let y = top; y < top + 18; y++) for (let i = 0; i < w; i++) if (p[(y * w + i) * 4 + 3] > 140) { sx += i; n++; }
-    const hx = n ? sx / n : w / 2;
-    for (let i = 0; i < w; i++) if (p[((top + 12) * w + i) * 4 + 3] > 140) { minX = Math.min(minX, i); maxX = Math.max(maxX, i); }
-    const hr = Math.max(12, Math.min(26, (maxX - minX) / 2 || 18));
+    // the top of her head, and where it sits across (heroHead in js/hero.js)
+    const hd = heroHead(frame), top = hd.top, hx = hd.cx, hr = Math.max(12, Math.min(26, hd.r * 1.05));
     const spots = [];
     const pal = LOOKS[look] && LOOKS[look].pal.map(hexRgb);
+    // the messenger's tunic covers everything that isn't skin or hair from the chin to the hips, whatever
+    // the hero wears; the other looks recolour the pink dress
+    // (the other heroes have no pink dress: their rags and fine clothes recolour all they wear, neck to toe)
+    const tunic = look === 'messenger' || (!!LOOKS[look] && HERO.id !== 'aubrey'), hips = look === 'messenger' ? hd.cy + (h - hd.cy) * 0.55 : h;
     if (pal) {
       const r = seeded(7);
-      for (let y = top + 44; y < h; y++) for (let i = 0; i < w; i++) {
+      for (let y = tunic ? Math.round(hd.neck + hd.r * 0.25) : top + 44; y < h; y++) for (let i = 0; i < w; i++) {
         const k = (y * w + i) * 4;
         if (p[k + 3] < 20) continue;
-        const R = p[k], G = p[k + 1], B = p[k + 2];
-        if (!(B > G + 6 && R > 110 && R - G > 26)) continue;
+        const R = p[k], G = p[k + 1], B = p[k + 2], pink = B > G + 6 && R > 110 && R - G > 26;
+        const skinOrHair = R >= G && G >= B && (R > G + 25 || R + G + B < 250);
+        if (!(pink || (tunic && y < hips && !skinOrHair))) continue;
         const L = clamp(((R + G + B) / 765 - 0.42) / 0.5, 0, 1);
         const [a, b2, kk] = L < 0.5 ? [pal[0], pal[1], L * 2] : [pal[1], pal[2], (L - 0.5) * 2];
         p[k] = lerp(a[0], b2[0], kk); p[k + 1] = lerp(a[1], b2[1], kk); p[k + 2] = lerp(a[2], b2[2], kk);
@@ -125,13 +124,39 @@
     inkRect(-r, -r * 0.08, r * 2, r * 0.22, '#ffd84a', lw * 0.7, 2);
     ctx.restore();
   }
+  // a boy hero's: a gold crown, and a patched flat cap for the rags
+  function crown(hx, top, r, lw, t) {
+    const y = top + r * 0.22;
+    ink(P2(`M${hx - r * 0.66},${y + r * 0.14} L${hx - r * 0.7},${y - r * 0.38} L${hx - r * 0.34},${y - r * 0.12} L${hx},${y - r * 0.5} L${hx + r * 0.34},${y - r * 0.12} L${hx + r * 0.7},${y - r * 0.38} L${hx + r * 0.66},${y + r * 0.14} Z`), '#ffd84a', lw);
+    inkRect(hx - r * 0.66, y, r * 1.32, r * 0.16, '#e8b020', lw * 0.5, 1);
+    inkCircle(hx, y + r * 0.06, r * 0.1, '#d83a5a', lw * 0.5);
+    star(hx, y - r * 0.5, r * (0.16 + 0.07 * Math.sin(t * 6)), '#ffffff');
+  }
+  function patchedCap(hx, top, r, lw) {
+    ink(P2(`M${hx - r * 0.98},${top + r * 0.5} C${hx - r * 1.02},${top - r * 0.22} ${hx + r * 1.02},${top - r * 0.22} ${hx + r * 0.98},${top + r * 0.5} C${hx + r * 0.5},${top + r * 0.32} ${hx - r * 0.5},${top + r * 0.32} ${hx - r * 0.98},${top + r * 0.5} Z`), '#8a6a4a', lw);
+    ink(P2(`M${hx - r * 0.7},${top + r * 0.42} C${hx - r * 0.2},${top + r * 0.62} ${hx + r * 0.6},${top + r * 0.62} ${hx + r * 1.05},${top + r * 0.5} C${hx + r * 0.6},${top + r * 0.36} ${hx - r * 0.2},${top + r * 0.34} ${hx - r * 0.7},${top + r * 0.42} Z`), '#6a4a30', lw * 0.8);
+    inkRect(hx - r * 0.45, top + r * 0.02, r * 0.34, r * 0.26, '#8aa0b8', lw * 0.6, 1);
+    inkCircle(hx, top - r * 0.06, r * 0.1, '#6a4a30', lw * 0.5);
+  }
   function glassSlipper(x, y, sz, lw = 1, rot = 0) {
+    if (isBoy()) return glassBoot(x, y, sz, lw, rot);
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
     const p = P2(`M${-sz},${sz * 0.25} C${-sz},${-sz * 0.2} ${-sz * 0.55},${-sz * 0.35} ${-sz * 0.1},${-sz * 0.2} C${sz * 0.3},${-sz * 0.05} ${sz * 0.7},${-sz * 0.45} ${sz},${-sz * 0.2} L${sz},${sz * 0.25} Z`);
     ink(p, 'rgba(200,240,255,.85)', lw, '#5a8ac0');
     ctx.strokeStyle = '#5a8ac0'; ctx.lineWidth = lw * 1.2; ctx.beginPath(); ctx.moveTo(sz * 0.8, sz * 0.25); ctx.lineTo(sz * 0.8, sz * 0.6); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,.9)'; ellipse(-sz * 0.45, 0, sz * 0.18, sz * 0.08, -0.3);
     star(sz * 0.2, -sz * 0.25, sz * 0.22, '#ffffff');
+    ctx.restore();
+  }
+  // the boys' story loses a little glass boot instead (toe to the left, like the slipper)
+  function glassBoot(x, y, sz, lw = 1, rot = 0) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    const p = P2(`M${-sz},${sz * 0.25} C${-sz},${-sz * 0.2} ${-sz * 0.5},${-sz * 0.3} ${sz * 0.05},${-sz * 0.3} L${sz * 0.1},${-sz * 0.95} L${sz * 0.85},${-sz * 0.95} L${sz * 0.85},${sz * 0.25} Z`);
+    ink(p, 'rgba(200,240,255,.85)', lw, '#5a8ac0');
+    ctx.fillStyle = 'rgba(160,210,245,.9)'; ctx.fillRect(-sz, sz * 0.12, sz * 1.85, sz * 0.13);
+    ctx.strokeStyle = '#5a8ac0'; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(sz * 0.06, -sz * 0.78); ctx.lineTo(sz * 0.86, -sz * 0.78); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ellipse(-sz * 0.45, -sz * 0.02, sz * 0.18, sz * 0.08, -0.3); ellipse(sz * 0.32, -sz * 0.45, sz * 0.07, sz * 0.25, 0);
+    star(sz * 0.55, -sz * 0.55, sz * 0.22, '#ffffff');
     ctx.restore();
   }
   // Aubrey in a costume look ('rags' | 'gown' | 'messenger' | null)
@@ -146,11 +171,12 @@
     ctx.scale(s, s); ctx.translate(-im.width / 2, -im.height);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     const lw = Math.min(2.4, 1.1 / s);
-    if (look === 'rags') kerchief(C.hx, C.top, C.hr, lw);
+    // boys: a patched cap with the rags, and a crown with the fine suit
+    if (look === 'rags') (isBoy() ? patchedCap : kerchief)(C.hx, C.top, C.hr, lw);
     if (look === 'gown') {
-      tiara(C.hx, C.top, C.hr, lw, t);
+      (isBoy() ? crown : tiara)(C.hx, C.top, C.hr, lw, t);
       C.spots.forEach(([sx, sy], i) => { const k = Math.sin(t * 4 + i * 1.7); if (k > 0.2) star(sx, sy, 2.2 + k * 2.6, 'rgba(255,255,255,.95)'); });
-      if (frame === 'idle_front' && o.slippers !== false) for (const [fx, fy] of AUB_FEET) { if (o.slippers === 'one' && fx > 50) continue; glassSlipper(fx, fy - 2, 10, lw * 0.7); }
+      if (frame === 'idle_front' && o.slippers !== false) for (const [fx, fy] of heroFitted() ? heroFit().feet : AUB_FEET) { if (o.slippers === 'one' && fx > 50) continue; glassSlipper(fx, fy - 2, 10, lw * 0.7); }
     }
     if (look === 'messenger') messengerCap(C.hx, C.top, C.hr, lw, t);
     ctx.restore();
@@ -167,7 +193,11 @@
     sisterB: { skin: '#f4d0bc', hair: '#3a2a4a', style: 'bun', gown: '#ff8ac0', trim: '#ffd84a', bow: '#c06ae0', tall: true },
     coachman: { skin: '#f0c8a8', hair: '#8a8aa0', style: 'short', coat: '#5a3a8a', trim: '#ffd84a', legs: '#ffffff', boots: '#2a1a2a', whiskers: true, tophat: true },
     footman: { skin: '#f0c8a8', hair: '#5a8a3a', style: 'short', coat: '#3a9a5a', trim: '#ffd84a', legs: '#ffffff', boots: '#2a1a2a' },
+    // in a boy hero's story (Cinderfella) a princess holds the ball
+    princess: { skin: '#f6d2b8', hair: '#e8a838', style: 'curls', gown: '#7ab8f0', trim: '#ffd84a', bow: '#ff6fae', crown: true },
   };
+  // who Cinderella dances with (the prince), or Cinderfella (the princess)
+  const partner = () => (isBoy() ? 'princess' : 'prince');
   // pose: { walk: phase, arm: -1..1 (raise the front arm), bow: 0..1, spin: angle, mouth: 'smile'|'o'|'pout' }
   function folk(kind, x, gy, s = 1, dir = 1, pose = {}) {
     const F = FOLK[kind], t = S.t, tall = F.tall ? 1.12 : 1;
@@ -1211,7 +1241,7 @@
   // --- story pages --------------------------------------------------------------------------------
   const PILES = [[160, 396], [262, 418], [352, 398], [430, 424], [214, 430], [392, 432]];
   const ITEMS = [['👒', 'hat', 'HAT'], ['🧤', 'gloves', 'GLOVES'], ['👠', 'shoes', 'SHOES'], ['🎀', 'ribbon', 'RIBBON'], ['👜', 'bag', 'BAG'], ['💍', 'ring', 'RING']];
-  const MOVES = { L: ['👈', 'Step left', 'arrowleft', '1'], R: ['👉', 'Step right', 'arrowright', '2'], T: ['💫', 'Twirl', 'arrowup', '3'], C: ['🙇', 'Curtsy', 'arrowdown', '4'] };
+  const MOVES = { L: ['👈', 'Step left', 'arrowleft', '1'], R: ['👉', 'Step right', 'arrowright', '2'], T: ['💫', 'Twirl', 'arrowup', '3'], C: ['🙇', '{Curtsy|Bow}', 'arrowdown', '4'] };
   const bong = () => { tone(196, 1.2, 'sine', 0.16); tone(392, 0.9, 'sine', 0.06); tone(588, 0.6, 'triangle', 0.03); };
   const BEATS = {
     sweep: {
@@ -1219,7 +1249,7 @@
       enter(g, b) {
         b.piles = PILES.slice(0, 3 + g.tier).map(([x, y]) => ({ x, y, k: 1 }));
         Object.assign(b, { ax: 520, lp: null, time: 0, puff: 0 });
-        g.cap = 'Once upon a time, a kind girl named Cinderella had to do ALL the chores for her stepmother and two stepsisters. Aubrey is Cinderella! Rub the broom over the ashes to sweep the hearth.';
+        g.cap = 'Once upon a time, a kind {girl named Cinderella|boy named Cinderfella} had to do ALL the chores for {her|his} stepmother and two stepsisters. Aubrey is {Cinderella|Cinderfella}! Rub the broom over the ashes to sweep the hearth.';
         g.act = 'Hold and rub over the ashes!';
       },
       update(g, b, dt) {
@@ -1238,8 +1268,8 @@
           if (keys[' ']) for (const p of b.piles) if (p.k > 0 && Math.abs(p.x - (b.ax + 40)) < 60) { p.k -= dt * 1.1; if ((b.puff -= dt) <= 0) { b.puff = 0.15; burst(p.x, p.y - 6, 3, { colors: ['#b8b0c0'], up: 40, spread: 60 }); SFX.scrub(); } }
           b.ax = clamp(b.ax, 120, 760);
           const left = b.piles.reduce((s, p) => s + Math.max(0, p.k), 0);
-          if (left <= 0.001) g.finish(b.time < 35 ? 1 : 0.8, 'Swish, swish! The hearth was clean. But Cinderella was always covered in cinders and ashes, and THAT is how she got her name.');
-          else if (b.time > 70) g.finish(0.6 * (1 - left / b.piles.length), 'That will do! Cinderella was always covered in cinders and ashes, and THAT is how she got her name.');
+          if (left <= 0.001) g.finish(b.time < 35 ? 1 : 0.8, 'Swish, swish! The hearth was clean. But {Cinderella|Cinderfella} was always covered in cinders and ashes, and THAT is how {she|he} got {her|his} name.');
+          else if (b.time > 70) g.finish(0.6 * (1 - left / b.piles.length), 'That will do! {Cinderella|Cinderfella} was always covered in cinders and ashes, and THAT is how {she|he} got {her|his} name.');
           b.hint = b.time > 6;
         }
         b.bx = bx; b.by = by;
@@ -1261,7 +1291,7 @@
           for (let k = 0; k < 60; k++) { const x = rand(140, 560), y = rand(372, 426); if (items.every(o => Math.hypot(o.x - x, o.y - y) > 30)) { items.push({ x, y, lentil: i < n, taken: false, wig: 0, r: g.tier === 3 ? 8 : 9.5, col: pick(['#d08a3a', '#c86a2a', '#7aa83a']) }); break; } }
         }
         Object.assign(b, { items, n: items.filter(o => o.lentil).length, inBowl: 0, birds: [], miss: 0 });
-        g.cap = 'Her mean stepmother tipped a bowl of lentils into the ashes. "Pick them ALL out!" Cinderella called her friends, the birds. Tap each lentil and a bird will carry it to the bowl. Not the grey pebbles!';
+        g.cap = '{Her|His} mean stepmother tipped a bowl of lentils into the ashes. "Pick them ALL out!" {Cinderella called her|Cinderfella called his} friends, the birds. Tap each lentil and a bird will carry it to the bowl. Not the grey pebbles!';
         g.act = 'Tap the lentils!';
       },
       update(g, b, dt) {
@@ -1276,7 +1306,7 @@
           if (o && o.lentil) { o.taken = true; b.birds.push({ o, leg: 0, k: 0, from: [rand(640, 760), 140] }); tone(1200, 0.08, 'sine', 0.08); }
           else if (o) { o.wig = 0.5; b.miss++; SFX.miss(); say(g, 'That is a grey ash pebble! Look for the lentils.'); }
         }
-        if (g.ph === 'act' && b.inBowl >= b.n) g.finish(1 - 0.08 * b.miss, `${NUM_WORDS[b.n] ? NUM_WORDS[b.n][0].toUpperCase() + NUM_WORDS[b.n].slice(1) : b.n} lentils, all in the bowl! "Thank you, little birds!" said Cinderella.`);
+        if (g.ph === 'act' && b.inBowl >= b.n) g.finish(1 - 0.08 * b.miss, `${NUM_WORDS[b.n] ? NUM_WORDS[b.n][0].toUpperCase() + NUM_WORDS[b.n].slice(1) : b.n} lentils, all in the bowl! "Thank you, little birds!" said {Cinderella|Cinderfella}.`);
       },
       draw(g, b, t) {
         SCENES_CN.kitchen({}, t);
@@ -1306,7 +1336,7 @@
         g.act = 'Tap the door!';
       },
       setStage(g, b, s, cap, act) { b.stage = s; b.st = 0; if (cap) { g.cap = cap; say(g, cap); } g.act = act || null; },
-      ask(g, b) { const [, , big] = ITEMS[b.reqs[b.ri]]; const who = b.ri % 2 ? 'the other stepsister' : 'a stepsister'; say(g, `"My ${big}! Hurry up, Cinderella!" shouts ${who}. Tap the ${ITEMS[b.reqs[b.ri]][1]}!`); g.cap = g.say; },
+      ask(g, b) { const [, , big] = ITEMS[b.reqs[b.ri]]; const who = b.ri % 2 ? 'the other stepsister' : 'a stepsister'; say(g, `"My ${big}! Hurry up, {Cinderella|Cinderfella}!" shouts ${who}. Tap the ${ITEMS[b.reqs[b.ri]][1]}!`); g.cap = g.say; },
       update(g, b, dt) {
         b.st += dt; for (const k in b.shake) if ((b.shake[k] -= dt) <= 0) delete b.shake[k];
         if (b.stage >= 1) b.door = Math.min(1, b.door + dt * 2);
@@ -1323,12 +1353,12 @@
           if (i >= 0) {
             if (i === b.reqs[b.ri]) {
               SFX.hit(); burst(b.cards[i].x + 50, b.cards[i].y + 40, 12); b.got[b.ri % 2].push(ITEMS[i][0]); b.ri++;
-              if (b.ri >= b.reqs.length) { this.setStage(g, b, 4); say(g, '"Off to the ball!" The stepsisters rushed out of the door, and left Cinderella behind.'); b.st = 0; }
+              if (b.ri >= b.reqs.length) { this.setStage(g, b, 4); say(g, '"Off to the ball!" The stepsisters rushed out of the door, and left {Cinderella|Cinderfella} behind.'); b.st = 0; }
               else this.ask(g, b);
             } else { b.miss++; b.shake[i] = 0.5; SFX.miss(); say(g, `No, no! Not the ${ITEMS[i][1]}! My ${ITEMS[b.reqs[b.ri]][2]}!`); }
           }
         } else if (b.stage === 4 && b.st > 0.6) { b.stage = 5; b.st = 0; }
-        else if (b.stage === 5 && b.st > 1.4) g.finish(1 - 0.15 * b.miss, '"Off to the ball!" The stepsisters rushed away in their fancy clothes. "Can I come too?" asked Cinderella. "YOU? In those rags? No!" they laughed.');
+        else if (b.stage === 5 && b.st > 1.4) g.finish(1 - 0.15 * b.miss, '"Off to the ball!" The stepsisters rushed away in their fancy clothes. "Can I come too?" asked {Cinderella|Cinderfella}. "YOU? In those rags? No!" they laughed.');
         b.knock = b.stage === 0 && (b.st % 1.6) < 0.05;
         if (b.knock) { tone(160, 0.08, 'square', 0.06); tone(160, 0.08, 'square', 0.06, 0.18); }
       },
@@ -1390,13 +1420,13 @@
         list.push({ k: 'dress', x: 190, y: 360 });
         Object.assign(b, { list, ni: 0, miss: 0, nm, nl, spin: -1 });
         list.forEach(o => { o.done = false; o.k2 = 0; });
-        g.cap = `Then, with a twinkle, Cinderella's Fairy Godmother appeared! "You SHALL go to the ball!" Use the magic wand, in order: the pumpkin, then the ${nm} mice${T >= 1 ? ', then the rat' : ''}${nl ? ', then the lizards' : ''}, and last of all, Cinderella herself!`;
+        g.cap = `Then, with a twinkle, {Cinderella|Cinderfella}'s Fairy Godmother appeared! "You SHALL go to the ball!" Use the magic wand, in order: the pumpkin, then the ${nm} mice${T >= 1 ? ', then the rat' : ''}${nl ? ', then the lizards' : ''}, and last of all, {Cinderella herself|Cinderfella himself}!`;
         g.act = 'Tap with the wand, in order!';
       },
-      name: o => ({ pumpkin: 'the pumpkin', mouse: 'a mouse', rat: 'the rat', lizard: 'a lizard', dress: 'Cinderella herself' })[o.k],
+      name: o => ({ pumpkin: 'the pumpkin', mouse: 'a mouse', rat: 'the rat', lizard: 'a lizard', dress: '{Cinderella herself|Cinderfella himself}' })[o.k],
       update(g, b, dt) {
         for (const o of b.list) if (o.done) o.k2 = Math.min(1, o.k2 + dt * 1.6);
-        if (b.spin >= 0) { b.spin += dt; if (b.spin > 1.3 && g.ph === 'act') g.finish(1 - 0.12 * b.miss, '"Glass slippers, too!" Cinderella was dressed in a gown of gold and silver. "But remember," said her Fairy Godmother, "the magic ends at MIDNIGHT!"'); }
+        if (b.spin >= 0) { b.spin += dt; if (b.spin > 1.3 && g.ph === 'act') g.finish(1 - 0.12 * b.miss, '{"Glass slippers, too!" Cinderella was dressed in a gown of gold and silver|"Glass boots, too!" Cinderfella was dressed in a suit of gold and silver}. "But remember," said {her|his} Fairy Godmother, "the magic ends at MIDNIGHT!"'); }
         if (g.ph !== 'act' || !pointer.clicked || !inPic() || b.spin >= 0) return;
         const hitR = o => o.k === 'dress' ? inRect({ x: 150, y: 290, w: 80, h: 130 }) : Math.hypot(pointer.x - o.x, pointer.y - (o.y - 14)) < (o.k === 'pumpkin' ? 46 : 24);
         const o = b.list.find(o => !o.done && hitR(o));
@@ -1439,7 +1469,7 @@
       over(g, b) {
         // the spell list, in order
         const parts = [['🎃', 1, 'pumpkin']], T = g.tier - 1;
-        parts.push(['🐭', b.nm, 'mouse']); if (T >= 1) parts.push(['🐀', 1, 'rat']); if (b.nl) parts.push(['🦎', b.nl, 'lizard']); parts.push(['👗', 1, 'dress']);
+        parts.push(['🐭', b.nm, 'mouse']); if (T >= 1) parts.push(['🐀', 1, 'rat']); if (b.nl) parts.push(['🦎', b.nl, 'lizard']); parts.push([isBoy() ? '🤴' : '👗', 1, 'dress']);
         const w = parts.length * 92, x0 = W / 2 - w / 2 + 120, y = PIC.y + 12;
         rrect(x0 - 8, y, w + 16, 52, 16, 'rgba(255,250,235,.95)', '#c9a8e0', 2);
         parts.forEach(([e, n, k], i) => {
@@ -1465,7 +1495,7 @@
         const lens = [[2, 3, 3], [3, 4, 4], [3, 4, 5, 5]][g.tier - 1];
         Object.assign(b, { lens, r: 0, seq: [], mode: 'show', si: 0, mt: 0, miss: 0, wrongHere: 0, pm: null, am: null, ak: 1, pk: 1, sp: [0.95, 0.8, 0.66][g.tier - 1] });
         this.grow(b);
-        g.cap = 'At the ball, the prince asked Cinderella to dance! Watch his steps, then copy them: tap the moves, or use the arrow keys.';
+        g.cap = 'At the ball, the {prince asked Cinderella to dance! Watch his steps|princess asked Cinderfella to dance! Watch her steps}, then copy them: tap the moves, or use the arrow keys.';
         g.act = null;
       },
       grow(b) { while (b.seq.length < b.lens[b.r]) { let m; do m = pick(Object.keys(MOVES)); while (m === b.seq[b.seq.length - 1]); b.seq.push(m); } b.mode = 'show'; b.si = 0; b.mt = -0.6; b.ui = 0; b.wrongHere = 0; },
@@ -1476,10 +1506,10 @@
           b.mt += dt;
           if (b.mt >= 0 && b.pm === null) { b.pm = b.seq[b.si]; b.pk = 0; tone([392, 494, 587, 659][b.si % 4], 0.3, 'triangle', 0.08); }
           if (b.mt >= b.sp) { b.mt = 0; b.pm = null; b.si++; if (b.si >= b.seq.length) { b.mode = 'copy'; b.ui = 0; say(g, 'Your turn!'); } }
-          g.act = 'Watch the prince...';
+          g.act = 'Watch the {prince|princess}...';
           return;
         }
-        g.act = 'Your turn! Copy his steps.';
+        g.act = 'Your turn! Copy {his|her} steps.';
         let m = null;
         for (const [k, [, , key, num]] of Object.entries(MOVES)) if (pressed[key] || id === 'mv:' + k || pressed[num]) m = k;
         if (!m) return;
@@ -1489,11 +1519,11 @@
           if (b.ui >= b.seq.length) {
             SFX.hit(); burst(480, 250, 14);
             b.r++;
-            if (b.r >= b.lens.length) g.finish(1 - 0.12 * b.miss, 'They danced and danced, and the prince could not stop smiling. Who was this mysterious princess? Nobody knew!');
+            if (b.r >= b.lens.length) g.finish(1 - 0.12 * b.miss, 'They danced and danced, and the {prince|princess} could not stop smiling. Who was this mysterious {princess|prince}? Nobody knew!');
             else { floatText(480, 200, 'Lovely!', '#fff6a8', false, 28); this.grow(b); b.mt = -1.2; }
           }
         } else {
-          b.miss++; b.wrongHere++; SFX.miss(); say(g, 'Oops! Watch the prince again.');
+          b.miss++; b.wrongHere++; SFX.miss(); say(g, 'Oops! Watch the {prince|princess} again.');
           b.mode = 'show'; b.si = 0; b.mt = -1; b.pm = null;
         }
       },
@@ -1505,7 +1535,7 @@
         SCENES_CN.ball({}, t);
         const GYd = 340;
         const pp = this.pose(b.pm, b.pk);
-        folk('prince', 590 + pp.dx, GYd, 0.62, -1, { spin: pp.spin, bow: pp.bow, arm: b.pm ? 0.4 : 0 });
+        folk(partner(), 590 + pp.dx, GYd, 0.62, -1, { spin: pp.spin, bow: pp.bow, arm: b.pm ? 0.4 : 0 });
         if (b.mode === 'show' && b.pm && g.ph === 'act') bubble(590, 160, `${MOVES[b.pm][0]} ${MOVES[b.pm][1]}!`);
         const ap = this.pose(b.am, b.ak), moving = b.am && b.ak < 1;
         const frame = !moving ? 'idle_front' : b.am === 'T' ? 'twirl' : b.am === 'C' ? (b.ak > 0.2 && b.ak < 0.8 ? 'crouch' : 'idle_front') : 'run2';
@@ -1561,13 +1591,13 @@
           }
         } else if (b.sub === 'count' && id && id.startsWith('cnt:')) {
           const v = +id.slice(4);
-          if (v === 12) { SFX.hit(); g.finish(0.5 * b.good / 12 + 0.5 * (b.wrong === 0 ? 1 : 0.4), 'Twelve! At the twelfth chime, the magic ended. But on the stairs lay one little glass slipper...'); }
+          if (v === 12) { SFX.hit(); g.finish(0.5 * b.good / 12 + 0.5 * (b.wrong === 0 ? 1 : 0.4), 'Twelve! At the twelfth chime, the magic ended. But on the stairs lay one little glass {slipper|boot}...'); }
           else { b.wrong++; b.shake[v] = 0.5; SFX.miss(); say(g, 'Not quite. At midnight, the clock chimes once for every hour. Midnight is twelve o\'clock!'); }
         }
       },
       down(g, b) {
         b.step++; b.hop = 0; tone(500 + b.step * 30, 0.06, 'triangle', 0.06);
-        if (b.step === b.slipAt) { b.slipper = b.step - 1; floatText(stepPos(b.step - 1)[0], stepPos(b.step - 1)[1] - 90, 'Oh! Her slipper!', '#bfe8ff', false, 20); }
+        if (b.step === b.slipAt) { b.slipper = b.step - 1; floatText(stepPos(b.step - 1)[0], stepPos(b.step - 1)[1] - 90, 'Oh! {Her slipper|His boot}!', '#bfe8ff', false, 20); }
       },
       draw(g, b, t) {
         SCENES_CN.stairs({ ring: b.ring, slipper: b.slipper, pumpkin: b.chimes >= 12 && b.timer <= 0 || b.sub === 'count' }, t);
@@ -1598,7 +1628,7 @@
         const L = [[118, 100], [92, 80], [80, 72]][g.tier - 1];
         b.cands = shuffle([{ who: 'sisterA', L: L[0] }, { who: 'sisterB', L: L[1] }, { who: 'aub', L: 64 }]);
         Object.assign(b, { wrong: 0, fly: -1, pick: null, shake: {}, fitT: -1 });
-        g.cap = 'The prince\'s herald came to every house with the glass slipper. Whose foot is the right size? Tap the foot the slipper will fit!';
+        g.cap = 'The {prince|princess}\'s herald came to every house with the glass {slipper|boot}. Whose foot is the right size? Tap the foot the {slipper|boot} will fit!';
         g.act = 'Tap the right foot!';
       },
       rect: i => ({ x: 170 + i * 220, y: 140, w: 190, h: 270 }),
@@ -1609,10 +1639,10 @@
           if (b.fly > 0.6 && b.pick != null && b.fitT < 0) {
             const c = b.cands[b.pick];
             if (c.who === 'aub') { b.fitT = 0; SFX.fanfare(); burst(this.rect(b.pick).x + 95, 360, 24); }
-            else { b.wrong++; b.shake[b.pick] = 0.6; SFX.miss(); say(g, `Squeeeeze! That foot is much too BIG for the little slipper.`); b.fly = -1; b.pick = null; }
+            else { b.wrong++; b.shake[b.pick] = 0.6; SFX.miss(); say(g, `Squeeeeze! That foot is much too BIG for the little {slipper|boot}.`); b.fly = -1; b.pick = null; }
           }
         }
-        if (b.fitT >= 0) { b.fitT += dt; if (b.fitT > 1.4 && g.ph === 'act') g.finish(1 - 0.3 * b.wrong, 'It fit PERFECTLY! Then Cinderella took the OTHER glass slipper out of her pocket. The prince was overjoyed, and they lived happily ever after!'); }
+        if (b.fitT >= 0) { b.fitT += dt; if (b.fitT > 1.4 && g.ph === 'act') g.finish(1 - 0.3 * b.wrong, 'It fit PERFECTLY! Then {Cinderella took the OTHER glass slipper out of her pocket. The prince|Cinderfella took the OTHER glass boot out of his pocket. The princess} was overjoyed, and they lived happily ever after!'); }
         if (g.ph === 'act' && pointer.clicked && b.fly < 0) {
           const i = b.cands.findIndex((_, i) => inRect(this.rect(i)));
           if (i >= 0) { b.pick = i; b.fly = 0; tone(800, 0.1, 'sine', 0.08); }
@@ -1631,7 +1661,7 @@
           const fy = 352, L = c.L, fw = L * 0.36;
           ink(P2(`M${cx - L / 2},${fy} C${cx - L / 2},${fy - fw * 0.6} ${cx - L * 0.1},${fy - fw * 0.55} ${cx + L * 0.2},${fy - fw * 0.5} C${cx + L / 2},${fy - fw * 0.5} ${cx + L / 2},${fy + fw * 0.5} ${cx + L * 0.2},${fy + fw * 0.5} C${cx - L * 0.1},${fy + fw * 0.55} ${cx - L / 2},${fy + fw * 0.6} ${cx - L / 2},${fy} Z`), '#f6d2b8', 1.2);
           for (let k = 0; k < 5; k++) inkCircle(cx + L / 2 + 3 - k * 0.5, fy - fw * 0.42 + k * fw * 0.21, 3.2 - k * 0.3, '#f6d2b8', 0.6);
-          if (showLen) { ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(90,140,200,.8)'; ctx.lineWidth = 2; ctx.strokeRect(cx - 32, fy + 22, 64, 10); ctx.restore(); text('slipper', cx, fy + 44, 11, 'rgba(90,140,200,.9)', 'center', 700); }
+          if (showLen) { ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(90,140,200,.8)'; ctx.lineWidth = 2; ctx.strokeRect(cx - 32, fy + 22, 64, 10); ctx.restore(); text('{slipper|boot}', cx, fy + 44, 11, 'rgba(90,140,200,.9)', 'center', 700); }
           if (b.fitT >= 0 && b.pick === i) glassSlipper(cx, fy, 32, 1.4);
         });
         // the slipper on its velvet cushion (or flying to a foot)
@@ -1652,31 +1682,31 @@
   // --- "what happens next?" pages ------------------------------------------------------------------
   const Q = {
     fairy: {
-      ask: 'The stepsisters went off to the ball. Cinderella sat all alone in the garden, crying. What do you think happens next?',
-      opts: [['✨', 'Her Fairy Godmother appears!', true], ['🧹', 'She sweeps the floor all night', false], ['🐉', 'A dragon flies by', false]],
+      ask: 'The stepsisters went off to the ball. {Cinderella|Cinderfella} sat all alone in the garden, crying. What do you think happens next?',
+      opts: [['✨', '{Her|His} Fairy Godmother appears!', true], ['🧹', '{She|He} sweeps the floor all night', false], ['🐉', 'A dragon flies by', false]],
       hint: 'Hmm. Somebody kind and magical is coming to help. Who could it be?',
-      after: 'With a twinkle and a sparkle, her Fairy Godmother appeared! "Dry your tears, my dear. You SHALL go to the ball!"',
+      after: 'With a twinkle and a sparkle, {her|his} Fairy Godmother appeared! "Dry your tears, my dear. You SHALL go to the ball!"',
       draw: t => { SCENES_CN.garden({}, t); aubAt(200, FLOOR, 'crouch', 1, 'rags'); for (let i = 0; i < 2; i++) { const k = (t * 0.8 + i / 2) % 1; ctx.fillStyle = `rgba(140,200,255,${1 - k})`; ellipse(214 + i * 8, 330 + k * 30, 2.5, 4); } },
     },
     rule: {
       ask: '"Have a wonderful time!" says Fairy Godmother Gwen. "But you MUST leave before the clock strikes..." What time?',
       opts: [['🕛', 'Twelve o\'clock, midnight', true], ['🌅', 'Six in the morning', false], ['🍽️', 'Dinner time', false]],
       hint: 'Remember the big clock tower? The magic ends at MIDNIGHT, when it strikes twelve!',
-      after: '"...TWELVE! At midnight, your coach turns back into a pumpkin, and your gown turns back into rags!" And off Cinderella went to the ball.',
+      after: '"...TWELVE! At midnight, your coach turns back into a pumpkin, and your {gown|fine suit} turns back into rags!" And off {Cinderella|Cinderfella} went to the ball.',
       draw: t => { SCENES_CN.garden({}, t); coach(470, 418, 0.72, t); for (let i = 0; i < 4; i++) drawPony(600 + Math.floor(i / 2) * 52 + (i % 2) * 14, 398 + (i % 2) * 8, t * 2 + i, 0, 0.36, null, { rider: false, col: '#ffffff', mane: '#ffd84a' }); aubAt(200, FLOOR, 'idle_front', 1, 'gown'); gwen(300, FLOOR + 4, 0.52, -1); },
     },
     slipper: {
-      ask: 'The prince found a little glass slipper on the palace stairs. What do you think he will do?',
-      opts: [['👠', 'Look for the girl whose foot it fits', true], ['🗑️', 'Throw it away', false], ['🍵', 'Drink tea out of it', false]],
-      hint: 'He wants to find the girl he danced with. How could the slipper help?',
-      after: 'Yes! The prince sent his herald to every house in the kingdom, to try the slipper on every girl\'s foot.',
-      draw: t => { SCENES_CN.stairs({ slipper: null }, t); folk('prince', 420, 375, 0.6, 1, { arm: 0.8, mouth: 'o' }); glassSlipper(452, 280, 16, 1.2, -0.3); softGlow(452, 280, 30, '220,240,255', 0.6); },
+      ask: 'The {prince|princess} found a little glass {slipper|boot} on the palace stairs. What do you think {he|she} will do?',
+      opts: [['{👠|🥾}', 'Look for the {girl|boy} whose foot it fits', true], ['🗑️', 'Throw it away', false], ['🍵', 'Drink tea out of it', false]],
+      hint: '{He wants to find the girl he|She wants to find the boy she} danced with. How could the {slipper|boot} help?',
+      after: 'Yes! The {prince sent his|princess sent her} herald to every house in the kingdom, to try the {slipper on every girl|boot on every boy}\'s foot.',
+      draw: t => { SCENES_CN.stairs({ slipper: null }, t); folk(partner(), 420, 375, 0.6, 1, { arm: 0.8, mouth: 'o' }); glassSlipper(452, 280, 16, 1.2, -0.3); softGlow(452, 280, 30, '220,240,255', 0.6); },
     },
     why: {
-      ask: 'Think back. WHY did Cinderella run away from the ball at midnight?',
-      opts: [['🪄', 'The magic would end at midnight', true], ['😴', 'She was sleepy', false], ['🍰', 'She wanted cake at home', false]],
-      hint: 'What did her Fairy Godmother warn her about? What happens at midnight?',
-      after: 'That\'s it! The magic only lasted until midnight. That was the CAUSE, and running away was what she did about it.',
+      ask: 'Think back. WHY did {Cinderella|Cinderfella} run away from the ball at midnight?',
+      opts: [['🪄', 'The magic would end at midnight', true], ['😴', '{She|He} was sleepy', false], ['🍰', '{She|He} wanted cake at home', false]],
+      hint: 'What did {her|his} Fairy Godmother warn {her|him} about? What happens at midnight?',
+      after: 'That\'s it! The magic only lasted until midnight. That was the CAUSE, and running away was what {she|he} did about it.',
       draw: t => { SCENES_CN.stairs({ ring: 0.5 + 0.5 * Math.sin(t * 3), slipper: 7 }, t); aubAt(stepPos(9)[0], stepPos(9)[1], 'run2', 1, 'gown', { s: 0.42, slippers: false }); },
     },
   };
@@ -1734,9 +1764,9 @@
   const MOMENTS = {
     chores: { fx: 300, label: 'Sweeping the cinders', draw: t => { SCENES_CN.kitchen({ broom: false }, t); ashPile(300, 410, 0.7, t); aubAt(250, FLOOR, 'idle_front', 1, 'rags'); broom(296, FLOOR, -0.3, 0.8); } },
     magic: { fx: 330, label: 'The Fairy Godmother\'s magic', draw: t => { SCENES_CN.garden({}, t); coach(440, 418, 0.72, t); aubAt(220, FLOOR, 'idle_front', 1, 'gown'); gwen(310, FLOOR + 4, 0.52, -1); } },
-    ball: { fx: 480, label: 'Dancing with the prince', draw: t => { SCENES_CN.ball({}, t); folk('prince', 560, 380, 0.7, -1, { arm: 0.4 }); aubAt(400, 380, 'twirl', 1, 'gown', { s: 0.55 }); } },
+    ball: { fx: 480, label: 'Dancing with the {prince|princess}', draw: t => { SCENES_CN.ball({}, t); folk(partner(), 560, 380, 0.7, -1, { arm: 0.4 }); aubAt(400, 380, 'twirl', 1, 'gown', { s: 0.55 }); } },
     midnight: { fx: 520, label: 'BONG! Midnight!', draw: t => { SCENES_CN.stairs({ ring: 0.8, slipper: 6 }, t); aubAt(stepPos(9)[0], stepPos(9)[1], 'run2', 1, 'gown', { s: 0.42, slippers: false }); } },
-    fit: { fx: 480, label: 'The slipper fits!', draw: t => { SCENES_CN.hall({ door: 1 }, t); folk('prince', 600, FLOOR, 0.66, -1, { arm: 0.5 }); aubAt(440, FLOOR, 'idle_front', 1, 'gown', { s: 0.56 }); } },
+    fit: { fx: 480, label: 'The {slipper|boot} fits!', draw: t => { SCENES_CN.hall({ door: 1 }, t); folk(partner(), 600, FLOOR, 0.66, -1, { arm: 0.5 }); aubAt(440, FLOOR, 'idle_front', 1, 'gown', { s: 0.56 }); } },
   };
   function drawMoment(id, x, y, w, h) {
     const m = MOMENTS[id], s = h / PIC.h;
@@ -1765,7 +1795,7 @@
         b.placed[slot] = true; b.fly[slot] = 0; b.wrongHere = 0; SFX.hit();
         burst(R.slots[slot].x + R.slots[slot].w / 2, R.slots[slot].y + R.slots[slot].h / 2, 14);
         speak(MOMENTS[b.ids[slot]].label);
-        if (b.placed.every(Boolean)) { SFX.fanfare(); g.finish(Math.max(0, 1 - 0.25 * b.wrong), 'The end! You told the whole story of Cinderella, in the right order: beginning, middle and end!'); }
+        if (b.placed.every(Boolean)) { SFX.fanfare(); g.finish(Math.max(0, 1 - 0.25 * b.wrong), 'The end! You told the whole story of {Cinderella|Cinderfella}, in the right order: beginning, middle and end!'); }
       } else {
         b.wrong++; b.wrongHere++; b.shake[card] = 0.45; SFX.miss();
         say(g, slot === 0 ? 'Hmm, did that happen first? Think back to the very beginning.' : 'Hmm, not yet. What happened just after that?');
@@ -1831,8 +1861,8 @@
   };
 
   MG.rk2cinderella = {
-    kind: 'learn', title: () => 'Cinderella', icon: () => '👠', beats: BEATS,
-    how: () => "Fairy Godmother Gwen's favourite story, and YOU are Cinderella! Act out each page, guess what happens next, then tell the story again in order.",
+    kind: 'learn', title: () => '{Cinderella|Cinderfella}', icon: () => (isBoy() ? '🥾' : '👠'), beats: BEATS,
+    how: () => "Fairy Godmother Gwen's favourite story, and YOU are {Cinderella|Cinderfella}! Act out each page, guess what happens next, then tell the story again in order.",
     init(g) {
       const ids = ['sweep', 'lentils', 'invite', 'q_fairy', 'magic'];
       if (g.tier >= 2) ids.push('q_rule');
@@ -1916,9 +1946,9 @@
       'A:excited:A royal messenger? On a pony? Yes please!',
     ],
     mid: [
-      'N:Splendid riding! Now, all this talk of balls reminds me of my very favourite story: Cinderella.',
-      "N:And today, YOU will be Cinderella! Sweep the cinders, meet a little magic, and dance till midnight. Guess what happens next, then tell it back to me.",
-      'A:laughing:A sparkly gown AND glass slippers? I love this story!',
+      'N:Splendid riding! Now, all this talk of balls reminds me of my very favourite story: {Cinderella|Cinderfella}.',
+      "N:And today, YOU will be {Cinderella|Cinderfella}! Sweep the cinders, meet a little magic, and dance till midnight. Guess what happens next, then tell it back to me.",
+      'A:laughing:{A sparkly gown AND glass slippers|A royal suit AND glass boots}? I love this story!',
     ],
     outro: [
       'N:And they lived happily ever after! You told it beautifully, beginning, middle and end.',

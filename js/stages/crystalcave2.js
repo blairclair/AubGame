@@ -266,7 +266,7 @@
       }
       // --- head bonks
       if (g.state === 'play' && a.y > 0 && !a.hitThisJump) {
-        const im = IMG.jump, headY = FEET - a.y - im.height * AS + 6;
+        const im = IMG.jump, headY = FEET - a.y - (im.height - heroHead('jump').top) * AS + 6; // the top of her hair (heroHead)
         let best = -1, bd = 1e9;
         g.balls.forEach((b, i) => {
           if (b.pop) return;

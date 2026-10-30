@@ -490,7 +490,7 @@
       'A:excited:A real wizard telescope?! Yes please!',
     ],
     mid: ["N:Splendid spotting! Now for some star magic. Tap my stars in counting order, and they'll draw a secret picture!", 'A:excited:One, two, three... I love counting!'],
-    outro: ['N:Stardust and owl feathers from my collection. The stars will shine for you at the show, young lady.', 'A:happy:Thank you, Wizard Wendell!'],
+    outro: ['N:Stardust and owl feathers from my collection. The stars will shine for you at the show, young {lady|man}.', 'A:happy:Thank you, Wizard Wendell!'],
   });
 
   // =============================================================================================
@@ -667,7 +667,7 @@
   };
   MG.bubbleshot = {
     kind: 'action', title: () => 'Bubble Pop Shooter', icon: () => '🫧',
-    how: () => 'Aubrey is an octopus! Aim with the mouse or the arrow keys, then click or press space and she flicks a bubble with her tentacle. Touch 3 or more bubbles of the same colour to pop them. Clear them all!',
+    how: () => 'Aubrey is an octopus! Aim with the mouse or the arrow keys, then click or press space and {she|he} flicks a bubble with {her|his} tentacle. Touch 3 or more bubbles of the same colour to pop them. Clear them all!',
     init(g) {
       const rows = [3, 4, 4][g.tier - 1], ncol = [3, 3, 4][g.tier - 1];
       g.grid = {};
@@ -1539,7 +1539,8 @@
   const dolphinRider = (x, y, rot) => {
     drawDolphin(x, y, rot, 1);
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-    drawAubrey(RIDE[0], RIDE[1], 'crouch', 1, 0, RIDE[2]);
+    // each hero's crouch photo is shot at its own size, so match her head to her standing photo's (heroHead)
+    drawAubrey(RIDE[0], RIDE[1], 'crouch', 1, 0, RIDE[2] * 1.1 * heroHead('idle_front').r / heroHead('crouch').r);
     ctx.restore();
   };
   const RIDE = [-28, -22, 0.3]; // seat on Dolly's back (dolphin-local x, y) and Aubrey's scale
@@ -1979,18 +1980,21 @@
     drawAubrey(0, feet, 'idle_front', 1, 0, s);
     ctx.restore();
     // her right arm up, holding the wand; it flicks when a beam goes
-    const sx = 7, sy = waist - h * 0.3, kick = g.cast > 0 ? -5 : 0, hx = 15, hy = -114 + kick;
+    // (from her right shoulder in the photo, in her sleeve or skin colour: heroArmLook in js/hero.js)
+    const A = heroArmLook()[1], kick = g.cast > 0 ? -5 : 0, hx = 15, hy = -114 + kick;
+    const sx = (A.sh[0] - im.width / 2) * s * 0.8, sy = waist - h * 0.5 + (A.sh[1] + 6) * s;
     ctx.lineCap = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hx, hy); ctx.stroke();
-    ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = A.fore; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = A.upper; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo((sx + hx) / 2, (sy + hy) / 2); ctx.stroke();
     ctx.strokeStyle = OL; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(hx, hy + 4); ctx.lineTo(AD_WAND[0], AD_WAND[1] + kick + 6); ctx.stroke();
     ctx.strokeStyle = '#c87ad8'; ctx.lineWidth = 2.2; ctx.stroke();
-    inkCircle(hx, hy, 3, '#f6cfb0', 1);
+    inkCircle(hx, hy, 3, A.hand, 1);
     if (g.cast > 0) glow(AD_WAND[0], AD_WAND[1] + kick, 22, 'rgba(255,180,240,.9)');
     star(AD_WAND[0], AD_WAND[1] + kick, 6.5, '#ffd23f', 5);
   };
   MG.asteroiddodge = {
     kind: 'action', title: () => 'Asteroid Dodge', icon: () => '☄️',
-    how: () => 'Aubrey rides the rocket! Steer with the mouse or the arrow keys. Her magic wand zaps the asteroids by itself, and they burst into stars! Dodge the rocks and scoop up the sparkly stardust.',
+    how: () => 'Aubrey rides the rocket! Steer with the mouse or the arrow keys. {Her|His} magic wand zaps the asteroids by itself, and they burst into stars! Dodge the rocks and scoop up the sparkly stardust.',
     init(g) {
       Object.assign(g, { x: W / 2, rocks: [], zaps: [], dust: [], spawnT: 1, dustT: 0.5, zapT: 0, timeLeft: [35, 40, 40][g.tier - 1], booms: [], hits: 0, got: 0, made: 0, inv: 0, zapped: 0, facing: 0, stars: [] });
       for (let i = 0; i < 50; i++) g.stars.push({ x: rand(0, W), y: rand(60, H), v: rand(30, 120) });
@@ -2211,7 +2215,7 @@
     games: [['asteroiddodge', 'stardust', {}], ['solids3d', 'moonbeam', {}]],
     intro: [
       '*:A giant comet streaks across the night sky, and the grass in the meadow glows like little lanterns.',
-      "N:Hello, Earth girl! My comet's tail is full of stardust, but there are asteroids everywhere. Fly my rocket and zap them!",
+      "N:Hello, Earth {girl|boy}! My comet's tail is full of stardust, but there are asteroids everywhere. Fly my rocket and zap them!",
       'A:determined:Three, two, one... blast off!',
     ],
     mid: ['N:Space foxes have to know their shapes to build rockets. Can you match these solid shapes to real things?', 'A:thinking:A ball is round all over... that must be a sphere!'],

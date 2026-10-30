@@ -940,8 +940,12 @@
 
   // ---- Salmon Leap (action): Aubrey carries little Sal the salmon up the falls, one ledge at a time when the water is calm
   const SL = { lanes: [400, 560], LED: 118, base: 440, s: 0.48, wind: 0.14 };
-  // where her chest is in each sprite frame (image pixels, as the frame faces natively)
-  const SL_CHEST = { idle_front: [48, 94], crouch: [41, 70], jump: [64, 84] };
+  // where her chest is in each sprite frame (image pixels, as the frame faces natively), from her head
+  // and neck in the photo (heroHead in js/hero.js)
+  const SL_CHEST = frame => {
+    const hd = heroHead(frame);
+    return [hd.cx, hd.neck + (IMG[frame].height - hd.neck) * 0.26];
+  };
   // a chubby little salmon, head to the right, with a tail that wags by `wag` radians
   function drawHeldSalmon(wag, hurt) {
     ctx.save(); ctx.translate(-28, 0); ctx.rotate(wag);
@@ -962,7 +966,7 @@
   // Aubrey in sprite `frame`, feet at (x, gy), squashed by sq (>1 = stretched tall), tilted by rot, hugging the salmon
   function drawAubSalmon(x, gy, ground, frame, facing, sq, rot, wag, hurt, wet) {
     const im = IMG[frame], s = SL.s, w = im.width * s, h = im.height * s;
-    const mirror = frame === 'jump' ? (facing > 0 ? -1 : 1) : 1, [ax, ay] = SL_CHEST[frame];
+    const nat = AUB_NATIVE[frame], mirror = nat && facing && nat !== Math.sign(facing) ? -1 : 1, [ax, ay] = SL_CHEST(frame);
     const cx = (-w / 2 + ax * s) * mirror, cy = -h + ay * s;
     ctx.fillStyle = 'rgba(40,20,60,.22)'; ellipse(x, ground, 22 * clamp(1 - (ground - gy) / 160, 0.4, 1), 5);
     ctx.save(); ctx.translate(x, gy); ctx.rotate(rot); ctx.scale(1 / Math.sqrt(sq), sq);
@@ -1138,7 +1142,7 @@
   const SF_AX = 704, SF_STEP = 254, SF_AH = 132, SF_HAND = [674, 196], SF_DROP = 540, SF_TOSS = 0.4;
   MG.sinkorfloat = {
     kind: 'learn', title: () => 'Sink or Float?', icon: () => '🫧',
-    how: () => 'Aubrey has something to drop in the water! Will it sink to the bottom, or float on top? Make your guess, then she tosses it in. Splash!',
+    how: () => 'Aubrey has something to drop in the water! Will it sink to the bottom, or float on top? Make your guess, then {she|he} tosses it in. Splash!',
     init(g) {
       const rounds = [6, 7, 8][g.tier - 1], half = Math.floor(rounds / 2);
       const sink = shuffle(SF_THINGS.filter(t => !t[2])), float = shuffle(SF_THINGS.filter(t => t[2]));

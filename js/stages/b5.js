@@ -805,7 +805,7 @@
   // heads up the river), her arms out to the oar handles, pulling each one back as that side strokes
   const aubTop = (grips, oarL, oarR, steer = 0) => {
     const s = 0.3, im = aubNoArmsImage(), w = im.width * s, h = im.height * s, waist = 10, lean = 2.5 * Math.max(oarL, oarR);
-    const top = waist - h * 0.5, sy = top + h * 0.255, SEG = 12; // her shoulders in the photo; arm parts her real size
+    const top = waist - h * 0.5, SEG = 12, arms = heroArmLook(); // her shoulders in the photo; arm parts her real size
     ctx.save(); ctx.translate(0, lean);
     // her photo with its own arms cut away, top half only (the rest is inside the boat)
     ctx.save(); ctx.beginPath(); ctx.rect(-30, top - 4, 60, h * 0.5 + 4); ctx.clip();
@@ -814,7 +814,7 @@
     ctx.restore();
     // arms from her shoulders to the oar handles, bending out at the elbows
     for (const side of [-1, 1]) {
-      const x0 = side * 5.5, y0 = sy;
+      const A = arms[side < 0 ? 0 : 1], x0 = (A.sh[0] - im.width / 2) * s * 0.8, y0 = top + (A.sh[1] + 6) * s;
       let [x1, y1] = grips[side]; y1 -= lean;
       let dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
       if (d > SEG * 2 - 0.5) { const k = (SEG * 2 - 0.5) / d; dx *= k; dy *= k; x1 = x0 + dx; y1 = y0 + dy; d = SEG * 2 - 0.5; }
@@ -822,8 +822,10 @@
       const ex = x0 + dx / 2 + nx * m * sg, ey = y0 + dy / 2 + ny * m * sg;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 4.6;
       ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(ex, ey); ctx.lineTo(x1, y1); ctx.stroke();
-      ctx.strokeStyle = '#f6cfb0'; ctx.lineWidth = 2.4; ctx.stroke();
-      inkCircle(x1, y1, 2.6, '#f6cfb0', 0.9);
+      ctx.lineWidth = 2.4;
+      ctx.strokeStyle = A.fore; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.strokeStyle = A.upper; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(ex, ey); ctx.stroke();
+      inkCircle(x1, y1, 2.6, A.hand, 0.9);
     }
     ctx.restore();
   };

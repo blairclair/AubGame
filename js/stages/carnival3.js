@@ -44,7 +44,8 @@
   const ringmaster = (x, gy, s, frame = 'idle_front') => {
     drawAubrey(x, gy, frame, 1, 0, s);
     // brim perched on the crown of her hair, small enough that her face still shows
-    if (frame === 'idle_front') topHat(x + 2 * s / 0.5, gy - 226 * s + 5 * s / 0.5, s / 0.5 * 0.5);
+    // (her head from the photo: heroHead in js/hero.js)
+    if (frame === 'idle_front') { const im = IMG.idle_front, hd = heroHead('idle_front'); topHat(x + (hd.cx + 2 - im.width / 2) * s, gy - (im.height - hd.top - 10) * s, s / 0.5 * 0.5 * clamp(hd.r / 23.6, 0.8, 1.1)); }
   };
   const lights = (pts, t, r = 4) => pts.forEach(([x, y], i) => {
     const on = (Math.floor(t * 3) + i) % 3 !== 0;

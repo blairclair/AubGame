@@ -227,7 +227,7 @@ const LOCATIONS = [
     [['flyer', 'stardust', { player: '🧹', good: ['⭐'], bad: ['🌩️'], what: 'stars' }], ['add', 'feather', { item: '⭐', what: 'stars', sub: true }]],
     ["N:Ah, a visitor! Hop on my spare broom and fetch some stars for my telescope.", "A:surprised:A real BROOM?!"],
     ['N:Now some star maths. Take away, take away!'],
-    ['N:Stardust and owl feathers from my collection. Good luck, young lady.']),
+    ['N:Stardust and owl feathers from my collection. Good luck, young {lady|man}.']),
   loc('grotto', 'Mermaid Grotto', '🧜‍♀️', 3, 'deepsea', ['Olive the Octopus', '🐙'],
     [['catch', 'moonbeam', { good: ['🌙', '🫧'], bad: ['🦈'], what: 'moon pearls' }], ['memory', 'silk', { set: ['🐙', '🐠', '🐚', '🦀', '🐡', '🪸', '🐬', '🦑'] }]],
     ['N:Glub! Eight arms and still I drop my moon pearls! Catch them — and swim away from the shark!'],

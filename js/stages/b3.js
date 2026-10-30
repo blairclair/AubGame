@@ -784,17 +784,26 @@
     ctx.restore();
   };
   // Aubrey with her owl wings, centred on (x,y), facing right. Wing root is her back in the 'jump' sprite.
-  const OG_AS = 0.42, OG_ROOT = [80, 66];
+  const OG_AS = 0.42;
   const ogAubrey = (x, y, tilt, beat, hurt) => {
     const im = IMG.jump, w = im.width * OG_AS, h = im.height * OG_AS;
+    // a side-on jump photo is turned to fly right with both wings on her back; a front-on one gets a wing
+    // each side, behind her shoulders (her head and neck from heroHead in js/hero.js)
+    const side = AUB_NATIVE.jump, hd = heroHead('jump');
     ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
     if (hurt) ctx.globalAlpha = 0.5 + 0.5 * Math.sin(S.t * 30);
-    ctx.scale(-1, 1);                                     // the 'jump' sprite faces left: mirror it so she flies right
-    ctx.save(); ctx.translate(-w / 2 + OG_ROOT[0] * OG_AS, -h / 2 + OG_ROOT[1] * OG_AS);
-    // the far wing lags a touch behind the near one, darker and narrower
-    ctx.save(); ctx.scale(0.86, 0.9); ogWing(-0.55 + beat.swing * 0.92, beat.fold, true); ctx.restore();
-    ogWing(-0.25 + beat.swing, beat.fold, false);
-    ctx.restore();
+    if (side === -1) ctx.scale(-1, 1);
+    if (side) {
+      ctx.save(); ctx.translate(-w / 2 + (hd.cx - side * hd.r * 0.6) * OG_AS, -h / 2 + (hd.neck + 14) * OG_AS);
+      // the far wing lags a touch behind the near one, darker and narrower
+      ctx.save(); ctx.scale(0.86, 0.9); ogWing(-0.55 + beat.swing * 0.92, beat.fold, true); ctx.restore();
+      ogWing(-0.25 + beat.swing, beat.fold, false);
+      ctx.restore();
+    } else for (const d of [-1, 1]) {
+      ctx.save(); ctx.translate(-w / 2 + hd.cx * OG_AS, -h / 2 + (hd.neck + 14) * OG_AS); ctx.scale(d * 0.7, 0.7);
+      ogWing(0.2 + beat.swing, beat.fold, false);
+      ctx.restore();
+    }
     ctx.drawImage(im, -w / 2, -h / 2, w, h);
     ctx.globalAlpha = 1; ctx.restore();
   };
@@ -2336,7 +2345,7 @@
   restage('swanlake', {
     bg: 'swanlake_bg',
     games: [['swanribbon', 'feather', {}], ['swanstory', 'shell', {}]],
-    intro: ['*:The lake glows gold in the evening sun. Swans glide past the little white gazebo.', 'N:Darling, every unicorn must learn grace. Follow the silk ribbon across the water, smooth and steady!', 'A:focused:Like a ballerina!'],
+    intro: ['*:The lake glows gold in the evening sun. Swans glide past the little white gazebo.', 'N:Darling, every unicorn must learn grace. Follow the silk ribbon across the water, smooth and steady!', 'A:focused:Like a {ballerina|ballet dancer}!'],
     mid: ['N:Exquisite! Now sit with me, darling. Do you know the story of the Ugly Duckling? The pictures are all mixed up.', 'A:thinking:I think I know this one...'],
     outro: ['N:A swan feather, and a shell from the lake. Remember: everyone shines in their own time.', 'A:happy:Thank you, Lady Swan!'],
   });
