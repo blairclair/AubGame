@@ -90,11 +90,11 @@ SCENES.location = {
   enter({ id, after }) {
     if (id) {
       ADV = { place: LOC[id], got: [], summary: false };
-      return say(ADV.place.intro.map(l => parseLine(l, ADV.place)), () => playPlaceGame(0));
+      return say(placeLines(ADV.place, 'intro').map(l => parseLine(l, ADV.place)), () => playPlaceGame(0));
     }
     const p = ADV.place;
-    if (after === 0) say(p.mid.map(l => parseLine(l, p)), () => playPlaceGame(1));
-    else say(p.outro.map(l => parseLine(l, p)), () => {
+    if (after === 0) say(placeLines(p, 'mid').map(l => parseLine(l, p)), () => playPlaceGame(1));
+    else say(placeLines(p, 'outro').map(l => parseLine(l, p)), () => {
       ADV.summary = true;
       S.visitsToday++;
       S.log.push(p.id);

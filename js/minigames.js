@@ -1167,12 +1167,48 @@ const MEM_PEEK = { x: 832, y: 424, w: 80, h: 100 };
 const MEM_SLOTS = ['head', 'neck', 'back', 'tail'];
 // where each accessory sits on a standing unicorn, in her own units (for the spot-the-difference taps and hint rings)
 const MEM_ANCHOR = { head: [92, -214], neck: [64, -112], back: [-6, -122], tail: [-70, -92] };
+// on the dino route, the picture cards show the baby dinosaur instead (same game, his own wardrobe and colours)
+const MEM_DINO_SLOTS = ['dhead', 'dneck', 'dback', 'dtail'];
+const MEM_DINO_ANCHOR = { dhead: [62, -206], dneck: [50, -110], dback: [-26, -118], dtail: [-98, -56] };
+const MEM_DINO_PALS = {
+  green:  { name: 'Green',  body: '#7fd88a', dark: '#4fae66', belly: '#fff3d6', plate: '#ff8f8a' },
+  blue:   { name: 'Blue',   body: '#8ac8ff', dark: '#4f8ed0', belly: '#fff3d6', plate: '#ffd36b' },
+  orange: { name: 'Orange', body: '#ffb27a', dark: '#e07a40', belly: '#fff3d6', plate: '#8fd8ff' },
+  purple: { name: 'Purple', body: '#c9a6ff', dark: '#8e6ad8', belly: '#fff3e6', plate: '#ff9ec7' },
+  yellow: { name: 'Yellow', body: '#ffe27a', dark: '#d8a830', belly: '#fff8e0', plate: '#7fd88a' },
+  pink:   { name: 'Pink',   body: '#ffa6cf', dark: '#e070a8', belly: '#fff3e6', plate: '#a98cff' },
+};
+const MEM_DINO_SET = [
+  { pal: 'green', dhead: 'd_flowers', dback: 'd_wings', frame: 'full', mood: 'joy', bg: '#ffe0f0' },
+  { pal: 'blue', dhead: 'd_beanie', dneck: 'd_scarf', frame: 'head', mood: 'wow', facing: -1, bg: '#dcebff' },
+  { pal: 'orange', dhead: 'd_explorer', dneck: 'd_shells', frame: 'sit', bg: '#fff1c4' },
+  { pal: 'yellow', dhead: 'd_crown', dneck: 'd_bandana', frame: 'head', mood: 'joy', bg: '#ece0ff' },
+  { pal: 'purple', dhead: 'd_beanie', dback: 'd_starcape', frame: 'sit', mood: 'sleep', facing: -1, bg: '#cfd2ff' },
+  { pal: 'pink', dtail: 'd_tailbow', dfeet: 'd_boots', frame: 'full', mood: 'wow', facing: -1, bg: '#d8f7ea' },
+  { pal: 'blue', dhead: 'd_crown', dneck: 'd_medal', frame: 'head', facing: -1, bg: '#ffe3d4' },
+  { pal: 'green', dhead: 'd_flowers', dtail: 'd_bell', frame: 'sit', mood: 'joy', bg: '#e6f8d8' }];
+const memSlots = () => (isDino() ? MEM_DINO_SLOTS : MEM_SLOTS);
+const memAnchor = slot => (isDino() ? MEM_DINO_ANCHOR : MEM_ANCHOR)[slot];
+const memPetWord = () => (isDino() ? 'baby dino' : 'unicorn');
+// the cards' pet pictures: the unicorn's looks, or the dino's own set on the dino route
+const memSetOf = g => (isDino() && g.skin.set.some(ch => typeof ch === 'object') ? MEM_DINO_SET : g.skin.set);
+// draw a picture-card pet (a unicorn look, or a dino look from MEM_DINO_SET)
+function memDrawPet(x, y, s, ch, o) {
+  if (!isDino()) return drawUnicorn(x, y, s, { shine: 100, ...ch }, o);
+  const pal = MEM_DINO_PALS[ch.pal] || MEM_DINO_PALS.green;
+  const mood = o.mood === 'sleep' ? 'sleepy' : o.mood;
+  drawBabyDino(x, y, s, { head: ch.dhead, neck: ch.dneck, back: ch.dback, tail: ch.dtail, feet: ch.dfeet }, { ...o, mood, palette: pal === MEM_DINO_PALS.green ? undefined : pal });
+}
 const MEM_NOTES = [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568, 1760];
 const memIsLook = ch => typeof ch === 'object';
 const memLC = id => (ITEM[id]?.name || String(id)).toLowerCase();
 const memWith = id => (/s$/.test(memLC(id)) ? memLC(id) : `a ${memLC(id)}`);
 function memName(g, ch) {
   if (memIsLook(ch)) {
+    if (isDino()) {
+      const acc = ch.dhead || ch.dneck || ch.dback || ch.dtail || ch.dfeet;
+      return `${(MEM_DINO_PALS[ch.pal] || MEM_DINO_PALS.green).name} dino${acc ? ` with ${memWith(acc)}` : ''}!`;
+    }
     const acc = ch.head || ch.neck || ch.back || ch.tail;
     return `${ITEM[ch.mane]?.name || 'Cotton Candy'} mane${acc ? ` with ${memWith(acc)}` : ''}!`;
   }
@@ -1203,6 +1239,15 @@ function memPaint(key, w, h, ox, oy, paint) {
 }
 function memHorn(x, y, s, col = '#ffd36b') {
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  if (isDino()) {
+    // a little baby-dino head peeking up instead of a horn
+    const k = 0.25;
+    ctx.beginPath(); ctx.rect(-40, -40, 80, 41); ctx.clip();
+    ctx.beginPath(); ctx.ellipse(0, -6, 24, 32, 0, 0, Math.PI * 2); ctx.clip(); // stay inside the bookplate
+    drawBabyDino(-70 * k, 122 * k, k, {}, { facing: 1, mood: 'joy', t: 0 });
+    ctx.restore();
+    return;
+  }
   ink(P2('M-7,0 C-5,-10 -2,-20 0,-29 C2,-20 5,-10 7,0 C3,2.5 -3,2.5 -7,0 Z'), col, 1.3, OL);
   ctx.strokeStyle = mix(col, '#a05a00', 0.45); ctx.lineWidth = 1.2;
   for (const yy of [-5, -12, -19]) { const k = 1 + yy / 32; ctx.beginPath(); ctx.moveTo(-6 * k, yy + 2); ctx.lineTo(6 * k, yy - 2); ctx.stroke(); }
@@ -1282,10 +1327,10 @@ function memFrontArt(g, ch, w, h, th) {
   for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.moveTo(0, wy + wh / 2); ctx.arc(0, wy + wh / 2, wh, i * 0.785, i * 0.785 + 0.3); ctx.fill(); }
   if (memIsLook(ch)) {
     const f = ch.facing || 1;
-    const [div, cx, cy] = { head: [130, 92, -182], full: [330, 15, -105], sit: [290, 20, -95] }[ch.frame || 'head'];
+    const [div, cx, cy] = (isDino() ? { head: [150, 74, -170], full: [330, -6, -112], sit: [300, -6, -100] } : { head: [130, 92, -182], full: [330, 15, -105], sit: [290, 20, -95] })[ch.frame || 'head'];
     const s = ww / div;
     ctx.translate(0, wy + wh / 2);
-    drawUnicorn(-cx * s * f, -cy * s, s, { shine: 100, ...ch }, { facing: f, pose: ch.frame === 'sit' ? 'sit' : 'stand', mood: ch.mood, t: 0 });
+    memDrawPet(-cx * s * f, -cy * s, s, ch, { facing: f, pose: ch.frame === 'sit' ? 'sit' : 'stand', mood: ch.mood, t: 0 });
   } else {
     ctx.fillStyle = 'rgba(255,255,255,.7)'; circle(0, wy + wh / 2, ww * 0.36);
     emoji(ch, 0, wy + wh / 2 + 1, Math.min(ww, wh) * 0.62);
@@ -1294,8 +1339,8 @@ function memFrontArt(g, ch, w, h, th) {
   rrect(wx, wy, ww, wh, 8, null, OL, 1.6);
   const by = (wy + wh + y + h - 4) / 2;
   if (memIsLook(ch)) {
-    const icons = MEM_SLOTS.map(s => ch[s] && ITEM[ch[s]]?.icon).filter(Boolean).slice(0, 3);
-    const pal = MANES[ch.mane] || MANES.natural;
+    const icons = (isDino() ? [...MEM_DINO_SLOTS, 'dfeet'] : MEM_SLOTS).map(s => ch[s] && ITEM[ch[s]]?.icon).filter(Boolean).slice(0, 3);
+    const pal = isDino() ? [(MEM_DINO_PALS[ch.pal] || MEM_DINO_PALS.green).body] : MANES[ch.mane] || MANES.natural;
     inkCircle(x + 14, by, 4.5, pal[0], 0.8, OL);
     icons.forEach((ic, i) => emoji(ic, x + 30 + i * 15, by, 11));
   } else {
@@ -1315,11 +1360,12 @@ function memMagnifier(x, y, s, on = true) {
 function memTwinkle(x, y, r, col) { star(x, y, r + 1.4, 'rgba(91,63,115,.6)', 4); star(x, y, r, col, 4); }
 
 MG.memory = {
-  kind: 'learn', title: () => 'Memory Match', icon: g => (typeof g.skin.set[0] === 'string' ? g.skin.set[0] : '🦄'),
+  kind: 'learn', title: () => 'Memory Match', icon: g => (typeof g.skin.set[0] === 'string' ? g.skin.set[0] : isDino() ? '🦕' : '🦄'),
   how: g => `Tap two cards to flip them. Find all the matching pairs! Your magnifying glass can peek at one card.${g.tier >= 3 ? ' Watch out: swirly cards swap places!' : ''}`,
   init(g) {
-    const pairs = Math.min(g.skin.set.length, [6, 7, 8][g.tier - 1]);
-    const faces = shuffle(g.skin.set).slice(0, pairs);
+    g.mmSet = memSetOf(g);
+    const pairs = Math.min(g.mmSet.length, [6, 7, 8][g.tier - 1]);
+    const faces = shuffle(g.mmSet).slice(0, pairs);
     const cards = shuffle([...faces, ...faces]).map((ch, i) => ({ ch, slot: i, up: false, done: false, gone: false, flip: 0, hov: 0, peek: 0 }));
     const N = cards.length, gap = 14;
     // the biggest cards that fit the felt, rows centred
@@ -1331,7 +1377,7 @@ MG.memory = {
     Object.assign(g, { cards, pairs, open: [], moves: 0, found: 0, wait: 0, mmGrid: best, mmTheme: memThemeOf(g), mmLooks: faces.some(memIsLook),
       mmFx: [], mmTray: [], mmStreak: 0, mmBest: 0, mmPeeks: 1, mmArm: false, mmPrev: 0, mmSwap: null, mmSwaps: 0, mmSwapIn: 6,
       mmBonus: null, mmBonusLeft: 0, mmBonusOk: 0, mmEnd: 0, mmT: 0, mmTrail: 0 });
-    g.mmBonusRounds = g.mmLooks && g.skin.set.every(memIsLook) ? (g.tier >= 3 ? 2 : 1) : 0;
+    g.mmBonusRounds = g.mmLooks && g.mmSet.every(memIsLook) ? (g.tier >= 3 ? 2 : 1) : 0;
     g.mmBonusLeft = g.mmBonusRounds;
     g.say = 'Find the matching pairs!';
   },
@@ -1501,17 +1547,17 @@ MG.memory = {
     return { x: lerp(tx, sl.x, e), y: lerp(ty, sl.y + 26, e) - Math.sin(k * Math.PI) * 80, s: lerp(0.42, 0.14, e), face: 1, spin: 1, a: 1 - k * 0.5, moving: true };
   },
   startBonus(g) {
-    const looks = g.skin.set.filter(memIsLook), of = s => WARDROBE.filter(i => i.slot === s).map(i => i.id);
+    const looks = g.mmSet.filter(memIsLook), of = s => WARDROBE.filter(i => i.slot === s).map(i => i.id), SL = memSlots();
     const base = { ...pick(looks), frame: 'full', facing: 1, mood: 'joy' };
-    for (const s of shuffle(MEM_SLOTS)) if (!base[s] && MEM_SLOTS.filter(k => base[k]).length < 3) base[s] = pick(of(s));
-    const used = MEM_SLOTS.filter(k => base[k]);
+    for (const s of shuffle(SL)) if (!base[s] && SL.filter(k => base[k]).length < 3) base[s] = pick(of(s));
+    const used = SL.filter(k => base[k]);
     const prev = g.mmBonusPrev, slot = pick(used.filter(s => s !== prev).length ? used.filter(s => s !== prev) : used);
     const right = { ...base, [slot]: pick(of(slot).filter(id => id !== base[slot])) };
     g.mmBonusPrev = slot;
     g.mmBonus = { left: base, right, slot, opts: shuffle(used), picked: null, t: 0, after: 0 };
-    g.say = 'One thing is different on the second unicorn. Tap what is different!';
+    g.say = `One thing is different on the second ${memPetWord()}. Tap what is different!`;
     SFX.sparkle();
-    speak(`Bonus! Look at the two unicorns. ${g.say}`);
+    speak(`Bonus! Look at the two ${memPetWord()}s. ${g.say}`);
   },
   bonusSpot(i) { return { x: [220, 564][i], y: 394, s: 0.72 }; },
   updateBonus(g, dt, id) {
@@ -1523,12 +1569,12 @@ MG.memory = {
         // tapping the accessory on either unicorn counts too
         for (let u = 0; u < 2 && !pickSlot; u++) {
           const sp = this.bonusSpot(u);
-          for (const s of b.opts) { const [ax, ay] = MEM_ANCHOR[s]; if (Math.hypot(pointer.x - (sp.x + ax * sp.s), pointer.y - (sp.y + ay * sp.s)) < 34) { pickSlot = s; break; } }
+          for (const s of b.opts) { const [ax, ay] = memAnchor(s); if (Math.hypot(pointer.x - (sp.x + ax * sp.s), pointer.y - (sp.y + ay * sp.s)) < 34) { pickSlot = s; break; } }
         }
       }
       if (pickSlot) {
         b.picked = pickSlot; b.after = 2.6;
-        const nm = ITEM[b.right[b.slot]].name, sp = this.bonusSpot(1), [ax, ay] = MEM_ANCHOR[b.slot];
+        const nm = ITEM[b.right[b.slot]].name, sp = this.bonusSpot(1), [ax, ay] = memAnchor(b.slot);
         if (pickSlot === b.slot) {
           g.mmBonusOk++; SFX.sparkle(); burst(sp.x + ax * sp.s, sp.y + ay * sp.s, 24, { colors: MEM_THEMES[g.mmTheme].fx });
           speak(`Yes! The ${nm} is different! Sharp eyes!`);
@@ -1648,8 +1694,8 @@ MG.memory = {
     const th = g.mmTheme, e = flip * flip * (3 - 2 * flip), ang = e * Math.PI, sx = Math.abs(Math.cos(ang)), fl = Math.sin(ang);
     const up = e > 0.5, sc = scale * (1 + 0.1 * fl + 0.04 * lift), yy = cy - lift * 6 - fl * 12;
     const [pw, ph] = src || [w, h];
-    const img = up ? memPaint(`f:${memKey(ch)}:${pw}x${ph}:${th}`, pw + 6, ph + 6, (pw + 6) / 2, (ph + 6) / 2, () => memFrontArt(g, ch, pw, ph, th))
-      : memPaint(`b:${th}:${pw}x${ph}`, pw + 6, ph + 6, (pw + 6) / 2, (ph + 6) / 2, () => memBackArt(th, pw, ph));
+    const img = up ? memPaint(`f:${memKey(ch)}:${pw}x${ph}:${th}${isDino() ? ':d' : ''}`, pw + 6, ph + 6, (pw + 6) / 2, (ph + 6) / 2, () => memFrontArt(g, ch, pw, ph, th))
+      : memPaint(`b:${th}:${pw}x${ph}${isDino() ? ':d' : ''}`, pw + 6, ph + 6, (pw + 6) / 2, (ph + 6) / 2, () => memBackArt(th, pw, ph));
     ctx.save(); ctx.globalAlpha = alpha;
     // shadow on the felt
     ctx.fillStyle = `rgba(20,8,30,${0.28 - 0.08 * (lift + fl) / 2})`;
@@ -1689,7 +1735,7 @@ MG.memory = {
       gr.addColorStop(0, 'rgba(255,250,220,.55)'); gr.addColorStop(1, 'rgba(255,250,220,0)');
       ctx.fillStyle = gr; ctx.fillRect(p.x - 200, p.y - 260, 400, 300);
       ctx.translate(p.x, p.y); ctx.scale(p.spin, 1);
-      drawUnicorn(0, 0, p.s, { shine: 100, ...f.ch }, { facing: p.face, pose: 'stand', moving: p.moving, mood: 'joy', glow: 0.5, t: g.mmT });
+      memDrawPet(0, 0, p.s, f.ch, { facing: p.face, pose: 'stand', moving: p.moving, mood: 'joy', glow: 0.5, t: g.mmT });
       ctx.restore();
       // a ring of twinkles while she twirls
       if (f.t > 2.05 && f.t < 2.55) {
@@ -1715,7 +1761,7 @@ MG.memory = {
     ctx.save(); ctx.fillStyle = 'rgba(20,8,30,.35)'; ctx.fillRect(MEM_BOARD.x + 18, MEM_BOARD.y + 18, MEM_BOARD.w - 36, MEM_BOARD.h - 36); ctx.restore();
     panel(56, 82, 692, 438, 22);
     outlined('Spot the difference!', 402, 112, 28, '#ff6fb5', 'center', '#fff');
-    if (b.picked == null) text('One thing is different on unicorn 2. Tap it!', 402, 142, 16, '#7a4a8e', 'center', 600);
+    if (b.picked == null) text(`One thing is different on ${isDino() ? 'dino' : 'unicorn'} 2. Tap it!`, 402, 142, 16, '#7a4a8e', 'center', 600);
     for (let u = 0; u < 2; u++) {
       const sp = this.bonusSpot(u), look = u ? b.right : b.left;
       const fx = sp.x - 140, fy = 160;
@@ -1723,12 +1769,12 @@ MG.memory = {
       rrect(fx, fy, 300, 248, 16, mix(look.bg || '#ffe0f0', '#ffffff', 0.3), OL, 2.6);
       rrect(fx + 6, fy + 6, 288, 236, 12, null, T.trim, 2);
       ctx.save(); ctx.beginPath(); ctx.roundRect(fx + 3, fy + 3, 294, 242, 14); ctx.clip();
-      drawUnicorn(sp.x, sp.y, sp.s, { shine: 100, ...look }, { facing: 1, pose: 'stand', mood: look.mood, t: g.mmT });
+      memDrawPet(sp.x, sp.y, sp.s, look, { facing: 1, pose: 'stand', mood: look.mood, t: g.mmT });
       ctx.restore();
       inkCircle(fx + 22, fy + 22, 15, u ? '#ff8fc8' : '#9a6ae0', 1.3, OL);
       text(String(u + 1), fx + 22, fy + 23, 17, '#fff', 'center', 700);
       // after a while, or once answered, a ring shows where to look
-      const [ax, ay] = MEM_ANCHOR[b.slot];
+      const [ax, ay] = memAnchor(b.slot);
       const hint = b.picked != null ? 1 : clamp((b.t - 9) / 2, 0, 0.6);
       if (hint > 0) {
         ctx.save(); ctx.globalAlpha = hint; ctx.strokeStyle = b.picked === b.slot || b.picked == null ? '#ffd23f' : '#ff6f9f'; ctx.lineWidth = 4;

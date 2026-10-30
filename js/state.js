@@ -44,6 +44,21 @@ const petLook = (extra = {}) => (isDino() ? dinoLook(extra) : uniLook(extra));
 const dinoKit = () => WARDROBE.filter(i => i.pet === 'dino' && S.owned[i.id]);
 // on the dino route, story and place dialog that was written for the unicorn is gently rewritten
 const PET_SWAPS = [
+  // whole lines first, where a word swap would read oddly (the show, the rivals, a "magical" pet)
+  [/Every unicorn I know LOVES petals\./g, 'Little dinosaurs LOVE munching petals!'],
+  [/A friend of gnomes is a friend of unicorns\./g, 'A friend of gnomes is a friend of little dinosaurs.'],
+  [/Wait — you know about unicorns\?/g, 'Wait — you know about my dinosaur?!'],
+  [/Moon-silk, for a moon-bright unicorn\./g, 'Moon-silk, to keep a little dino snug on the long way home.'],
+  [/Your unicorn is going to sparkle like a comet\. Go win that show!/g, 'Your baby dino will glow like a comet, all the way home!'],
+  [/Stardust AND moonbeams\. Go win that show!/g, 'Stardust AND moonbeams. Get your little dino home safe!'],
+  [/^Like a fashion show!$/g, 'Like playing dress-up!'],
+  // Marina is a rival in the unicorn's show; on the dino route she is just a friendly mermaid
+  [/^A mermaid is sitting on a rock\. It's Marina[ ,—–-]+one of the other contestants!$/g, "A mermaid is sitting on a rock, humming to the moon. It's Marina!"],
+  [/^You're in the show too\? A fair show is a good show\. /g, "Hello! I've never seen you at my lake before. "],
+  [/^You're competing too\? Then I'll help you\. A fair show is a good show\. /g, "Hello! I've never seen you at my lake before. "],
+  [/^You're\.\.\. nice\?$/g, 'Can I really ride in your boat?'],
+  [/^See you at the show\. May the best creature win!$/g, 'Come back and race me again soon!'],
+  [/^Good luck, Marina!$/g, 'I will! Bye, Marina!'],
   [/could stay forever/g, 'could get home to his mama'],
   [/Good luck at the show!/g, 'Good luck on the journey home!'],
   [/Go win that show!/g, 'Get him home safe!'],
@@ -61,6 +76,19 @@ const PET_SWAPS = [
   [/\bwhinny\b/gi, 'happy squeak'],
   [/\bneighs?\b/gi, 'squeak'],
 ];
+// extra place lines on the dino route, slipped in `at` lines from the end of that part
+const DINO_PLACE_ADD = {
+  honeytree: { outro: { at: 2, lines: [
+    "A:thinking:Lofty, have you ever seen a little green dino with pink spikes? His name is {N}, and he's lost. He wants his mama.",
+    "N:Oh, the poor little one! His family must live at the far end of the valley, across the big river of dinosaurs. It's a long way, so bring lots of supplies!",
+  ] } },
+};
+function placeLines(place, part) {
+  const lines = place[part], add = isDino() && DINO_PLACE_ADD[place.id]?.[part];
+  if (!add) return lines;
+  const at = Math.max(0, lines.length - add.at);
+  return [...lines.slice(0, at), ...add.lines, ...lines.slice(at)];
+}
 function petText(str) {
   if (!isDino() || typeof str !== 'string') return str;
   for (const [re, to] of PET_SWAPS) {
