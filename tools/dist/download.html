@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download Secret Pet</title>
+<style>
+  :root { --ink: #3d2350; --soft: #6b5580; --pink: #ff6fb5; --line: #e6d8f5; --bg: #fffafd; --card: #ffffff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #f3e9ff; --soft: #c9b6dc; --pink: #ff8fc8; --line: #463658; --bg: #1b1326; --card: #241a31; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 19px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 60px; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 6px; }
+  .lede { color: var(--soft); margin: 0 0 22px; }
+  img.shot { width: 100%; border-radius: 14px; border: 1px solid var(--line); display: block; margin-bottom: 22px; }
+  .play { display: block; text-align: center; background: var(--pink); color: #fff; font-weight: 700; font-size: 22px; padding: 16px; border-radius: 14px; text-decoration: none; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 26px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .card h2 { margin: 0 0 10px; font-size: 23px; }
+  .card a { color: var(--pink); font-weight: 700; }
+  .card p { margin: 8px 0 0; }
+  .small { color: var(--soft); font-size: 16px; margin-top: 26px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Secret Pet</h1>
+  <p class="lede">A little adventure game for young children. Play it right here in the browser, or download it to play any time without the internet.</p>
+  <img class="shot" src="{{TITLE_SHOT}}" alt="The game's first screen: pick Aubrey, Charlotte, Ashton or Levi, then a unicorn or a baby dinosaur">
+  <a class="play" href="./">▶ Play now in this browser</a>
+  <div class="cards">
+    <div class="card">
+      <h2>Mac</h2>
+      <p><a href="Secret-Pet-Mac.zip" download>Download for Mac</a> ({{MAC_MB}} MB)</p>
+      <p><a href="How%20to%20play%20(Mac).html">Step-by-step guide</a></p>
+    </div>
+    <div class="card">
+      <h2>Windows</h2>
+      <p><a href="Secret-Pet-Windows.zip" download>Download for Windows</a> ({{WIN_MB}} MB)</p>
+      <p><a href="How%20to%20play%20(Windows).html">Step-by-step guide</a></p>
+    </div>
+  </div>
+  <p class="small">The download is one file you double-click to play. Nothing to install and no account needed. The same guide is inside the download too.</p>
+</main>
+</body>
+</html>

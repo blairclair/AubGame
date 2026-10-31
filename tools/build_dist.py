@@ -75,6 +75,16 @@ def main():
             z.writestr(f"{FOLDER}/{GAME}", page)
             z.writestr(f"{FOLDER}/{name}", text)
             z.write(TOOLS / "fonts" / "OFL.txt", f"{FOLDER}/font licence (Fredoka).txt")
+    # the website (tools/deploy_pages.sh puts dist/site on GitHub Pages): the game as the front page, plus a download page
+    site = OUT / "site"
+    site.mkdir()
+    (site / "index.html").write_text(page)
+    (site / ".nojekyll").write_text("")
+    for f in OUT.glob("*.*"):
+        if f.name != GAME: shutil.copy(f, site / f.name)
+    mb = {s: f"{(OUT / f'Secret-Pet-{s}.zip').stat().st_size / 1e6:.1f}" for s in SYSTEMS}
+    (site / "download.html").write_text((TOOLS / "dist" / "download.html").read_text()
+        .replace("{{TITLE_SHOT}}", shot).replace("{{MAC_MB}}", mb["Mac"]).replace("{{WIN_MB}}", mb["Windows"]))
     print(f"{GAME}: {len(page) / 1e6:.1f} MB, {scripts} scripts, {pics} pictures")
     for z in sorted(OUT.glob("*.zip")):
         print(f"{z.name}: {z.stat().st_size / 1e6:.1f} MB")
