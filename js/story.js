@@ -288,7 +288,7 @@ const PET_CARD = { w: 300, h: 176, y: 344 };
 SCENES.title = {
   enter() {
     this.sel = this.sel ?? null; this.t = 0;
-    speak("Aubrey's Secret Pet! Who are you? Tap a friend. Then pick your secret pet: press 1 for a unicorn, or 2 for a baby dinosaur.");
+    speak("The Secret Pet! Who are you? Tap a friend. Then pick your secret pet: press 1 for a unicorn, or 2 for a baby dinosaur.");
   },
   pickHero(i) {
     const h = HEROES[(i + HEROES.length) % HEROES.length];
@@ -325,7 +325,7 @@ SCENES.title = {
     dreamy('#3b1d6e', '#ff9ec7');
     ctx.fillStyle = '#7fbf75'; ellipse(W / 2, H + 60, 720, 150);
     ctx.fillStyle = '#8fcf85'; ellipse(W / 2, H + 80, 640, 130);
-    outlined(`${HERO.name}'s Secret Pet`, W / 2, 40, 44, '#fff');
+    outlined('The Secret Pet', W / 2, 40, 44, '#fff');
     ctx.globalAlpha = 0.7 + 0.3 * Math.sin(S.t * 4);
     outlined('Who are you?', W / 2, 98, 22, '#fff6a8');
     ctx.globalAlpha = 1;

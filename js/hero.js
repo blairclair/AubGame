@@ -103,7 +103,7 @@ function useHero(id) {
   Object.assign(AUB_NATIVE, HERO.native);
   heroTextCache.clear();
   for (const fn of heroResets) fn();
-  document.title = `${HERO.name}'s Secret Pet`;
+  document.title = 'The Secret Pet';
   try { localStorage.setItem('aubgame.hero', HERO.id); } catch (e) { /* private window: the title screen just starts on Aubrey */ }
 }
 function savedHeroId() {
